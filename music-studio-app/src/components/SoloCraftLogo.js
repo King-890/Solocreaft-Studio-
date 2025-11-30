@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SoloCraftLogo({ size = 120, showText = true, animated = true }) {
@@ -13,7 +13,7 @@ export default function SoloCraftLogo({ size = 120, showText = true, animated = 
                 Animated.timing(rotateAnim, {
                     toValue: 1,
                     duration: 20000,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 })
             ).start();
 
@@ -23,12 +23,12 @@ export default function SoloCraftLogo({ size = 120, showText = true, animated = 
                     Animated.timing(pulseAnim, {
                         toValue: 1.1,
                         duration: 2000,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                     Animated.timing(pulseAnim, {
                         toValue: 1,
                         duration: 2000,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                 ])
             ).start();
@@ -122,10 +122,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         elevation: 10,
-        shadowColor: '#BA55D3',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.8,
-        shadowRadius: 20,
     },
     innerGradient: {
         width: '100%',
@@ -143,17 +139,11 @@ const styles = StyleSheet.create({
     letterS: {
         fontWeight: 'bold',
         color: '#BA55D3',
-        textShadowColor: '#BA55D3',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 15,
         marginRight: -5,
     },
     letterC: {
         fontWeight: 'bold',
         color: '#FFD700',
-        textShadowColor: '#FFD700',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 15,
         marginLeft: -5,
     },
     musicNote: {
@@ -171,9 +161,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#BA55D3',
         letterSpacing: 2,
-        textShadowColor: '#BA55D3',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10,
     },
     appSubtitle: {
         fontWeight: '600',

@@ -5,7 +5,14 @@
 
 import { Dimensions, Platform } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
+// Lazy dimension getter to avoid web platform issues
+const getDimensions = () => {
+    try {
+        return Dimensions.get('window');
+    } catch (e) {
+        return { width: 375, height: 667 }; // fallback dimensions
+    }
+};
 
 // ==================== COLORS ====================
 export const COLORS = {
@@ -68,8 +75,8 @@ export const SPACING = {
 
 // ==================== SIZES ====================
 export const SIZES = {
-    width,
-    height,
+    get width() { return getDimensions().width; },
+    get height() { return getDimensions().height; },
     padding: 20,
     radius: 16,
     radiusSmall: 8,
@@ -81,25 +88,28 @@ export const SIZES = {
 // ==================== SHADOWS ====================
 export const SHADOWS = {
     light: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
         elevation: 2,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 1px 4px rgba(0, 0, 0, 0.2)',
+            }
+        })
     },
     medium: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
         elevation: 5,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            }
+        })
     },
     glow: {
-        shadowColor: COLORS.petal,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.6,
-        shadowRadius: 10,
         elevation: 10,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+            }
+        })
     },
 };
 
@@ -155,9 +165,12 @@ export const AUDIO_CONFIG = {
 export const LAYOUT = {
     // Home Screen specific
     homeScreen: {
-        noteSourcePosition: {
-            top: height * 0.55,
-            left: width * 0.35,
+        get noteSourcePosition() {
+            const { width, height } = getDimensions();
+            return {
+                top: height * 0.55,
+                left: width * 0.35,
+            };
         },
         profileOrbPosition: {
             top: 60,
@@ -168,7 +181,7 @@ export const LAYOUT = {
 
     // Modal
     modal: {
-        cardWidth: width * 0.85,
+        get cardWidth() { return getDimensions().width * 0.85; },
         cardPadding: 30,
         cardRadius: 24,
     },

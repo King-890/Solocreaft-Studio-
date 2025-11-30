@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useProject } from '../contexts/ProjectContext';
+import { useMixer } from '../contexts/MixerContext';
 import AudioPlaybackService from '../services/AudioPlaybackService';
 import MixerChannelStrip from './MixerChannelStrip';
 
@@ -19,7 +20,11 @@ export default function MixerModal({ visible, onClose, fullScreen = false }) {
         updateTrackCompressor
     } = useProject();
 
-    const [masterVolume, setMasterVolume] = useState(0.85);
+    const {
+        mixerState,
+        setMasterVolume,
+        toggleMasterMute,
+    } = useMixer();
 
     // Calculate master meter level
     const calculateMasterLevel = () => {
@@ -27,7 +32,7 @@ export default function MixerModal({ visible, onClose, fullScreen = false }) {
         const activeTracks = tracks.filter(t => !t.muted);
         if (activeTracks.length === 0) return 0;
         const avgVolume = activeTracks.reduce((sum, t) => sum + (t.volume * t.gain), 0) / activeTracks.length;
-        return avgVolume * masterVolume;
+        return avgVolume * mixerState.masterVolume;
     };
 
     const masterLevel = calculateMasterLevel();
@@ -102,13 +107,13 @@ export default function MixerModal({ visible, onClose, fullScreen = false }) {
                             style={styles.masterFader}
                             minimumValue={0}
                             maximumValue={1}
-                            value={masterVolume}
+                            value={mixerState.masterVolume}
                             onValueChange={setMasterVolume}
                             minimumTrackTintColor="#4a9eff"
                             maximumTrackTintColor="#444"
                             thumbTintColor="#4a9eff"
                         />
-                        <Text style={styles.masterValue}>{(masterVolume * 100).toFixed(0)}%</Text>
+                        <Text style={styles.masterValue}>{(mixerState.masterVolume * 100).toFixed(0)}%</Text>
                     </View>
 
                     <View style={styles.masterStats}>
@@ -207,16 +212,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
     },
     masterSection: {
-        width: 240,
+        width: 260,
+        height: '100%',
         backgroundColor: '#252525',
         borderRadius: 12,
-        padding: 18,
+        padding: 20,
         borderWidth: 3,
         borderColor: '#4a9eff',
-        shadowColor: '#4a9eff',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
         elevation: 6,
     },
     masterHeader: {
@@ -233,9 +235,6 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         textAlign: 'center',
-        textShadowColor: '#4a9eff',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 8,
     },
     masterMeter: {
         alignItems: 'center',
@@ -255,10 +254,6 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
         borderWidth: 3,
         borderColor: '#333',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.5,
-        shadowRadius: 4,
     },
     meterFill: {
         width: '100%',

@@ -4,7 +4,7 @@ import {
     Text,
     StyleSheet,
     Animated,
-    TouchableWithoutFeedback,
+    Pressable,
     Dimensions,
     Platform,
     Alert
@@ -18,16 +18,15 @@ import SocialAuthButton from '../components/SocialAuthButton';
 import UISounds from '../utils/UISounds';
 import UJLogo from '../components/UJLogo';
 
-const { width, height } = Dimensions.get('window');
-
 export default function SignupScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [socialLoading, setSocialLoading] = useState({ google: false, facebook: false });
+    // COMMENTED OUT: OAuth functionality disabled
+    // const [socialLoading, setSocialLoading] = useState({ google: false, facebook: false });
     const [errorMsg, setErrorMsg] = useState('');
-    const { signUp, signInWithGoogle, signInWithFacebook } = useAuth();
+    const { signUp } = useAuth(); // Removed: signInWithGoogle, signInWithFacebook
 
     // Animation values
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -45,28 +44,28 @@ export default function SignupScreen({ navigation }) {
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 800,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
             Animated.spring(formAnim, {
                 toValue: 0,
                 tension: 20,
                 friction: 7,
                 delay: 300,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
             Animated.spring(logoAnim, {
                 toValue: 1,
                 tension: 20,
                 friction: 7,
                 delay: 150,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
             Animated.spring(titleAnim, {
                 toValue: 0,
                 tension: 20,
                 friction: 7,
                 delay: 200,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
         ]).start();
     }, []);
@@ -102,37 +101,38 @@ export default function SignupScreen({ navigation }) {
         }
     };
 
-    const handleSocialSignup = async (provider) => {
-        setSocialLoading({ ...socialLoading, [provider]: true });
-        setErrorMsg('');
-        try {
-            const signInMethod = provider === 'google' ? signInWithGoogle : signInWithFacebook;
-            const { error } = await signInMethod();
-            if (error) {
-                // Check if it's a provider not enabled error
-                if (error.message?.includes('provider is not enabled') || error.error_code === 'validation_failed') {
-                    const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
-                    setErrorMsg(`${providerName} signup is not configured yet. Please use email/password or contact support.`);
-                } else {
-                    setErrorMsg(error.message);
-                }
-                UISounds.playError();
-            } else {
-                UISounds.playSuccess();
-            }
-        } catch (err) {
-            // Handle network or other errors
-            if (err.message?.includes('provider is not enabled')) {
-                const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
-                setErrorMsg(`${providerName} signup is not configured yet. Please use email/password or contact support.`);
-            } else {
-                setErrorMsg(err.message || 'Failed to sign up with ' + provider);
-            }
-            UISounds.playError();
-        } finally {
-            setSocialLoading({ ...socialLoading, [provider]: false });
-        }
-    };
+    // COMMENTED OUT: OAuth functionality disabled
+    // const handleSocialSignup = async (provider) => {
+    //     setSocialLoading({ ...socialLoading, [provider]: true });
+    //     setErrorMsg('');
+    //     try {
+    //         const signInMethod = provider === 'google' ? signInWithGoogle : signInWithFacebook;
+    //         const { error } = await signInMethod();
+    //         if (error) {
+    //             // Check if it's a provider not enabled error
+    //             if (error.message?.includes('provider is not enabled') || error.error_code === 'validation_failed') {
+    //                 const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+    //                 setErrorMsg(`${providerName} signup is not configured yet. Please use email/password or contact support.`);
+    //             } else {
+    //                 setErrorMsg(error.message);
+    //             }
+    //             UISounds.playError();
+    //         } else {
+    //             UISounds.playSuccess();
+    //         }
+    //     } catch (err) {
+    //         // Handle network or other errors
+    //         if (err.message?.includes('provider is not enabled')) {
+    //             const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+    //             setErrorMsg(`${providerName} signup is not configured yet. Please use email/password or contact support.`);
+    //         } else {
+    //             setErrorMsg(err.message || 'Failed to sign up with ' + provider);
+    //         }
+    //         UISounds.playError();
+    //     } finally {
+    //         setSocialLoading({ ...socialLoading, [provider]: false });
+    //     }
+    // };
 
     const handleScreenTap = (event) => {
         const sounds = ['playBell', 'playWood', 'playMetal', 'playString', 'playWind'];
@@ -154,7 +154,7 @@ export default function SignupScreen({ navigation }) {
             Animated.timing(newRipple.anim, {
                 toValue: 1,
                 duration: 1000,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }).start(() => {
                 setRipples(prev => prev.filter(r => r.id !== newRipple.id));
             });
@@ -162,7 +162,7 @@ export default function SignupScreen({ navigation }) {
     };
 
     return (
-        <TouchableWithoutFeedback onPress={handleScreenTap}>
+        <Pressable onPress={handleScreenTap} style={styles.container}>
             <View style={styles.container}>
                 <LinearGradient
                     colors={['#0a0000', '#1a0505', '#0f0000', '#000000']}
@@ -240,6 +240,8 @@ export default function SignupScreen({ navigation }) {
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                                 useEnhancedSounds={true}
+                                id="signup-email"
+                                name="email"
                             />
 
                             <EnhancedAnimatedInput
@@ -249,6 +251,8 @@ export default function SignupScreen({ navigation }) {
                                 secureTextEntry
                                 autoCapitalize="none"
                                 useEnhancedSounds={true}
+                                id="signup-password"
+                                name="password"
                             />
 
                             <EnhancedAnimatedInput
@@ -258,6 +262,8 @@ export default function SignupScreen({ navigation }) {
                                 secureTextEntry
                                 autoCapitalize="none"
                                 useEnhancedSounds={true}
+                                id="signup-confirm-password"
+                                name="confirmPassword"
                             />
 
                             {errorMsg ? (
@@ -273,15 +279,16 @@ export default function SignupScreen({ navigation }) {
                                 loading={loading}
                             />
 
+                            {/* COMMENTED OUT: OAuth functionality disabled */}
                             {/* Divider */}
-                            <View style={styles.dividerContainer}>
+                            {/* <View style={styles.dividerContainer}>
                                 <View style={styles.dividerLine} />
                                 <Text style={styles.dividerText}>OR</Text>
                                 <View style={styles.dividerLine} />
-                            </View>
+                            </View> */}
 
                             {/* Social Signup Buttons - Side by Side */}
-                            <View style={styles.socialButtonsRow}>
+                            {/* <View style={styles.socialButtonsRow}>
                                 <View style={styles.socialButtonHalf}>
                                     <SocialAuthButton
                                         provider="google"
@@ -298,9 +305,9 @@ export default function SignupScreen({ navigation }) {
                                         loading={socialLoading.facebook}
                                     />
                                 </View>
-                            </View>
+                            </View> */}
 
-                            <TouchableWithoutFeedback
+                            <Pressable
                                 onPress={() => {
                                     UISounds.playTap();
                                     if (navigation && navigation.navigate) {
@@ -314,7 +321,7 @@ export default function SignupScreen({ navigation }) {
                                         <Text style={styles.loginLink}>Login</Text>
                                     </Text>
                                 </View>
-                            </TouchableWithoutFeedback>
+                            </Pressable>
                         </Animated.View>
 
                         {/* Footer */}
@@ -325,7 +332,7 @@ export default function SignupScreen({ navigation }) {
                     </Animated.View>
                 </LinearGradient>
             </View>
-        </TouchableWithoutFeedback>
+        </Pressable>
     );
 }
 
@@ -358,9 +365,6 @@ const styles = StyleSheet.create({
         marginBottom: 2,
         fontStyle: 'italic',
         letterSpacing: 0.3,
-        textShadowColor: '#FFD700',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 6,
         opacity: 0.85,
     },
     subtitle: {

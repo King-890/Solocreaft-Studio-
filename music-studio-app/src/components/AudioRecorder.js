@@ -1,100 +1,171 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { Audio } from 'expo-av';
-import { RECORDING_OPTIONS_HIGH_QUALITY, requestAudioPermissions } from '../utils/audioHelpers';
-import { supabase, uploadAudioFile } from '../services/supabase';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { useAudioRecorder } from 'expo-audio';
+import { requestAudioPermissions } from '../utils/audioHelpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useProject } from '../contexts/ProjectContext';
+import { supabase } from '../services/supabase';
+import { saveFileToLocal } from '../utils/webStorage';
 
 export default function AudioRecorder({ onRecordingSaved, tracks }) {
-    const [recording, setRecording] = useState(null);
-    const [isRecording, setIsRecording] = useState(false);
     const [duration, setDuration] = useState(0);
-    const [metering, setMetering] = useState(-160); // Initial low value
     const [uploading, setUploading] = useState(false);
     const { user } = useAuth();
     const { addClip, addRecording } = useProject();
 
+    const [localIsRecording, setLocalIsRecording] = useState(false);
+    const [starting, setStarting] = useState(false);
+
+    // useAudioRecorder hook handles the recording state and logic
+    const audioRecorder = useAudioRecorder({
+        onStatusUpdate: (status) => {
+            setDuration(status.durationMillis);
+        }
+    });
+
+    // Use local state for Web reliability, fallback to hook state for others
+    const isRecording = Platform.OS === 'web' ? localIsRecording : audioRecorder.isRecording;
+
+    // Timer effect for Web
+    useEffect(() => {
+        let interval;
+        if (isRecording && Platform.OS === 'web') {
+            interval = setInterval(() => {
+                setDuration(prev => prev + 1000);
+            }, 1000);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isRecording]);
+
+    // Cleanup effect on unmount
     useEffect(() => {
         return () => {
-            if (recording) {
-                recording.stopAndUnloadAsync();
+            if (audioRecorder.isRecording) {
+                audioRecorder.stop();
             }
         };
     }, []);
 
     const startRecording = async () => {
-        const hasPermission = await requestAudioPermissions();
-        if (!hasPermission) return;
+        if (starting || isRecording) return;
 
         try {
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: true,
-                playsInSilentModeIOS: true,
+            setStarting(true);
+            const hasPermission = await requestAudioPermissions();
+            if (!hasPermission) {
+                console.error('Audio permission denied');
+                alert('Microphone permission is required to record audio. Please enable it in your device settings.');
+                setStarting(false);
+                return;
+            }
+
+            console.log('Starting recording...');
+            await audioRecorder.prepareToRecordAsync({
+                android: {
+                    extension: '.wav',
+                    outputFormat: 'mpeg_4',
+                    audioEncoder: 'aac',
+                },
+                ios: {
+                    extension: '.wav',
+                    audioQuality: 'high',
+                    sampleRate: 44100,
+                    numberOfChannels: 2,
+                    bitRate: 128000,
+                    linearPCMBitDepth: 16,
+                    linearPCMIsBigEndian: false,
+                    linearPCMIsFloat: false,
+                },
+                web: {
+                    mimeType: 'audio/webm', // Changed to webm for better browser support
+                    bitsPerSecond: 128000,
+                },
             });
 
-            const { recording } = await Audio.Recording.createAsync(
-                RECORDING_OPTIONS_HIGH_QUALITY,
-                (status) => {
-                    setDuration(status.durationMillis);
-                    if (status.metering) {
-                        setMetering(status.metering);
-                    }
-                },
-                100 // Update interval
-            );
-
-            setRecording(recording);
-            setIsRecording(true);
-        } catch (err) {
-            console.error('Failed to start recording', err);
+            audioRecorder.record();
+            setLocalIsRecording(true);
+            setDuration(0);
+            console.log('Recording started');
+        } catch (error) {
+            console.error('Failed to start recording:', error);
+            alert(`Failed to start recording: ${error.message || 'Unknown error'}`);
+            setLocalIsRecording(false);
+        } finally {
+            setStarting(false);
         }
     };
 
     const stopRecording = async () => {
-        if (!recording) return;
+        if (starting) return;
 
-        setIsRecording(false);
         try {
-            await recording.stopAndUnloadAsync();
-            const uri = recording.getURI();
-            setRecording(null);
+            setUploading(true); // Start loading state
+            await audioRecorder.stop();
+            setLocalIsRecording(false);
+            const localUri = audioRecorder.uri;
 
-            console.log('Recording stopped. URI:', uri, 'Duration:', duration);
-            console.log('Available tracks:', tracks);
-
-            // Add clip to timeline immediately (for local playback)
-            const vocalsTrack = tracks?.find(t => t.name === 'Vocals');
-            console.log('Found Vocals track:', vocalsTrack);
-
-            if (vocalsTrack && uri && duration > 0) {
-                console.log('Adding clip to timeline...');
-                addClip(vocalsTrack.id, uri, duration);
-
-                // Also add to recordings library
-                addRecording(uri, duration);
-            } else {
-                console.warn('Cannot add clip:', { vocalsTrack, uri, duration });
-            }
-
-            // Auto-upload logic (optional, for cloud storage)
-            if (user && uri) {
-                setUploading(true);
-                const projectId = 'temp-project';
-                const { data, error } = await uploadAudioFile(uri, user.id, projectId);
+            if (!localUri) {
+                console.error('Recording stopped but no URI returned');
+                alert('Recording failed to save. Please try again.');
                 setUploading(false);
+                return;
+            }
 
-                if (error) {
-                    console.error('Upload failed:', error);
-                }
+            console.log('Recording stopped. Local URI:', localUri, 'Duration:', duration);
 
-                if (onRecordingSaved) {
-                    onRecordingSaved({ uri, duration, ...data });
+            let finalUri = localUri;
+
+            // Upload to Supabase if user is logged in
+            // REVERTED: User requested local storage only for now
+            /*
+            if (user) {
+                try {
+                    // ... upload logic removed ...
+                } catch (uploadError) {
+                    console.error('Failed to upload recording:', uploadError);
                 }
             }
+            */
+
+            // Use local URI directly
+            console.log('Saving recording locally:', localUri);
+
+            // Persist on Web
+            let savedUri = finalUri;
+            const recordingId = `recording_${Date.now()}`; // Generate ID here
+
+            if (Platform.OS === 'web') {
+                savedUri = await saveFileToLocal(finalUri, recordingId);
+                console.log('Web persistent URI:', savedUri);
+            }
+
+            // Add to recordings library (auto-save)
+            // Pass the ID so we can rehydrate it later
+            const savedRecording = addRecording(savedUri, duration, recordingId);
+            console.log('✅ Recording auto-saved to library:', savedRecording.name);
+
+            // Also add clip to timeline if vocals track exists
+            const vocalsTrack = tracks?.find(t => t.name === 'Lead Vocals' || t.name === 'Vocals');
+            if (vocalsTrack && finalUri && duration > 0) {
+                addClip(vocalsTrack.id, savedUri, duration, recordingId);
+                console.log('✅ Clip added to timeline');
+            }
+
+            // Show success feedback
+            if (onRecordingSaved) {
+                onRecordingSaved({ uri: finalUri, duration, recording: savedRecording });
+            }
+
+            // Reset duration
+            setDuration(0);
         } catch (error) {
-            console.error('Failed to stop recording', error);
+            console.error('Failed to stop recording:', error);
+            alert(`Failed to save recording: ${error.message || 'Unknown error'}`);
+        } finally {
             setUploading(false);
+            setLocalIsRecording(false);
         }
     };
 
@@ -105,9 +176,8 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
         return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     };
 
-    // Simple visualizer based on metering (dB)
-    // Metering range is typically -160 to 0
-    const visualizerHeight = Math.max(0, (metering + 160) / 160) * 100;
+    // Simple visualizer based on recording state
+    const visualizerHeight = isRecording ? 50 : 0;
 
     return (
         <View style={styles.container}>
@@ -130,7 +200,7 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
                 )}
             </View>
             <Text style={styles.statusText}>
-                {isRecording ? 'Recording...' : uploading ? 'Saving...' : 'Ready'}
+                {isRecording ? 'Recording...' : uploading ? 'Saving...' : 'Tap to record'}
             </Text>
         </View>
     );
@@ -169,14 +239,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     recordButton: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
+        width: 72,
+        height: 72,
+        borderRadius: 36,
         backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 4,
-        borderColor: '#ccc',
+        borderColor: '#e0e0e0',
+        boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.3)',
+        elevation: 8,
     },
     recordingButton: {
         borderColor: '#ff0000',
@@ -195,7 +267,9 @@ const styles = StyleSheet.create({
     },
     statusText: {
         color: '#888',
-        marginTop: 10,
-        fontSize: 12,
+        marginTop: 15,
+        fontSize: 14,
+        fontWeight: '500',
+        letterSpacing: 1,
     },
 });

@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, StatusBar, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import RecordingsLibrary from '../components/RecordingsLibrary';
+import ProjectsLibrary from '../components/ProjectsLibrary';
 import { COLORS, SPACING } from '../constants/UIConfig';
 
 export default function LibraryScreen() {
     const navigation = useNavigation();
+    const [activeTab, setActiveTab] = useState('recordings'); // 'recordings' or 'projects'
 
     const handleNewProject = () => {
         navigation.navigate('Studio', { projectId: 'new' });
@@ -40,12 +42,36 @@ export default function LibraryScreen() {
             {/* Decorative wave line */}
             <View style={styles.waveLine} />
 
-            {/* Recordings Section */}
+            {/* Tab Switcher */}
+            <View style={styles.tabContainer}>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'recordings' && styles.activeTab]}
+                    onPress={() => setActiveTab('recordings')}
+                >
+                    <Text style={[styles.tabText, activeTab === 'recordings' && styles.activeTabText]}>
+                        🎙️ Recordings
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'projects' && styles.activeTab]}
+                    onPress={() => setActiveTab('projects')}
+                >
+                    <Text style={[styles.tabText, activeTab === 'projects' && styles.activeTabText]}>
+                        📁 Projects
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* Content Section */}
             <ScrollView
                 style={styles.content}
                 showsVerticalScrollIndicator={false}
             >
-                <RecordingsLibrary />
+                {activeTab === 'recordings' ? (
+                    <RecordingsLibrary />
+                ) : (
+                    <ProjectsLibrary />
+                )}
 
                 {/* Bottom spacing */}
                 <View style={{ height: 60 }} />
@@ -94,10 +120,6 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: COLORS.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
         elevation: 5,
     },
     newButtonIcon: {
@@ -117,6 +139,34 @@ const styles = StyleSheet.create({
         marginHorizontal: SPACING.lg,
         marginBottom: SPACING.md,
         opacity: 0.3,
+    },
+    tabContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: SPACING.lg,
+        marginBottom: SPACING.md,
+        gap: 12,
+    },
+    tab: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        backgroundColor: '#2a2a2a',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#333',
+    },
+    activeTab: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    tabText: {
+        color: '#888',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    activeTabText: {
+        color: '#fff',
     },
     content: {
         flex: 1,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated, Alert, TextInput, Modal, Platform } from 'react-native';
 import AudioRecorder from '../components/AudioRecorder';
 import Piano from '../components/Piano';
 import DrumMachine from '../components/DrumMachine';
@@ -19,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import ProjectManager from '../services/ProjectManager';
 import AnimatedCard from '../components/AnimatedCard';
+import ImmersiveBackground from '../components/ImmersiveBackground';
 
 const INSTRUMENTS = [
     { id: 'timeline', name: 'Timeline' },
@@ -40,7 +41,7 @@ export default function StudioScreen({ route }) {
     const initialInstrument = route?.params?.initialInstrument || 'timeline';
     const [activeInstrument, setActiveInstrument] = useState(initialInstrument);
     const [showExportModal, setShowExportModal] = useState(false);
-    const { tracks } = useProject();
+    const { tracks, saveCurrentProject, currentProjectName } = useProject();
     const { user } = useAuth();
     const navigation = useNavigation();
 
@@ -58,14 +59,14 @@ export default function StudioScreen({ route }) {
         Animated.timing(fadeAnim, {
             toValue: 0,
             duration: 150,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start(() => {
             setActiveInstrument(instrumentId);
             // Fade in
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 250,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }).start();
         });
     };
@@ -74,31 +75,30 @@ export default function StudioScreen({ route }) {
         console.log('Recording saved:', data);
     };
 
-    const handleSaveProject = async () => {
-        if (!user) {
-            alert('Please log in to save projects');
-            return;
-        }
-
-        try {
-            const projectData = {
-                name: `Project ${new Date().toLocaleDateString()}`,
-                user_id: user.id,
-                tracks: JSON.stringify(tracks),
-                tempo: 120,
-            };
-
-            const { data, error } = await ProjectManager.createProject(projectData);
-
-            if (error) {
-                alert('Failed to save project: ' + error.message);
-            } else {
-                alert('Project saved successfully!');
-            }
-        } catch (error) {
-            console.error('Save error details:', error);
-            alert(`Failed to save project: ${error.message || 'Unknown error'}. Please check database setup.`);
-        }
+    const handleSaveProject = () => {
+        Alert.prompt(
+            'Save Project',
+            'Enter a name for your project:',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel'
+                },
+                {
+                    text: 'Save',
+                    onPress: (projectName) => {
+                        if (projectName && projectName.trim()) {
+                            const project = saveCurrentProject(projectName.trim());
+                            Alert.alert('Success', `Project "${project.name}" saved successfully!`);
+                        } else {
+                            Alert.alert('Error', 'Please enter a valid project name');
+                        }
+                    }
+                }
+            ],
+            'plain-text',
+            currentProjectName
+        );
     };
 
     const renderInstrument = () => {
@@ -135,65 +135,67 @@ export default function StudioScreen({ route }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => navigation.goBack()}
-                >
-                    <Text style={styles.backButtonText}>← Back</Text>
-                </TouchableOpacity>
-                <Text style={styles.title}>Studio</Text>
-                <View style={styles.headerButtons}>
-                    <AnimatedCard
-                        onPress={handleSaveProject}
-                        style={styles.iconButton}
+        <ImmersiveBackground>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
                     >
-                        <Text style={styles.iconButtonText}>💾</Text>
-                    </AnimatedCard>
-                    <AnimatedCard
-                        onPress={() => setShowExportModal(true)}
-                        style={styles.exportButton}
-                    >
-                        <Text style={styles.exportButtonText}>Export</Text>
-                    </AnimatedCard>
-                </View>
-            </View>
-
-            <View style={styles.selectorContainer}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {INSTRUMENTS.map((inst) => (
-                        <TouchableOpacity
-                            key={inst.id}
-                            style={[
-                                styles.selectorButton,
-                                activeInstrument === inst.id && styles.activeSelector
-                            ]}
-                            onPress={() => handleInstrumentChange(inst.id)}
+                        <Text style={styles.backButtonText}>← Back</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Studio</Text>
+                    <View style={styles.headerButtons}>
+                        <AnimatedCard
+                            onPress={handleSaveProject}
+                            style={styles.iconButton}
                         >
-                            <Text style={[
-                                styles.selectorText,
-                                activeInstrument === inst.id && styles.activeSelectorText
-                            ]}>
-                                {inst.name}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View>
+                            <Text style={styles.iconButtonText}>💾</Text>
+                        </AnimatedCard>
+                        <AnimatedCard
+                            onPress={() => setShowExportModal(true)}
+                            style={styles.exportButton}
+                        >
+                            <Text style={styles.exportButtonText}>Export</Text>
+                        </AnimatedCard>
+                    </View>
+                </View>
 
-            <View style={styles.workspace}>
-                <Animated.View style={[styles.instrumentArea, { opacity: fadeAnim }]}>
-                    {renderInstrument()}
-                </Animated.View>
-            </View>
+                <View style={styles.selectorContainer}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={true} indicatorStyle="white">
+                        {INSTRUMENTS.map((inst) => (
+                            <TouchableOpacity
+                                key={inst.id}
+                                style={[
+                                    styles.selectorButton,
+                                    activeInstrument === inst.id && styles.activeSelector
+                                ]}
+                                onPress={() => handleInstrumentChange(inst.id)}
+                            >
+                                <Text style={[
+                                    styles.selectorText,
+                                    activeInstrument === inst.id && styles.activeSelectorText
+                                ]}>
+                                    {inst.name}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
 
-            <ExportModal
-                visible={showExportModal}
-                onClose={() => setShowExportModal(false)}
-                projectName="My Project"
-            />
-        </SafeAreaView>
+                <View style={styles.workspace}>
+                    <Animated.View style={[styles.instrumentArea, { opacity: fadeAnim }]}>
+                        {renderInstrument()}
+                    </Animated.View>
+                </View>
+
+                <ExportModal
+                    visible={showExportModal}
+                    onClose={() => setShowExportModal(false)}
+                    projectName="My Project"
+                />
+            </SafeAreaView>
+        </ImmersiveBackground>
     );
 }
 

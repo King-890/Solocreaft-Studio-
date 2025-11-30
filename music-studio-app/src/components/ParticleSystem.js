@@ -1,8 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Animated, StyleSheet, Dimensions, Easing } from 'react-native';
+import { View, Animated, StyleSheet, useWindowDimensions, Easing, Platform } from 'react-native';
 import { COLORS } from '../constants/DesignSystem';
-
-const { width, height } = Dimensions.get('window');
 
 const PARTICLE_TYPES = {
     PETAL: 'petal',
@@ -10,6 +8,7 @@ const PARTICLE_TYPES = {
 };
 
 const Particle = ({ type, startX, delay }) => {
+    const { width, height } = useWindowDimensions();
     const translateY = useRef(new Animated.Value(-50)).current;
     const translateX = useRef(new Animated.Value(startX)).current;
     const opacity = useRef(new Animated.Value(0)).current;
@@ -26,22 +25,22 @@ const Particle = ({ type, startX, delay }) => {
                     toValue: height + 50,
                     duration: duration,
                     easing: Easing.linear,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
                 Animated.timing(translateX, {
                     toValue: startX + (Math.random() * 400 - 100), // Stronger drift to the right (wind)
                     duration: duration,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
                 Animated.sequence([
-                    Animated.timing(opacity, { toValue: 0.9, duration: 1000, useNativeDriver: true }),
+                    Animated.timing(opacity, { toValue: 0.9, duration: 1000, useNativeDriver: Platform.OS !== 'web' }),
                     Animated.delay(duration - 2000),
-                    Animated.timing(opacity, { toValue: 0, duration: 1000, useNativeDriver: true }),
+                    Animated.timing(opacity, { toValue: 0, duration: 1000, useNativeDriver: Platform.OS !== 'web' }),
                 ]),
                 Animated.timing(rotate, {
                     toValue: 1,
                     duration: duration,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
             ])
         ]).start(() => {
@@ -78,6 +77,7 @@ const Particle = ({ type, startX, delay }) => {
 };
 
 export default function ParticleSystem({ count = 30 }) {
+    const { width } = useWindowDimensions();
     const [particles, setParticles] = useState([]);
 
     useEffect(() => {
@@ -94,7 +94,7 @@ export default function ParticleSystem({ count = 30 }) {
     }, []);
 
     return (
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
             {particles.map(p => (
                 <Particle key={p.id} type={p.type} startX={p.startX} delay={p.delay} />
             ))}
@@ -114,10 +114,6 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         borderTopRightRadius: 0,
         backgroundColor: COLORS.petal,
-        shadowColor: COLORS.petalDark,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
-        shadowRadius: 3,
     },
     note: {
         width: 8,

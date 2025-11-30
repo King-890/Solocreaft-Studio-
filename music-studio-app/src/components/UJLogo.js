@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, Animated, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 /**
- * UJ Logo - Professional Company Branding
- * Heartbeat wave animation representing life, passion, and rhythm
+ * UJ Logo Component
+ * Professional animated logo with heartbeat effect, waves, and particles
  */
 export default function UJLogo({ size = 120, showText = false }) {
     // Heartbeat animations
@@ -29,23 +29,23 @@ export default function UJLogo({ size = 120, showText = false }) {
                 Animated.timing(heartbeat, {
                     toValue: 1.12,
                     duration: 150,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
                 Animated.timing(heartbeat, {
                     toValue: 1,
                     duration: 150,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
                 // Second beat (dub)
                 Animated.timing(heartbeat, {
                     toValue: 1.08,
                     duration: 120,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
                 Animated.timing(heartbeat, {
                     toValue: 1,
                     duration: 180,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
                 // Pause
                 Animated.delay(600),
@@ -61,12 +61,12 @@ export default function UJLogo({ size = 120, showText = false }) {
                     Animated.timing(wave, {
                         toValue: 1,
                         duration: 2500,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                     Animated.timing(wave, {
                         toValue: 0,
                         duration: 0,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                 ])
             ).start();
@@ -102,12 +102,12 @@ export default function UJLogo({ size = 120, showText = false }) {
                     Animated.timing(anim, {
                         toValue: 1,
                         duration: 3200,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                     Animated.timing(anim, {
                         toValue: 0,
                         duration: 0,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                 ])
             ).start();
@@ -202,10 +202,6 @@ export default function UJLogo({ size = 120, showText = false }) {
             >
                 <Animated.View
                     style={{
-                        shadowColor: '#FF4500',
-                        shadowOffset: { width: 0, height: 0 },
-                        shadowOpacity: glowIntensity,
-                        shadowRadius: glowRadius,
                         elevation: 15,
                     }}
                 >
@@ -277,10 +273,6 @@ const styles = StyleSheet.create({
         width: 4,
         height: 4,
         borderRadius: 2,
-        shadowColor: '#FFD700',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.6,
-        shadowRadius: 6,
     },
     logoCore: {
         alignItems: 'center',
@@ -306,27 +298,23 @@ const styles = StyleSheet.create({
         position: 'absolute',
         fontWeight: '900',
         color: '#000',
-        letterSpacing: 2,
-        textShadowColor: 'rgba(0, 0, 0, 0.7)',
-        textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 4,
+        opacity: 0.3,
+        // Web compatibility
+        ...Platform.select({
+            web: {
+                textShadow: '0 0 0 rgba(0,0,0,0.3)', // Reset native shadow
+            }
+        })
     },
     mainText: {
         fontWeight: '900',
         color: '#fff',
         letterSpacing: 2,
-        textShadowColor: '#FFD700',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10,
     },
     heartbeatLine: {
         position: 'absolute',
         height: 1.5,
         backgroundColor: '#FFD700',
-        shadowColor: '#FFD700',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.7,
-        shadowRadius: 6,
     },
     ekgPath: {
         width: '100%',
@@ -337,9 +325,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         color: '#FFD700',
         fontWeight: 'bold',
-        textShadowColor: '#FFD700',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10,
         opacity: 0.8,
     },
     textBelow: {
@@ -352,8 +337,5 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         color: '#FF4500',
         letterSpacing: 3,
-        textShadowColor: '#FF4500',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 20,
     },
 });

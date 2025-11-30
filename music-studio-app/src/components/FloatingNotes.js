@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Animated, View, StyleSheet } from 'react-native';
+import { Animated, View, StyleSheet, Platform } from 'react-native';
 
 export default function FloatingNotes() {
     const notes = ['♪', '♫', '♬', '♩', '𝄞'];
@@ -25,46 +25,46 @@ export default function FloatingNotes() {
                         Animated.timing(anim.opacity, {
                             toValue: 0.3,
                             duration: 1000,
-                            useNativeDriver: true,
+                            useNativeDriver: Platform.OS !== 'web',
                         }),
                         Animated.timing(anim.scale, {
                             toValue: 1 + Math.random() * 0.5,
                             duration: 1000,
-                            useNativeDriver: true,
+                            useNativeDriver: Platform.OS !== 'web',
                         }),
                     ]),
                     Animated.parallel([
                         Animated.timing(anim.translateY, {
                             toValue: -800,
                             duration: duration,
-                            useNativeDriver: true,
+                            useNativeDriver: Platform.OS !== 'web',
                         }),
                         Animated.timing(anim.translateX, {
                             toValue: xOffset,
                             duration: duration,
-                            useNativeDriver: true,
+                            useNativeDriver: Platform.OS !== 'web',
                         }),
                     ]),
                     Animated.timing(anim.opacity, {
                         toValue: 0,
                         duration: 1000,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                     Animated.parallel([
                         Animated.timing(anim.translateY, {
                             toValue: 0,
                             duration: 0,
-                            useNativeDriver: true,
+                            useNativeDriver: Platform.OS !== 'web',
                         }),
                         Animated.timing(anim.translateX, {
                             toValue: 0,
                             duration: 0,
-                            useNativeDriver: true,
+                            useNativeDriver: Platform.OS !== 'web',
                         }),
                         Animated.timing(anim.scale, {
                             toValue: 1,
                             duration: 0,
-                            useNativeDriver: true,
+                            useNativeDriver: Platform.OS !== 'web',
                         }),
                     ]),
                 ])
@@ -73,7 +73,7 @@ export default function FloatingNotes() {
     }, []);
 
     return (
-        <View style={styles.container} pointerEvents="none">
+        <View style={[styles.container, { pointerEvents: 'none' }]}>
             {animations.map((anim, index) => (
                 <Animated.Text
                     key={index}

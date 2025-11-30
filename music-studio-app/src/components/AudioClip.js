@@ -1,53 +1,155 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useProject } from '../contexts/ProjectContext';
 
-const PIXELS_PER_SECOND = 50;
+export default function AudioClip({ clip, pixelsPerSecond, trackColor }) {
+    const { selectedClipId, setSelectedClipId, deleteClip } = useProject();
 
-export default function AudioClip({ clip }) {
-    const { currentTime } = useProject();
+    const isSelected = selectedClipId === clip.id;
+    const clipWidth = (clip.duration / 1000) * pixelsPerSecond;
+    const clipLeft = (clip.startTime / 1000) * pixelsPerSecond;
 
-    const left = (clip.startTime / 1000) * PIXELS_PER_SECOND;
-    const width = (clip.duration / 1000) * PIXELS_PER_SECOND;
+    const handlePress = () => {
+        setSelectedClipId(clip.id);
+    };
 
-    // Highlight if playhead is over this clip
-    const isPlaying = currentTime >= clip.startTime && currentTime <= (clip.startTime + clip.duration);
+    const handleDelete = () => {
+        if (confirm('Delete this clip?')) {
+            deleteClip(clip.id);
+        }
+    };
 
     return (
         <TouchableOpacity
             style={[
-                styles.clip,
-                { left, width },
-                isPlaying && styles.clipPlaying
+                styles.container,
+                {
+                    left: clipLeft,
+                    width: clipWidth,
+                    backgroundColor: trackColor || '#6200ee',
+                    borderColor: isSelected ? '#03dac6' : 'transparent',
+                }
             ]}
+            onPress={handlePress}
             activeOpacity={0.8}
         >
-            <Text style={styles.clipText} numberOfLines={1}>
-                Recording
-            </Text>
+            {/* Clip Content */}
+            <View style={styles.content}>
+                <Text style={styles.clipName} numberOfLines={1}>
+                    {clip.type === 'audio' ? '🎤' : '🎵'} Clip
+                </Text>
+
+                {/* Waveform placeholder */}
+                <View style={styles.waveform}>
+                    {Array.from({ length: Math.floor(clipWidth / 4) }).map((_, i) => (
+                        <View
+                            key={i}
+                            style={[
+                                styles.waveformBar,
+                                { height: `${20 + Math.random() * 60}%` }
+                            ]}
+                        />
+                    ))}
+                </View>
+            </View>
+
+            {/* Selection Border */}
+            {isSelected && (
+                <>
+                    <View style={styles.selectionBorder} />
+                    <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={handleDelete}
+                    >
+                        <Text style={styles.deleteButtonText}>×</Text>
+                    </TouchableOpacity>
+                </>
+            )}
+
+            {/* Trim Handles (for future implementation) */}
+            {isSelected && (
+                <>
+                    <View style={[styles.trimHandle, styles.trimHandleLeft]} />
+                    <View style={[styles.trimHandle, styles.trimHandleRight]} />
+                </>
+            )}
         </TouchableOpacity>
     );
 }
 
 const styles = StyleSheet.create({
-    clip: {
+    container: {
         position: 'absolute',
-        height: 60,
-        backgroundColor: '#03dac6',
-        borderRadius: 4,
-        justifyContent: 'center',
-        paddingHorizontal: 8,
         top: 10,
-        borderWidth: 1,
-        borderColor: '#05f5db',
+        height: 80,
+        borderRadius: 6,
+        borderWidth: 2,
+        overflow: 'hidden',
+        opacity: 0.9,
     },
-    clipPlaying: {
-        backgroundColor: '#05f5db',
-        borderColor: '#fff',
+    content: {
+        flex: 1,
+        padding: 6,
     },
-    clipText: {
-        color: '#000',
-        fontSize: 12,
+    clipName: {
+        color: '#fff',
+        fontSize: 11,
         fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    waveform: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 2,
+    },
+    waveformBar: {
+        width: 2,
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        borderRadius: 1,
+    },
+    selectionBorder: {
+        ...StyleSheet.absoluteFillObject,
+        borderWidth: 2,
+        borderColor: '#03dac6',
+        borderRadius: 6,
+        pointerEvents: 'none',
+    },
+    deleteButton: {
+        position: 'absolute',
+        top: -10,
+        right: -10,
+        width: 24,
+        height: 24,
+        backgroundColor: '#cf6679',
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#1a1a1a',
+    },
+    deleteButtonText: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: -2,
+    },
+    trimHandle: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        width: 8,
+        backgroundColor: '#03dac6',
+        opacity: 0.8,
+    },
+    trimHandleLeft: {
+        left: 0,
+        borderTopLeftRadius: 6,
+        borderBottomLeftRadius: 6,
+    },
+    trimHandleRight: {
+        right: 0,
+        borderTopRightRadius: 6,
+        borderBottomRightRadius: 6,
     },
 });

@@ -29,7 +29,7 @@ class AudioPlaybackService {
             return audioBuffer;
         } catch (error) {
             console.error('Error loading audio:', error);
-            return null;
+            throw new Error('Failed to load audio file. It may be missing or expired.');
         }
     }
 

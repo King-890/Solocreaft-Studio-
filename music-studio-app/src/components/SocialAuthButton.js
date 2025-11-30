@@ -6,6 +6,7 @@ import {
     Animated,
     View,
     ActivityIndicator,
+    Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -18,18 +19,21 @@ export default function SocialAuthButton({
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const glowAnim = useRef(new Animated.Value(0)).current;
 
+    // Web animations must use useNativeDriver: false
+    const useNativeDriver = Platform.OS !== 'web';
+
     useEffect(() => {
         Animated.loop(
             Animated.sequence([
                 Animated.timing(glowAnim, {
                     toValue: 1,
                     duration: 2000,
-                    useNativeDriver: true,
+                    useNativeDriver,
                 }),
                 Animated.timing(glowAnim, {
                     toValue: 0,
                     duration: 2000,
-                    useNativeDriver: true,
+                    useNativeDriver,
                 }),
             ])
         ).start();
@@ -38,7 +42,7 @@ export default function SocialAuthButton({
     const handlePressIn = () => {
         Animated.spring(scaleAnim, {
             toValue: 0.95,
-            useNativeDriver: true,
+            useNativeDriver,
         }).start();
     };
 
@@ -47,7 +51,7 @@ export default function SocialAuthButton({
             toValue: 1,
             friction: 3,
             tension: 40,
-            useNativeDriver: true,
+            useNativeDriver,
         }).start();
     };
 
@@ -105,7 +109,20 @@ export default function SocialAuthButton({
                     colors={config.colors}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={styles.gradient}
+                    style={[
+                        styles.gradient,
+                        Platform.select({
+                            web: {
+                                boxShadow: `0 4px 12px ${config.shadowColor}66`,
+                            },
+                            default: {
+                                shadowColor: config.shadowColor,
+                                shadowOffset: { width: 0, height: 4 },
+                                shadowOpacity: 0.3,
+                                shadowRadius: 8,
+                            },
+                        }),
+                    ]}
                 >
                     {/* Glow effect */}
                     <Animated.View
@@ -118,18 +135,18 @@ export default function SocialAuthButton({
                         ]}
                     />
 
-                    <View style={styles.content}>
-                        {loading ? (
-                            <ActivityIndicator color="#fff" size="small" />
-                        ) : (
-                            <>
-                                <View style={styles.iconContainer}>
-                                    <Text style={styles.icon}>{config.icon}</Text>
-                                </View>
-                                <Text style={styles.text}>{config.text}</Text>
-                            </>
-                        )}
-                    </View>
+                    {loading ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                        <View style={styles.contentContainer}>
+                            <View style={styles.iconContainer}>
+                                <Text style={styles.iconText}>{config.icon}</Text>
+                            </View>
+                            <Text style={styles.buttonText}>
+                                Continue with {config.text}
+                            </Text>
+                        </View>
+                    )}
                 </LinearGradient>
             </TouchableOpacity>
         </Animated.View>
@@ -138,48 +155,44 @@ export default function SocialAuthButton({
 
 const styles = StyleSheet.create({
     container: {
-        marginVertical: 6,
-        borderRadius: 12,
-        overflow: 'hidden',
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        width: '100%',
+        marginBottom: 16,
     },
     gradient: {
+        padding: 1,
         borderRadius: 12,
-        overflow: 'hidden',
+        height: 56,
+        justifyContent: 'center',
+        elevation: 4,
     },
     glowOverlay: {
         ...StyleSheet.absoluteFillObject,
         borderRadius: 12,
     },
-    content: {
+    contentContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 12,
+        height: '100%',
     },
     iconContainer: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        alignItems: 'center',
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#fff',
         justifyContent: 'center',
-        marginRight: 8,
+        alignItems: 'center',
+        marginRight: 12,
     },
-    icon: {
-        fontSize: 14,
+    iconText: {
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#333',
     },
-    text: {
+    buttonText: {
         color: '#fff',
-        fontSize: 13,
+        fontSize: 16,
         fontWeight: '600',
-        letterSpacing: 0.3,
+        letterSpacing: 0.5,
     },
 });

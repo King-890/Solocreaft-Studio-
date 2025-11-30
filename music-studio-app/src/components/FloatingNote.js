@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, Easing } from 'react-native';
+import { Animated, StyleSheet, Text, Easing, Platform } from 'react-native';
 import { COLORS } from '../constants/DesignSystem';
 
 const NOTES = ['♪', '♫', '♬', '♩'];
@@ -28,14 +28,14 @@ export default function FloatingNote({ delay = 0, startX, startY, duration = 400
                     Animated.timing(translateY, {
                         toValue: -200 - Math.random() * 100,
                         duration: duration,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                         easing: Easing.out(Easing.sin),
                     }),
                     // Drift side to side
                     Animated.timing(translateX, {
                         toValue: (Math.random() - 0.5) * 100,
                         duration: duration,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                         easing: Easing.inOut(Easing.sin),
                     }),
                     // Fade in then out
@@ -43,19 +43,19 @@ export default function FloatingNote({ delay = 0, startX, startY, duration = 400
                         Animated.timing(opacity, {
                             toValue: 0.8,
                             duration: duration * 0.2,
-                            useNativeDriver: true,
+                            useNativeDriver: Platform.OS !== 'web',
                         }),
                         Animated.timing(opacity, {
                             toValue: 0,
                             duration: duration * 0.8,
-                            useNativeDriver: true,
+                            useNativeDriver: Platform.OS !== 'web',
                         }),
                     ]),
                     // Scale up slightly
                     Animated.timing(scale, {
                         toValue: 1.2,
                         duration: duration,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                 ])
             ]).start(() => {
@@ -92,9 +92,6 @@ const styles = StyleSheet.create({
     note: {
         position: 'absolute',
         color: COLORS.textGold,
-        textShadowColor: COLORS.primary,
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 5,
         fontWeight: 'bold',
     },
 });

@@ -4,10 +4,9 @@ import {
     Text,
     StyleSheet,
     Animated,
-    TouchableWithoutFeedback,
     TouchableOpacity,
-    Dimensions,
-    Platform
+    Pressable,
+    Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,16 +16,16 @@ import FloatingNotes from '../components/FloatingNotes';
 import SocialAuthButton from '../components/SocialAuthButton';
 import SoloCraftLogo from '../components/SoloCraftLogo';
 import UISounds from '../utils/UISounds';
-
-const { width, height } = Dimensions.get('window');
+import { getUserFriendlyErrorMessage } from '../utils/errorMessages';
 
 export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [socialLoading, setSocialLoading] = useState({ google: false, facebook: false });
+    // COMMENTED OUT: OAuth functionality disabled
+    // const [socialLoading, setSocialLoading] = useState({ google: false, facebook: false });
     const [errorMsg, setErrorMsg] = useState('');
-    const { signIn, signInWithGoogle, signInWithFacebook } = useAuth();
+    const { signIn } = useAuth(); // Removed: signInWithGoogle, signInWithFacebook
 
     // Animation values
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -45,27 +44,27 @@ export default function LoginScreen({ navigation }) {
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 800,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
             Animated.spring(titleAnim, {
                 toValue: 0,
                 tension: 20,
                 friction: 7,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
             Animated.spring(formAnim, {
                 toValue: 0,
                 tension: 20,
                 friction: 7,
                 delay: 300,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
             Animated.spring(logoAnim, {
                 toValue: 1,
                 tension: 20,
                 friction: 7,
                 delay: 150,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
         ]).start();
 
@@ -73,7 +72,7 @@ export default function LoginScreen({ navigation }) {
             Animated.timing(logoRotate, {
                 toValue: 1,
                 duration: 20000,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             })
         ).start();
     }, []);
@@ -84,50 +83,51 @@ export default function LoginScreen({ navigation }) {
         try {
             const { error } = await signIn(email, password);
             if (error) {
-                setErrorMsg(error.message);
+                setErrorMsg(getUserFriendlyErrorMessage(error));
                 UISounds.playError();
             } else {
                 UISounds.playSuccess();
             }
         } catch (err) {
-            setErrorMsg(err.message);
+            setErrorMsg(getUserFriendlyErrorMessage(err));
             UISounds.playError();
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSocialLogin = async (provider) => {
-        setSocialLoading({ ...socialLoading, [provider]: true });
-        setErrorMsg('');
-        try {
-            const signInMethod = provider === 'google' ? signInWithGoogle : signInWithFacebook;
-            const { error } = await signInMethod();
-            if (error) {
-                // Check if it's a provider not enabled error
-                if (error.message?.includes('provider is not enabled') || error.error_code === 'validation_failed') {
-                    const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
-                    setErrorMsg(`${providerName} login is not configured yet. Please use email/password or contact support.`);
-                } else {
-                    setErrorMsg(error.message);
-                }
-                UISounds.playError();
-            } else {
-                UISounds.playSuccess();
-            }
-        } catch (err) {
-            // Handle network or other errors
-            if (err.message?.includes('provider is not enabled')) {
-                const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
-                setErrorMsg(`${providerName} login is not configured yet. Please use email/password or contact support.`);
-            } else {
-                setErrorMsg(err.message || 'Failed to sign in with ' + provider);
-            }
-            UISounds.playError();
-        } finally {
-            setSocialLoading({ ...socialLoading, [provider]: false });
-        }
-    };
+    // COMMENTED OUT: OAuth functionality disabled
+    // const handleSocialLogin = async (provider) => {
+    //     setSocialLoading({ ...socialLoading, [provider]: true });
+    //     setErrorMsg('');
+    //     try {
+    //         const signInMethod = provider === 'google' ? signInWithGoogle : signInWithFacebook;
+    //         const { error } = await signInMethod();
+    //         if (error) {
+    //             // Check if it's a provider not enabled error
+    //             if (error.message?.includes('provider is not enabled') || error.error_code === 'validation_failed') {
+    //                 const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+    //                 setErrorMsg(`${providerName} login is not configured yet. Please use email/password or contact support.`);
+    //             } else {
+    //                 setErrorMsg(error.message);
+    //             }
+    //             UISounds.playError();
+    //         } else {
+    //             UISounds.playSuccess();
+    //         }
+    //     } catch (err) {
+    //         // Handle network or other errors
+    //         if (err.message?.includes('provider is not enabled')) {
+    //             const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+    //             setErrorMsg(`${providerName} login is not configured yet. Please use email/password or contact support.`);
+    //         } else {
+    //             setErrorMsg(err.message || 'Failed to sign in with ' + provider);
+    //         }
+    //         UISounds.playError();
+    //     } finally {
+    //         setSocialLoading({ ...socialLoading, [provider]: false });
+    //     }
+    // };
 
     const handleScreenTap = (event) => {
         UISounds.playTap();
@@ -146,7 +146,7 @@ export default function LoginScreen({ navigation }) {
             Animated.timing(newRipple.anim, {
                 toValue: 1,
                 duration: 1000,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }).start(() => {
                 setRipples(prev => prev.filter(r => r.id !== newRipple.id));
             });
@@ -159,7 +159,7 @@ export default function LoginScreen({ navigation }) {
     });
 
     return (
-        <TouchableWithoutFeedback onPress={handleScreenTap}>
+        <Pressable onPress={handleScreenTap} style={{ flex: 1 }}>
             <View style={styles.container}>
                 <LinearGradient
                     colors={['#0f0520', '#1a0a33', '#2d1b4e', '#0f0520']}
@@ -233,6 +233,8 @@ export default function LoginScreen({ navigation }) {
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                                 useEnhancedSounds={false}
+                                id="login-email"
+                                name="email"
                             />
 
                             <EnhancedAnimatedInput
@@ -242,6 +244,8 @@ export default function LoginScreen({ navigation }) {
                                 secureTextEntry
                                 autoCapitalize="none"
                                 useEnhancedSounds={false}
+                                id="login-password"
+                                name="password"
                             />
 
                             {errorMsg ? (
@@ -257,15 +261,16 @@ export default function LoginScreen({ navigation }) {
                                 loading={loading}
                             />
 
+                            {/* COMMENTED OUT: OAuth functionality disabled */}
                             {/* Divider */}
-                            <View style={styles.dividerContainer}>
+                            {/* <View style={styles.dividerContainer}>
                                 <View style={styles.dividerLine} />
                                 <Text style={styles.dividerText}>OR</Text>
                                 <View style={styles.dividerLine} />
-                            </View>
+                            </View> */}
 
                             {/* Social Login Buttons - Side by Side */}
-                            <View style={styles.socialButtonsRow}>
+                            {/* <View style={styles.socialButtonsRow}>
                                 <View style={styles.socialButtonHalf}>
                                     <SocialAuthButton
                                         provider="google"
@@ -282,7 +287,7 @@ export default function LoginScreen({ navigation }) {
                                         loading={socialLoading.facebook}
                                     />
                                 </View>
-                            </View>
+                            </View> */}
 
                             <TouchableOpacity
                                 onPress={() => {
@@ -309,7 +314,7 @@ export default function LoginScreen({ navigation }) {
                     </Animated.View>
                 </LinearGradient>
             </View>
-        </TouchableWithoutFeedback>
+        </Pressable>
     );
 }
 
@@ -348,9 +353,6 @@ const styles = StyleSheet.create({
         color: '#BA55D3',
         textAlign: 'center',
         marginBottom: 4,
-        textShadowColor: '#9370DB',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 18,
         letterSpacing: 1.2,
     },
     subtitle: {

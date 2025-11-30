@@ -8,7 +8,7 @@ class InstrumentAudio {
         this.instrumentSettings = new Map(); // Store settings per instrument
     }
 
-    initialize() {
+    async initialize() {
         if (!this.audioContext) {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.masterGain = this.audioContext.createGain();
@@ -17,8 +17,17 @@ class InstrumentAudio {
         }
 
         // Resume context on user interaction
-        if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume();
+        await this.resumeContext();
+    }
+
+    async resumeContext() {
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            try {
+                await this.audioContext.resume();
+                console.log('✅ InstrumentAudio context resumed');
+            } catch (error) {
+                console.error('❌ Failed to resume InstrumentAudio context:', error);
+            }
         }
     }
 
@@ -44,8 +53,8 @@ class InstrumentAudio {
     }
 
     // Play instrument sound based on type with spatial positioning and settings
-    playInstrument(instrumentName, duration = 1.5, spatialPosition = null, instrumentId = null) {
-        this.initialize();
+    async playInstrument(instrumentName, duration = 1.5, spatialPosition = null, instrumentId = null) {
+        await this.initialize();
 
         const now = this.audioContext.currentTime;
         const settings = instrumentId ? this.getSettings(instrumentId) : this.getDefaultSettings();

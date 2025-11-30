@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { TextInput, Animated, StyleSheet, Text, View } from 'react-native';
+import { TextInput, Animated, StyleSheet, Text, View, Platform } from 'react-native';
 import UISounds from '../utils/UISounds';
 
 export default function AnimatedInput({
@@ -64,10 +64,7 @@ export default function AnimatedInput({
         outputRange: ['rgba(255, 215, 0, 0.3)', 'rgba(255, 215, 0, 1)'],
     });
 
-    const shadowOpacity = focusAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 0.8],
-    });
+
 
     const labelTop = labelAnim.interpolate({
         inputRange: [0, 1],
@@ -98,7 +95,6 @@ export default function AnimatedInput({
                     styles.inputContainer,
                     {
                         borderColor: borderColor,
-                        shadowOpacity: shadowOpacity,
                     },
                 ]}
             >
@@ -135,10 +131,12 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderRadius: 12,
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        shadowColor: '#FFD700',
-        shadowOffset: { width: 0, height: 0 },
-        shadowRadius: 10,
         elevation: 5,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            }
+        })
     },
     input: {
         padding: 18,

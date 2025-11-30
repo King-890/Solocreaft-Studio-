@@ -1,9 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AnimatedCard from './AnimatedCard';
-
-const { width } = Dimensions.get('window');
 
 const INSTRUMENTS = [
     { id: 'piano', name: 'Piano', icon: '🎹', color: '#6200ee' },
@@ -20,6 +18,7 @@ const INSTRUMENTS = [
 ];
 
 export default function InstrumentsLibrary() {
+    const { width } = useWindowDimensions();
     const navigation = useNavigation();
 
     const handleInstrumentPress = (instrumentId) => {
@@ -39,7 +38,13 @@ export default function InstrumentsLibrary() {
                         <AnimatedCard
                             key={instrument.id}
                             delay={index * 50} // Staggered delay
-                            style={[styles.instrumentCard, { borderColor: instrument.color }]}
+                            style={[
+                                styles.instrumentCard,
+                                {
+                                    borderColor: instrument.color,
+                                    width: (width - 45) / 2 // Dynamic width
+                                }
+                            ]}
                             onPress={() => handleInstrumentPress(instrument.id)}
                         >
                             <View style={[styles.iconContainer, { backgroundColor: `${instrument.color}20` }]}>
@@ -86,7 +91,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     instrumentCard: {
-        width: (width - 45) / 2, // 2 columns with spacing
+        // width handled dynamically
         backgroundColor: '#1e1e1e',
         padding: 15,
         borderRadius: 16,
@@ -94,10 +99,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         marginBottom: 15,
         elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
     },
     iconContainer: {
         width: 70,

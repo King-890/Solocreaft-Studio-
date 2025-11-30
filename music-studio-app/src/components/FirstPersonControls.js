@@ -1,3 +1,5 @@
+// COMMENTED OUT: 3D functionality disabled - THREE.js imports not needed
+/*
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
 
@@ -61,3 +63,4 @@ export function initFirstPersonControls(camera, renderer, gl) {
 
     return { controls, update };
 }
+*/

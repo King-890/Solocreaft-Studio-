@@ -1,6 +1,13 @@
-import { Dimensions } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
+// Lazy dimension getter to avoid web platform issues
+const getDimensions = () => {
+    try {
+        return Dimensions.get('window');
+    } catch (e) {
+        return { width: 375, height: 667 }; // fallback dimensions
+    }
+};
 
 export const COLORS = {
     primary: '#6200ee',
@@ -27,8 +34,8 @@ export const FONTS = {
 };
 
 export const SIZES = {
-    width,
-    height,
+    get width() { return getDimensions().width; },
+    get height() { return getDimensions().height; },
     padding: 20,
     radius: 12,
     iconSize: 24,
@@ -40,18 +47,20 @@ export const SIZES = {
 
 export const SHADOWS = {
     light: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
         elevation: 2,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 1px 4px rgba(0, 0, 0, 0.2)',
+            }
+        })
     },
     medium: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
         elevation: 5,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            }
+        })
     },
 };
 

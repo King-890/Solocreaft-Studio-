@@ -15,13 +15,9 @@ export default function InstrumentsLibraryScreen({ navigation, route }) {
             route.params.onSelect(instrument);
             navigation.goBack();
         } else {
-            // Navigate to Instrument Room
+            // Navigate to Instrument Room with correct parameter
             navigation.navigate('InstrumentRoom', {
-                instrument: instrument,
-                instrumentCategory: categoryId,
-                instrumentName: instrument.name,
-                instrumentIcon: instrument.icon,
-                instrumentId: instrument.id
+                instrumentType: instrument.id,  // This is the key parameter InstrumentRoomScreen expects
             });
         }
     };

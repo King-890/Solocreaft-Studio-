@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Dimensions, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, PanResponder, Platform, useWindowDimensions } from 'react-native';
 import { COLORS, SPACING } from '../constants/UIConfig';
-
-const { width } = Dimensions.get('window');
 
 // Custom Slider component to avoid dependency issues on web
 const SimpleSlider = ({ value, minimumValue, maximumValue, onValueChange, step = 0.01 }) => {
@@ -52,6 +50,7 @@ const defaultSettings = {
 };
 
 const InstrumentSettings = ({ visible, onClose, instrumentName, instrumentId, onSettingsChange, currentSettings }) => {
+    const { width } = useWindowDimensions();
     const [settings, setSettings] = useState({ ...defaultSettings, ...currentSettings });
 
     useEffect(() => {
@@ -355,14 +354,12 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.primary,
         marginLeft: -10, // Center thumb
         top: 10,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
         elevation: 5,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            }
+        })
     },
     presetButtons: {
         flexDirection: 'row',

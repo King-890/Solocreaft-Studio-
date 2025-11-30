@@ -19,13 +19,13 @@ export default function AnimatedCard({
                 toValue: 1,
                 duration: duration,
                 delay: delay,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
             Animated.timing(translateY, {
                 toValue: 0,
                 duration: duration,
                 delay: delay,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
         ]).start();
     }, [delay, duration]);
@@ -33,7 +33,7 @@ export default function AnimatedCard({
     const handlePressIn = () => {
         Animated.spring(scaleAnim, {
             toValue: 0.95,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start();
     };
 
@@ -42,7 +42,7 @@ export default function AnimatedCard({
             toValue: 1,
             friction: 3,
             tension: 40,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start();
     };
 

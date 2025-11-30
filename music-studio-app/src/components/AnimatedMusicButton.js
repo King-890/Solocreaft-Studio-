@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { TouchableOpacity, Text, Animated, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, Animated, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UISounds from '../utils/UISounds';
 
@@ -14,12 +14,12 @@ export default function AnimatedMusicButton({ title, onPress, disabled = false, 
                     Animated.timing(pulseAnim, {
                         toValue: 1.05,
                         duration: 1000,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                     Animated.timing(pulseAnim, {
                         toValue: 1,
                         duration: 1000,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                 ])
             ).start();
@@ -30,7 +30,7 @@ export default function AnimatedMusicButton({ title, onPress, disabled = false, 
         UISounds.playButton();
         Animated.spring(scaleAnim, {
             toValue: 0.95,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start();
     };
 
@@ -39,7 +39,7 @@ export default function AnimatedMusicButton({ title, onPress, disabled = false, 
             toValue: 1,
             friction: 3,
             tension: 40,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start();
     };
 
@@ -79,10 +79,6 @@ const styles = StyleSheet.create({
     container: {
         borderRadius: 20,
         overflow: 'hidden',
-        shadowColor: '#FFD700',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.5,
-        shadowRadius: 8,
         elevation: 6,
     },
     gradient: {

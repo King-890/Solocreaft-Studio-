@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, useWindowDimensions, Platform } from 'react-native';
 import AudioPlaybackService from '../services/AudioPlaybackService';
-
-const { width } = Dimensions.get('window');
 
 // Tabla sounds mapping
 const TABLA_SOUNDS = {
@@ -19,6 +17,7 @@ const TABLA_SOUNDS = {
 };
 
 export default function Tabla() {
+    const { width } = useWindowDimensions();
     const [activeHit, setActiveHit] = useState(null);
     const [dayanAnim] = useState(new Animated.Value(1));
     const [bayanAnim] = useState(new Animated.Value(1));
@@ -32,8 +31,8 @@ export default function Tabla() {
         const anim = drum === 'dayan' ? dayanAnim : bayanAnim;
 
         Animated.sequence([
-            Animated.timing(anim, { toValue: 0.95, duration: 50, useNativeDriver: true }),
-            Animated.timing(anim, { toValue: 1, duration: 100, useNativeDriver: true }),
+            Animated.timing(anim, { toValue: 0.95, duration: 50, useNativeDriver: Platform.OS !== 'web' }),
+            Animated.timing(anim, { toValue: 1, duration: 100, useNativeDriver: Platform.OS !== 'web' }),
         ]).start();
 
         setTimeout(() => setActiveHit(null), 200);
@@ -174,10 +173,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 8,
         borderColor: '#8d6e63',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.5,
-        shadowRadius: 15,
         elevation: 10,
     },
     bayanOuterRing: {
@@ -218,10 +213,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 6,
         borderColor: '#616161',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.5,
-        shadowRadius: 12,
         elevation: 10,
     },
     dayanOuterRing: {

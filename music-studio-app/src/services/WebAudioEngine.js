@@ -5,6 +5,7 @@
 class WebAudioEngine {
     constructor() {
         this.audioContext = null;
+        this.initialized = false;
         this.noteFrequencies = {
             'C': 261.63, 'C#': 277.18, 'D': 293.66, 'D#': 311.13,
             'E': 329.63, 'F': 349.23, 'F#': 369.99, 'G': 392.00,
@@ -14,70 +15,143 @@ class WebAudioEngine {
 
     init() {
         if (!this.audioContext) {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            try {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                this.initialized = true;
+                console.log('✅ WebAudioEngine initialized');
+            } catch (error) {
+                console.error('❌ Failed to initialize WebAudioEngine:', error);
+                return false;
+            }
         }
+        return true;
     }
 
-    playSound(noteName) {
-        this.init();
+    async resumeContext() {
+        if (!this.audioContext) {
+            console.warn('⚠️ AudioContext not initialized');
+            return false;
+        }
+
+        if (this.audioContext.state === 'suspended') {
+            try {
+                await this.audioContext.resume();
+                console.log('▶️ AudioContext resumed');
+                return true;
+            } catch (error) {
+                console.error('❌ Failed to resume AudioContext:', error);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    async playSound(noteName) {
+        console.log(`🎵 Playing sound: ${noteName}`);
+
+        if (!this.init()) {
+            console.error('❌ Cannot play sound - init failed');
+            return;
+        }
+
+        const resumed = await this.resumeContext();
+        if (!resumed) {
+            console.error('❌ Cannot play sound - resume failed');
+            return;
+        }
 
         // Parse note name (e.g., "C4", "F#3")
         const match = noteName.match(/^([A-G]#?)(\d)$/);
         if (!match) {
-            console.warn('Invalid note name:', noteName);
+            console.warn('⚠️ Invalid note name:', noteName);
             return;
         }
 
         const [, note, octave] = match;
         const baseFreq = this.noteFrequencies[note];
-        if (!baseFreq) return;
+        if (!baseFreq) {
+            console.warn('⚠️ Unknown note:', note);
+            return;
+        }
 
         // Calculate frequency for the octave (A4 = 440Hz is octave 4)
         const frequency = baseFreq * Math.pow(2, octave - 4);
 
-        // Create oscillator for beep sound
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
+        try {
+            // Create oscillator for beep sound
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
 
-        oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
 
-        oscillator.frequency.value = frequency;
-        oscillator.type = 'sine'; // Can be 'sine', 'square', 'sawtooth', 'triangle'
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'sine'; // Can be 'sine', 'square', 'sawtooth', 'triangle'
 
-        // Envelope: quick attack, short sustain, quick release
-        const now = this.audioContext.currentTime;
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01); // Attack
-        gainNode.gain.linearRampToValueAtTime(0.2, now + 0.1);  // Sustain
-        gainNode.gain.linearRampToValueAtTime(0, now + 0.3);    // Release
+            // Envelope: quick attack, short sustain, quick release
+            const now = this.audioContext.currentTime;
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01); // Attack
+            gainNode.gain.linearRampToValueAtTime(0.2, now + 0.1);  // Sustain
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.3);    // Release
 
-        oscillator.start(now);
-        oscillator.stop(now + 0.3);
+            oscillator.start(now);
+            oscillator.stop(now + 0.3);
+
+            console.log(`✅ Played ${noteName} at ${frequency.toFixed(2)}Hz`);
+        } catch (error) {
+            console.error('❌ Error playing sound:', error);
+        }
     }
 
-    playDrumSound(padNumber) {
-        this.init();
+    async playDrumSound(padNumber) {
+        console.log(`🥁 Playing drum pad: ${padNumber}`);
 
-        // Different frequencies for different drum pads
-        const frequencies = [80, 100, 120, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000, 1200, 1500];
-        const frequency = frequencies[padNumber % frequencies.length];
+        if (!this.init()) {
+            console.error('❌ Cannot play drum - init failed');
+            return;
+        }
 
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
+        const resumed = await this.resumeContext();
+        if (!resumed) {
+            console.error('❌ Cannot play drum - resume failed');
+            return;
+        }
 
-        oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
+        try {
+            // Different frequencies for different drum pads
+            const frequencies = [80, 100, 120, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000, 1200, 1500];
+            const frequency = frequencies[(padNumber - 1) % frequencies.length];
 
-        oscillator.frequency.value = frequency;
-        oscillator.type = 'sawtooth';
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
 
-        const now = this.audioContext.currentTime;
-        gainNode.gain.setValueAtTime(0.5, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
 
-        oscillator.start(now);
-        oscillator.stop(now + 0.1);
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'sawtooth';
+
+            const now = this.audioContext.currentTime;
+            gainNode.gain.setValueAtTime(0.5, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+            oscillator.start(now);
+            oscillator.stop(now + 0.1);
+
+            console.log(`✅ Played drum pad ${padNumber} at ${frequency}Hz`);
+        } catch (error) {
+            console.error('❌ Error playing drum:', error);
+        }
+    }
+
+    // Get audio context state for debugging
+    getState() {
+        return {
+            initialized: this.initialized,
+            contextState: this.audioContext?.state || 'not created',
+            sampleRate: this.audioContext?.sampleRate || 0,
+        };
     }
 }
 
