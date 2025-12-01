@@ -20,7 +20,11 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
                     <TouchableOpacity
                         key={chord}
                         style={styles.chordButton}
-                        onPress={() => handleChordPress(chord)}
+                        onPressIn={() => handleChordPress(chord)}
+                        onPressOut={() => {
+                            const rootNote = chord.replace('m', '').replace('7', '') + '3';
+                            UnifiedAudioEngine.stopSound(rootNote, instrument);
+                        }}
                     >
                         <Text style={styles.chordText}>{chord}</Text>
                     </TouchableOpacity>

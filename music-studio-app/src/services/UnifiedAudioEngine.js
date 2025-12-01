@@ -6,6 +6,8 @@ import { generateTone } from '../utils/NativeToneGenerator';
 class NativeAudioEngine {
     constructor() {
         this.sounds = {};
+        this.activeSounds = {}; // Track active sounds for stopping
+        this.toneCache = {}; // Cache generated WAV URIs
         this.soundFiles = {
             piano: {
                 'C4': require('../../assets/sounds/piano/C4.mp3'),
@@ -81,6 +83,9 @@ class NativeAudioEngine {
             // Ensure audio is initialized
             await this.init();
 
+            // Stop existing sound for this note if any (monophonic per note)
+            await this.stopSound(noteName, instrument);
+
             // Check if we have a sample for this instrument
             const instrumentKey = instrument.toLowerCase();
             if (this.soundFiles[instrumentKey]) {
@@ -91,6 +96,21 @@ class NativeAudioEngine {
             }
         } catch (error) {
             console.warn('Failed to play native sound:', error);
+        }
+    }
+
+    async stopSound(noteName, instrument) {
+        const key = `${instrument}-${noteName}`;
+        const soundObject = this.activeSounds[key];
+        if (soundObject) {
+            try {
+                // Fade out if possible, or just stop
+                await soundObject.stopAsync();
+                await soundObject.unloadAsync();
+                delete this.activeSounds[key];
+            } catch (error) {
+                console.warn('Error stopping sound:', error);
+            }
         }
     }
 
@@ -157,10 +177,17 @@ class NativeAudioEngine {
                 { shouldPlay: true, rate: rate }
             );
 
+            // Store active sound
+            const key = `${instrument}-${noteName}`;
+            this.activeSounds[key] = sound;
+
             // Auto-unload
             sound.setOnPlaybackStatusUpdate(async (status) => {
                 if (status.didJustFinish) {
                     await sound.unloadAsync();
+                    if (this.activeSounds[key] === sound) {
+                        delete this.activeSounds[key];
+                    }
                 }
             });
         } catch (error) {
@@ -189,18 +216,34 @@ class NativeAudioEngine {
             default: waveform = 'sine';
         }
 
-        // Generate base64 WAV
-        const uri = generateTone(frequency, 500, waveform, 0.6);
+        // Generate base64 WAV or use cache
+        const cacheKey = `${frequency}-${waveform}-500`; // Assuming 500ms duration
+        let uri = this.toneCache[cacheKey];
+
+        if (!uri) {
+            // console.log(`⚡ Generating tone for ${noteName} (${frequency}Hz)`);
+            uri = generateTone(frequency, 500, waveform, 0.6);
+            this.toneCache[cacheKey] = uri;
+        } else {
+            // console.log(`⚡ Using cached tone for ${noteName}`);
+        }
 
         const { sound } = await Audio.Sound.createAsync(
             { uri },
             { shouldPlay: true }
         );
 
+        // Store active sound
+        const key = `${instrument}-${noteName}`;
+        this.activeSounds[key] = sound;
+
         // Auto-unload after playback
         sound.setOnPlaybackStatusUpdate(async (status) => {
             if (status.didJustFinish) {
                 await sound.unloadAsync();
+                if (this.activeSounds[key] === sound) {
+                    delete this.activeSounds[key];
+                }
             }
         });
     }
@@ -330,7 +373,14 @@ class NativeAudioEngine {
                 waveform = 'noise';
             }
 
-            const uri = generateTone(frequency, duration, waveform, volume);
+            // Cache drum sounds too
+            const cacheKey = `drum-${frequency}-${waveform}-${duration}`;
+            let uri = this.toneCache[cacheKey];
+
+            if (!uri) {
+                uri = generateTone(frequency, duration, waveform, volume);
+                this.toneCache[cacheKey] = uri;
+            }
 
             const { sound } = await Audio.Sound.createAsync(
                 { uri },
@@ -349,6 +399,14 @@ class NativeAudioEngine {
 
     async stopAll() {
         // Stop all native sounds
+        const promises = Object.values(this.activeSounds).map(async (sound) => {
+            try {
+                await sound.stopAsync();
+                await sound.unloadAsync();
+            } catch (e) { }
+        });
+        await Promise.all(promises);
+        this.activeSounds = {};
     }
 }
 
@@ -374,6 +432,13 @@ const UnifiedAudioEngine = {
             return WebAudioEngine.playDrumSound(padId);
         } else {
             return nativeEngine.playDrumSound(padId);
+        }
+    },
+    stopSound: async (noteName, instrument) => {
+        if (Platform.OS === 'web') {
+            // WebAudioEngine doesn't have stopSound exposed yet
+        } else {
+            return nativeEngine.stopSound(noteName, instrument);
         }
     },
     stopAll: async () => {

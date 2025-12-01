@@ -20,7 +20,11 @@ export default function Violin() {
                     <TouchableOpacity
                         key={string}
                         style={styles.string}
-                        onPress={() => handleStringPress(string)}
+                        onPressIn={() => handleStringPress(string)}
+                        onPressOut={() => {
+                            const noteMap = { 'G': 'G3', 'D': 'D4', 'A': 'A4', 'E': 'E5' };
+                            UnifiedAudioEngine.stopSound(noteMap[string], 'violin');
+                        }}
                         activeOpacity={0.7}
                     >
                         <Text style={styles.stringText}>{string}</Text>

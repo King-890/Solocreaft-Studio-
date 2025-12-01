@@ -376,6 +376,7 @@ const styles = StyleSheet.create({
     },
     formContainer: {
         marginTop: 0,
+        width: '100%', // Ensure form takes full width
     },
     errorContainer: {
         backgroundColor: 'rgba(255, 0, 0, 0.1)',

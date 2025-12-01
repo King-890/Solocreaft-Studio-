@@ -35,7 +35,11 @@ export default function BassGuitar() {
                                 <TouchableOpacity
                                     key={`${string}-${fret}`}
                                     style={styles.fret}
-                                    onPress={() => handleFretPress(string, fret)}
+                                    onPressIn={() => handleFretPress(string, fret)}
+                                    onPressOut={() => {
+                                        const note = getNoteForFret(string, fret);
+                                        UnifiedAudioEngine.stopSound(note, 'bass');
+                                    }}
                                     activeOpacity={0.8}
                                 >
                                     <View style={[styles.stringLine, { height: sIndex + 1 }]} />

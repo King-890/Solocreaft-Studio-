@@ -35,7 +35,7 @@ export default function DrumMachine() {
                     <TouchableOpacity
                         key={pad.id}
                         style={[styles.pad, { borderColor: pad.color }]}
-                        onPress={() => handlePadPress(pad)}
+                        onPressIn={() => handlePadPress(pad)}
                         activeOpacity={0.6}
                     >
                         <Text style={[styles.padText, { color: pad.color }]}>{pad.label}</Text>

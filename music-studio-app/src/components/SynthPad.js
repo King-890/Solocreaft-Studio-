@@ -15,6 +15,7 @@ export default function SynthPad() {
 
     const handlePressOut = () => {
         console.log('Synth Pad Press Out');
+        UnifiedAudioEngine.stopSound('C4', 'synth');
     };
 
     const toggleParam = (param) => {

@@ -23,7 +23,8 @@ export default function Piano() {
                     <TouchableOpacity
                         key={`${note}${octave}`}
                         style={styles.whiteKey}
-                        onPress={() => handleNotePress(`${note}${octave}`)}
+                        onPressIn={() => handleNotePress(`${note}${octave}`)}
+                        onPressOut={() => UnifiedAudioEngine.stopSound(`${note}${octave}`, 'piano')}
                         activeOpacity={0.9}
                     >
                         <Text style={styles.keyLabel}>{note}{octave}</Text>
@@ -75,7 +76,8 @@ export default function Piano() {
                     <TouchableOpacity
                         key={`${note}${octave}`}
                         style={[styles.blackKey, { left: left }]}
-                        onPress={() => handleNotePress(`${note}${octave}`)}
+                        onPressIn={() => handleNotePress(`${note}${octave}`)}
+                        onPressOut={() => UnifiedAudioEngine.stopSound(`${note}${octave}`, 'piano')}
                         activeOpacity={0.9}
                     />
                 );

@@ -71,6 +71,7 @@ const styles = StyleSheet.create({
         marginVertical: 8,
         height: 56,
         justifyContent: 'center',
+        width: '100%', // Ensure full width
     },
     input: {
         height: 50,
@@ -81,6 +82,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: 'white',
         backgroundColor: '#2a2a2a',
+        width: '100%', // Ensure full width
     },
 });
 
