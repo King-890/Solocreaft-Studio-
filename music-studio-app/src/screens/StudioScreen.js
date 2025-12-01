@@ -50,23 +50,31 @@ export default function StudioScreen({ route }) {
     // Animations
     const fadeAnim = useRef(new Animated.Value(1)).current;
 
-
-
+    // Lock orientation to landscape for specific instruments only
     useEffect(() => {
-        // Lock to landscape
-        async function lockLandscape() {
-            await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+        const landscapeInstruments = ['piano', 'bass', 'flute', 'saxophone'];
+
+        async function setOrientation() {
+            try {
+                if (landscapeInstruments.includes(activeInstrument)) {
+                    // Lock to landscape for Piano, Bass, Flute, Sax
+                    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+                } else {
+                    // Unlock (allow portrait) for other instruments
+                    await ScreenOrientation.unlockAsync();
+                }
+            } catch (error) {
+                console.log('Orientation lock error:', error);
+            }
         }
-        lockLandscape();
+
+        setOrientation();
 
         return () => {
-            // Unlock on exit
-            async function unlockOrientation() {
-                await ScreenOrientation.unlockAsync();
-            }
-            unlockOrientation();
+            // Unlock orientation when leaving screen
+            ScreenOrientation.unlockAsync().catch(err => console.log('Unlock error:', err));
         };
-    }, []);
+    }, [activeInstrument]);
 
     useEffect(() => {
         if (route?.params?.initialInstrument) {
