@@ -4,12 +4,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
+import { useProject } from '../contexts/ProjectContext';
 import { COLORS, SPACING } from '../constants/UIConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { moveRecordingToPermanentStorage } from '../utils/fileSystem';
 
 export default function ProfileScreen() {
     const { user, signOut } = useAuth();
+    const { projects = [], tracks = [], clips = [] } = useProject() || {};
+
+    // Calculate stats
+    const projectCount = projects.length || 0;
+    const trackCount = tracks.length || 0;
+    const recordingCount = clips.length || 0;
 
     // Profile editing state
     const [isEditing, setIsEditing] = useState(false);
@@ -96,16 +103,31 @@ export default function ProfileScreen() {
 
             if (!result.canceled && result.assets && result.assets.length > 0) {
                 const selectedUri = result.assets[0].uri;
+                let finalUri = selectedUri;
+
                 if (Platform.OS !== 'web') {
                     try {
                         const permanentUri = await moveRecordingToPermanentStorage(selectedUri);
-                        setAvatarUri(permanentUri);
+                        finalUri = permanentUri;
                     } catch (err) {
-                        console.warn('Failed to move avatar to permanent storage:', err);
-                        setAvatarUri(selectedUri);
+                        console.warn('Failed to move avatar:', err);
                     }
-                } else {
-                    setAvatarUri(selectedUri);
+                }
+
+                setAvatarUri(finalUri);
+
+                // Auto-save avatar
+                try {
+                    const currentProfile = await AsyncStorage.getItem('@user_profile');
+                    const profileToSave = currentProfile ? JSON.parse(currentProfile) : profileData;
+                    profileToSave.avatarUri = finalUri;
+                    await AsyncStorage.setItem('@user_profile', JSON.stringify(profileToSave));
+
+                    if (Platform.OS !== 'web') {
+                        Alert.alert('Success', 'Avatar updated!');
+                    }
+                } catch (saveError) {
+                    console.error('Error saving avatar:', saveError);
                 }
             }
         } catch (error) {
@@ -162,8 +184,12 @@ export default function ProfileScreen() {
                             onPress={handlePickImage}
                             activeOpacity={0.8}
                         >
-                            {avatarUri ? (
-                                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                            {avatarUri && (Platform.OS === 'web' || avatarUri.startsWith('file://') || avatarUri.startsWith('http')) ? (
+                                <Image
+                                    source={{ uri: avatarUri }}
+                                    style={styles.avatarImage}
+                                    onError={() => setAvatarUri(null)}
+                                />
                             ) : (
                                 <LinearGradient
                                     colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']}
@@ -256,15 +282,15 @@ export default function ProfileScreen() {
                     {/* Stats Section */}
                     <View style={styles.statsContainer}>
                         <View style={styles.statCard}>
-                            <Text style={styles.statValue}>0</Text>
+                            <Text style={styles.statValue}>{projectCount}</Text>
                             <Text style={styles.statLabel}>Projects</Text>
                         </View>
                         <View style={styles.statCard}>
-                            <Text style={styles.statValue}>0</Text>
+                            <Text style={styles.statValue}>{recordingCount}</Text>
                             <Text style={styles.statLabel}>Recordings</Text>
                         </View>
                         <View style={styles.statCard}>
-                            <Text style={styles.statValue}>0</Text>
+                            <Text style={styles.statValue}>{trackCount}</Text>
                             <Text style={styles.statLabel}>Tracks</Text>
                         </View>
                     </View>
