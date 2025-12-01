@@ -133,10 +133,20 @@ class WebAudioEngine {
     }
 
     async playDrumSound(padNumber, volume = 0.8, pan = 0) {
-        console.log(`🥁 Playing drum pad: ${padNumber}`);
+        // Map string IDs to numeric values
+        const drumMap = {
+            'kick': 1, 'snare': 2, 'hihat': 3, 'tom1': 4, 'tom2': 5,
+            'crash': 6, 'ride': 7, 'na': 8, 'tin': 9, 'tun': 10,
+            'te': 11, 'ge': 12, 'ke': 13, 'kat': 14
+        };
+
+        // Convert string to number if needed
+        const numericPad = typeof padNumber === 'string' ? drumMap[padNumber] : padNumber;
+
+        console.log(`🥁 Playing drum pad: ${padNumber} (mapped to ${numericPad})`);
 
         // Validate padNumber
-        if (typeof padNumber !== 'number' || isNaN(padNumber)) {
+        if (typeof numericPad !== 'number' || isNaN(numericPad)) {
             console.error(`❌ Invalid drum pad number: ${padNumber}`);
             return;
         }
@@ -155,7 +165,7 @@ class WebAudioEngine {
         try {
             // Different frequencies for different drum pads
             const frequencies = [80, 100, 120, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000, 1200, 1500];
-            const frequency = frequencies[(padNumber - 1) % frequencies.length];
+            const frequency = frequencies[(numericPad - 1) % frequencies.length];
 
             const oscillator = this.audioContext.createOscillator();
             const gainNode = this.audioContext.createGain();
