@@ -1,27 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Modal, Dimensions, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions, StatusBar } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNavigation } from '@react-navigation/native';
 import ParticleSystem from '../components/ParticleSystem';
 import FloatingNote from '../components/FloatingNote';
 import MusicButton from '../components/MusicButton';
+import ThemeGallery from '../components/ThemeGallery';
+import ImmersiveBackground from '../components/ImmersiveBackground';
 import UIConfig from '../constants/UIConfig';
 import AudioManager from '../utils/AudioManager';
 import AnimatedCard from '../components/AnimatedCard';
 
 const { width, height } = Dimensions.get('window');
-const { COLORS, FONTS, SHADOWS, ASSETS, LAYOUT, ANIMATIONS } = UIConfig;
+const { COLORS, FONTS, SHADOWS, LAYOUT, ANIMATIONS } = UIConfig;
 
 export default function HomeScreen() {
     const { user } = useAuth();
     const { audioEnabled, animationsEnabled } = useSettings();
     const navigation = useNavigation();
     const [showProfile, setShowProfile] = useState(false);
+    const [showThemes, setShowThemes] = useState(false);
     const [audioStarted, setAudioStarted] = useState(false);
 
     useEffect(() => {
-        // Start ambient audio when screen loads if enabled
         if (audioEnabled) {
             const startAudio = async () => {
                 await AudioManager.playHomeScreenAmbience();
@@ -29,19 +31,16 @@ export default function HomeScreen() {
             };
             startAudio();
         } else {
-            // Stop audio if disabled
             AudioManager.stopAll();
             setAudioStarted(false);
         }
 
         return () => {
-            // Clean up audio when leaving screen
             AudioManager.stopAll();
         };
     }, [audioEnabled]);
 
     const handleScreenPress = async () => {
-        // Resume audio context on first user interaction (browser requirement)
         if (!audioStarted && audioEnabled) {
             await AudioManager.playHomeScreenAmbience();
             setAudioStarted(true);
@@ -63,122 +62,109 @@ export default function HomeScreen() {
         navigation.navigate('InstrumentsLibrary');
     };
 
-    const handleSettings = () => {
+    const handleThemes = () => {
         setShowProfile(false);
-        navigation.navigate('Settings');
+        setShowThemes(true);
     };
 
     return (
-        <View style={styles.container} onTouchStart={handleScreenPress}>
-            <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+        <ImmersiveBackground>
+            <View style={styles.container} onTouchStart={handleScreenPress}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-            {/* Static Background - No Rotation */}
-            <ImageBackground
-                source={ASSETS.homeBackground}
-                style={styles.background}
-                resizeMode="cover"
-            >
-                <View style={styles.overlay} />
-            </ImageBackground>
+                {animationsEnabled && <ParticleSystem count={ANIMATIONS.particles.petalCount} />}
 
-            {/* Particle System (Petals) - Only if animations enabled */}
-            {animationsEnabled && <ParticleSystem count={ANIMATIONS.particles.petalCount} />}
-
-            {/* Floating Notes from Instrument Area - Only if animations enabled */}
-            {animationsEnabled && (
-                <View style={styles.noteSourceContainer}>
-                    <FloatingNote delay={0} startX={0} startY={0} />
-                    <FloatingNote delay={1500} startX={30} startY={-20} />
-                    <FloatingNote delay={3000} startX={-30} startY={20} />
-                    <FloatingNote delay={4500} startX={10} startY={5} />
-                </View>
-            )}
-
-            {/* UI Layer */}
-            <View style={styles.uiContainer}>
-                {/* Profile / Menu Button */}
-                <TouchableOpacity
-                    style={styles.profileOrb}
-                    onPress={() => setShowProfile(true)}
-                >
-                    <View style={styles.orbInner}>
-                        <Text style={styles.orbText}>
-                            {user?.email?.charAt(0).toUpperCase() || '♪'}
-                        </Text>
+                {animationsEnabled && (
+                    <View style={styles.noteSourceContainer}>
+                        <FloatingNote delay={0} startX={0} startY={0} />
+                        <FloatingNote delay={1500} startX={30} startY={-20} />
+                        <FloatingNote delay={3000} startX={-30} startY={20} />
+                        <FloatingNote delay={4500} startX={10} startY={5} />
                     </View>
-                </TouchableOpacity>
-            </View>
+                )}
 
-            {/* Menu Modal */}
-            <Modal
-                visible={showProfile}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setShowProfile(false)}
-            >
-                <TouchableOpacity
-                    style={styles.modalOverlay}
-                    activeOpacity={1}
-                    onPress={() => setShowProfile(false)}
-                >
-                    <AnimatedCard style={styles.menuCard}>
-                        <View style={styles.menuHeader}>
-                            <Text style={styles.menuTitle}>Sanctuary</Text>
-                            <Text style={styles.menuSubtitle}>Choose your path</Text>
+                <View style={styles.uiContainer}>
+                    <TouchableOpacity
+                        style={styles.profileOrb}
+                        onPress={() => setShowProfile(true)}
+                    >
+                        <View style={styles.orbInner}>
+                            <Text style={styles.orbText}>
+                                {user?.email?.charAt(0).toUpperCase() || '♪'}
+                            </Text>
                         </View>
+                    </TouchableOpacity>
+                </View>
 
-                        <MusicButton
-                            title="New Creation"
-                            subtitle="Start a fresh composition"
-                            icon="🎵"
-                            color={COLORS.primary}
-                            onPress={handleNewProject}
-                        />
+                <Modal
+                    visible={showProfile}
+                    transparent={true}
+                    animationType="fade"
+                    onRequestClose={() => setShowProfile(false)}
+                >
+                    <TouchableOpacity
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setShowProfile(false)}
+                    >
+                        <AnimatedCard style={styles.menuCard}>
+                            <View style={styles.menuHeader}>
+                                <Text style={styles.menuTitle}>Sanctuary</Text>
+                                <Text style={styles.menuSubtitle}>Choose your path</Text>
+                            </View>
 
-                        <MusicButton
-                            title="Library"
-                            subtitle="Your saved works"
-                            icon="📚"
-                            color={COLORS.secondary}
-                            onPress={handleLibrary}
-                        />
+                            <MusicButton
+                                title="New Creation"
+                                subtitle="Start a fresh composition"
+                                icon="🎵"
+                                color={COLORS.primary}
+                                onPress={handleNewProject}
+                            />
 
-                        <MusicButton
-                            title="Instruments"
-                            subtitle="Explore sound collection"
-                            icon="🎹"
-                            color="#ff6b9d"
-                            onPress={handleInstruments}
-                        />
+                            <MusicButton
+                                title="Library"
+                                subtitle="Your saved works"
+                                icon="📚"
+                                color={COLORS.secondary}
+                                onPress={handleLibrary}
+                            />
 
-                        <MusicButton
-                            title="Settings"
-                            subtitle="Customize experience"
-                            icon="⚙️"
-                            color="#888"
-                            onPress={handleSettings}
-                        />
-                    </AnimatedCard>
-                </TouchableOpacity>
-            </Modal>
-        </View>
+                            <MusicButton
+                                title="Instruments"
+                                subtitle="Explore sound collection"
+                                icon="🎹"
+                                color="#ff6b9d"
+                                onPress={handleInstruments}
+                            />
+
+                            <MusicButton
+                                title="Themes"
+                                subtitle="Personalize your studio"
+                                icon="🎨"
+                                color="#b388ff"
+                                onPress={handleThemes}
+                            />
+                        </AnimatedCard>
+                    </TouchableOpacity>
+                </Modal>
+
+                <Modal
+                    visible={showThemes}
+                    animationType="slide"
+                    onRequestClose={() => setShowThemes(false)}
+                >
+                    <ThemeGallery onClose={() => setShowThemes(false)} />
+                </Modal>
+            </View>
+        </ImmersiveBackground>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: 'transparent',
         overflow: 'hidden',
-    },
-    background: {
-        ...StyleSheet.absoluteFillObject,
-        width: width,
-        height: height,
-    },
-    overlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: `rgba(0,0,0,${LAYOUT.homeScreen.overlayOpacity})`,
     },
     noteSourceContainer: {
         position: 'absolute',
