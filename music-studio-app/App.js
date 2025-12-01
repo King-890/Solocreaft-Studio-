@@ -289,14 +289,17 @@ export default function App() {
     console.log('🚀 Music Studio App Starting...');
     setupGlobalErrorHandler();
 
-    // Preload audio engine
+    // Preload audio engine - Non-blocking
     const initAudio = async () => {
-      try {
-        const UnifiedAudioEngine = require('./src/services/UnifiedAudioEngine').default;
-        await UnifiedAudioEngine.preload();
-      } catch (e) {
-        console.warn('Audio preload failed:', e);
-      }
+      // Wait for next frame to ensure UI renders first
+      setTimeout(async () => {
+        try {
+          const UnifiedAudioEngine = require('./src/services/UnifiedAudioEngine').default;
+          await UnifiedAudioEngine.preload();
+        } catch (e) {
+          console.warn('Audio preload failed:', e);
+        }
+      }, 100);
     };
     initAudio();
 
