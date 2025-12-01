@@ -33,10 +33,22 @@ class NativeAudioEngine {
                 'kick': require('../../assets/sounds/drums/kick.wav'),
                 'snare': require('../../assets/sounds/drums/snare.wav'),
                 'hihat': require('../../assets/sounds/drums/hihat.wav'),
+                // Use existing samples for missing drums
+                'tom1': require('../../assets/sounds/drums/kick.wav'), // Fallback
+                'tom2': require('../../assets/sounds/drums/kick.wav'), // Fallback
+                'crash': require('../../assets/sounds/drums/hihat.wav'), // Fallback
+                'ride': require('../../assets/sounds/drums/hihat.wav'), // Fallback
             },
             tabla: {
                 'dha': require('../../assets/sounds/tabla/dha.wav'),
                 'tin': require('../../assets/sounds/tabla/tin.wav'),
+                // Map all tabla sounds to available samples
+                'na': require('../../assets/sounds/tabla/tin.wav'),
+                'tun': require('../../assets/sounds/tabla/tin.wav'),
+                'te': require('../../assets/sounds/tabla/tin.wav'),
+                'ge': require('../../assets/sounds/tabla/dha.wav'),
+                'ke': require('../../assets/sounds/tabla/dha.wav'),
+                'kat': require('../../assets/sounds/tabla/dha.wav'),
             },
             dholak: {
                 'dha': require('../../assets/sounds/dholak/dha.wav'),
