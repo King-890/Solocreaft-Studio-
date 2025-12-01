@@ -77,6 +77,32 @@ class NativeAudioEngine {
         }
     }
 
+    async preload() {
+        console.log('🚀 Preloading audio engine...');
+        await this.init();
+
+        // Preload essential sounds (Piano C4, Kick, Snare)
+        // We play them at 0 volume to load into memory
+        const soundsToPreload = [
+            { src: this.soundFiles.piano['C4'], name: 'Piano C4' },
+            { src: this.soundFiles.drums['kick'], name: 'Kick' },
+            { src: this.soundFiles.drums['snare'], name: 'Snare' }
+        ];
+
+        const promises = soundsToPreload.map(async (item) => {
+            try {
+                const { sound } = await Audio.Sound.createAsync(item.src, { volume: 0 });
+                await sound.unloadAsync(); // Unload immediately, just wanted to cache the file access
+                // console.log(`✅ Preloaded ${item.name}`);
+            } catch (e) {
+                console.warn(`Failed to preload ${item.name}`, e);
+            }
+        });
+
+        await Promise.all(promises);
+        console.log('✨ Audio preloading complete');
+    }
+
     async playSound(noteName, instrument = 'piano') {
         // console.log(`🎵 [Native] Playing sound: ${noteName} (${instrument})`);
         try {
@@ -432,6 +458,13 @@ const UnifiedAudioEngine = {
             return WebAudioEngine.playDrumSound(padId);
         } else {
             return nativeEngine.playDrumSound(padId);
+        }
+    },
+    preload: async () => {
+        if (Platform.OS === 'web') {
+            // WebAudioEngine preload logic if needed
+        } else {
+            return nativeEngine.preload();
         }
     },
     stopSound: async (noteName, instrument) => {

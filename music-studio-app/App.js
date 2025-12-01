@@ -288,6 +288,18 @@ export default function App() {
   useReactEffect(() => {
     console.log('🚀 Music Studio App Starting...');
     setupGlobalErrorHandler();
+
+    // Preload audio engine
+    const initAudio = async () => {
+      try {
+        const UnifiedAudioEngine = require('./src/services/UnifiedAudioEngine').default;
+        await UnifiedAudioEngine.preload();
+      } catch (e) {
+        console.warn('Audio preload failed:', e);
+      }
+    };
+    initAudio();
+
     console.log('✅ Global error handler installed');
   }, []);
 

@@ -9,9 +9,9 @@
     "newArchEnabled": true,
     "scheme": "solocraft",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#6200ee"
+      "backgroundColor": "#1a0a33"
     },
     "ios": {
       "supportsTablet": true,

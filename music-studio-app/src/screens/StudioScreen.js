@@ -39,6 +39,30 @@ const INSTRUMENTS = [
     { id: 'world', name: 'World' },
 ];
 
+const InstrumentSelector = React.memo(({ instruments, activeInstrument, onSelect }) => (
+    <View style={styles.selectorContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={true} indicatorStyle="white">
+            {instruments.map((inst) => (
+                <TouchableOpacity
+                    key={inst.id}
+                    style={[
+                        styles.selectorButton,
+                        activeInstrument === inst.id && styles.activeSelector
+                    ]}
+                    onPress={() => onSelect(inst.id)}
+                >
+                    <Text style={[
+                        styles.selectorText,
+                        activeInstrument === inst.id && styles.activeSelectorText
+                    ]}>
+                        {inst.name}
+                    </Text>
+                </TouchableOpacity>
+            ))}
+        </ScrollView>
+    </View>
+));
+
 export default function StudioScreen({ route }) {
     const initialInstrument = route?.params?.initialInstrument || 'timeline';
     const [activeInstrument, setActiveInstrument] = useState(initialInstrument);
@@ -189,27 +213,11 @@ export default function StudioScreen({ route }) {
                     </View>
                 </View>
 
-                <View style={styles.selectorContainer}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={true} indicatorStyle="white">
-                        {INSTRUMENTS.map((inst) => (
-                            <TouchableOpacity
-                                key={inst.id}
-                                style={[
-                                    styles.selectorButton,
-                                    activeInstrument === inst.id && styles.activeSelector
-                                ]}
-                                onPress={() => handleInstrumentChange(inst.id)}
-                            >
-                                <Text style={[
-                                    styles.selectorText,
-                                    activeInstrument === inst.id && styles.activeSelectorText
-                                ]}>
-                                    {inst.name}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
+                <InstrumentSelector
+                    instruments={INSTRUMENTS}
+                    activeInstrument={activeInstrument}
+                    onSelect={handleInstrumentChange}
+                />
 
                 <View style={styles.workspace}>
                     <Animated.View style={[styles.instrumentArea, { opacity: fadeAnim }]}>

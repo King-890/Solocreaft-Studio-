@@ -71,34 +71,32 @@ export default function SoloCraftLogo({ size = 120, showText = true, animated = 
                 style={[
                     styles.logoCircle,
                     {
-                        width: logoSize * 0.85,
-                        height: logoSize * 0.85,
-                        borderRadius: (logoSize * 0.85) / 2,
+                        width: logoSize * 0.9,
+                        height: logoSize * 0.9,
+                        borderRadius: (logoSize * 0.9) / 2,
+                        backgroundColor: '#000', // Black background for contrast
                     },
                 ]}
             >
                 <LinearGradient
-                    colors={['#1a0a33', '#2d1b4e', '#1a0a33']}
+                    colors={['#2d1b4e', '#000000']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={[styles.innerGradient, { borderRadius: (logoSize * 0.85) / 2 }]}
+                    style={[styles.innerGradient, { borderRadius: (logoSize * 0.9) / 2 }]}
                 >
-                    {/* SC Letters */}
+                    {/* SC Letters Monogram */}
                     <View style={styles.lettersContainer}>
-                        <Text style={[styles.letterS, { fontSize }]}>S</Text>
-                        <Text style={[styles.letterC, { fontSize }]}>C</Text>
+                        <Text style={[styles.letterS, { fontSize: fontSize * 1.2 }]}>S</Text>
+                        <Text style={[styles.letterC, { fontSize: fontSize * 1.2 }]}>C</Text>
                     </View>
-
-                    {/* Musical note accent */}
-                    <Text style={[styles.musicNote, { fontSize: fontSize * 0.3 }]}>♪</Text>
                 </LinearGradient>
             </View>
 
             {/* App name text */}
             {showText && (
                 <View style={styles.textContainer}>
-                    <Text style={[styles.appName, { fontSize: textSize }]}>SoloCraft</Text>
-                    <Text style={[styles.appSubtitle, { fontSize: textSize * 0.7 }]}>STUDIO</Text>
+                    <Text style={[styles.appName, { fontSize: textSize }]}>SOLOCRAFT</Text>
+                    <Text style={[styles.appSubtitle, { fontSize: textSize * 0.6 }]}>STUDIO</Text>
                 </View>
             )}
         </View>
@@ -128,45 +126,49 @@ const styles = StyleSheet.create({
         height: '100%',
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: 'rgba(186, 85, 211, 0.5)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 215, 0, 0.3)', // Subtle gold border
     },
     lettersContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        marginTop: -5, // Center visually
     },
     letterS: {
-        fontWeight: 'bold',
-        color: '#BA55D3',
-        marginRight: -5,
+        fontWeight: '900',
+        color: '#BA55D3', // Purple
+        marginRight: -15, // Overlap
+        textShadowColor: 'rgba(0, 0, 0, 0.5)',
+        textShadowOffset: { width: 2, height: 2 },
+        textShadowRadius: 5,
+        fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif',
     },
     letterC: {
-        fontWeight: 'bold',
-        color: '#FFD700',
+        fontWeight: '900',
+        color: '#FFD700', // Gold
         marginLeft: -5,
-    },
-    musicNote: {
-        position: 'absolute',
-        top: '15%',
-        right: '20%',
-        color: '#9370DB',
-        opacity: 0.6,
+        textShadowColor: 'rgba(0, 0, 0, 0.5)',
+        textShadowOffset: { width: 2, height: 2 },
+        textShadowRadius: 5,
+        fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif',
     },
     textContainer: {
-        marginTop: 10,
+        marginTop: 15,
         alignItems: 'center',
     },
     appName: {
         fontWeight: 'bold',
-        color: '#BA55D3',
-        letterSpacing: 2,
+        color: '#fff',
+        letterSpacing: 4,
+        textTransform: 'uppercase',
     },
     appSubtitle: {
         fontWeight: '600',
         color: '#FFD700',
-        letterSpacing: 3,
+        letterSpacing: 6,
         opacity: 0.8,
-        marginTop: 2,
+        marginTop: 4,
+        fontSize: 10,
     },
 });
