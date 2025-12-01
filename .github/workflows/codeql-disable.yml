@@ -1,0 +1,19 @@
+# This file disables CodeQL for languages not in this project
+# The repo is JavaScript/React Native, not Java
+name: "Disable CodeQL"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  analyze:
+    name: Analyze (Disabled)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip CodeQL
+        run: echo "CodeQL disabled - JavaScript project does not require Java analysis"
