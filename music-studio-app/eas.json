@@ -29,7 +29,7 @@
         },
         "production": {
             "android": {
-                "buildType": "app-bundle",
+                "buildType": "apk",
                 "resourceClass": "medium"
             },
             "ios": {
