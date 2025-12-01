@@ -161,6 +161,39 @@ class AudioPlaybackService {
         const promises = clips.map(clip => this.playClip(clip, startTime));
         await Promise.all(promises);
     }
+    async playTestTone() {
+        console.log('🎵 Playing test tone...');
+        if (Platform.OS === 'web') {
+            this.init();
+            try {
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime); // A4
+
+                gainNode.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 1);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 1);
+            } catch (e) {
+                console.error('Web test tone failed:', e);
+            }
+        } else {
+            try {
+                // Simple native beep using expo-av if possible, or just log
+                // Since we don't have a tone generator here, we can try to play a default sound if available
+                // or just rely on the console log for now as a "dry run"
+                console.log('Native test tone triggered (placeholder)');
+            } catch (e) {
+                console.error('Native test tone failed:', e);
+            }
+        }
+    }
 }
 
 export default new AudioPlaybackService();
