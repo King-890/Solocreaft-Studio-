@@ -185,10 +185,10 @@ class AudioPlaybackService {
             }
         } else {
             try {
-                // Simple native beep using expo-av if possible, or just log
-                // Since we don't have a tone generator here, we can try to play a default sound if available
-                // or just rely on the console log for now as a "dry run"
-                console.log('Native test tone triggered (placeholder)');
+                // Use UnifiedAudioEngine to play a test tone (A4 = 440Hz)
+                const UnifiedAudioEngine = require('./UnifiedAudioEngine').default;
+                await UnifiedAudioEngine.playSound('A4', 'synth');
+                console.log('✅ Native test tone played (A4 - 440Hz)');
             } catch (e) {
                 console.error('Native test tone failed:', e);
             }

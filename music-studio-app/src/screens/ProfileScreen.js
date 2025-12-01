@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, StatusBar, TouchableOpacity, Platform, Alert, TextInput, Image } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, StatusBar, TouchableOpacity, Platform, Alert, TextInput, Image, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,9 +21,34 @@ export default function ProfileScreen() {
         role: 'Music Producer',
     });
 
+    // Animations
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
+    const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
     // Load profile data on mount
-    React.useEffect(() => {
+    useEffect(() => {
         loadProfileData();
+
+        // Entrance animation
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 600,
+                useNativeDriver: Platform.OS !== 'web',
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 600,
+                useNativeDriver: Platform.OS !== 'web',
+            }),
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                friction: 8,
+                tension: 40,
+                useNativeDriver: Platform.OS !== 'web',
+            }),
+        ]).start();
     }, []);
 
     const loadProfileData = async () => {
@@ -64,15 +89,13 @@ export default function ProfileScreen() {
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['images'],
-                mediaTypes: ['images'],
-                allowsEditing: false,
+                allowsEditing: true,
                 aspect: [1, 1],
                 quality: 0.8,
             });
 
             if (!result.canceled && result.assets && result.assets.length > 0) {
                 const selectedUri = result.assets[0].uri;
-                // Move to permanent storage if on native
                 if (Platform.OS !== 'web') {
                     try {
                         const permanentUri = await moveRecordingToPermanentStorage(selectedUri);
@@ -120,107 +143,155 @@ export default function ProfileScreen() {
                 style={styles.scrollView}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Profile Card */}
-                <LinearGradient
-                    colors={['#6200ee', '#3700b3']}
-                    style={styles.profileCard}
-                >
-                    <TouchableOpacity
-                        style={styles.avatarContainer}
-                        onPress={handlePickImage}
-                        activeOpacity={0.8}
+                <Animated.View style={{
+                    opacity: fadeAnim,
+                    transform: [
+                        { translateY: slideAnim },
+                        { scale: scaleAnim }
+                    ]
+                }}>
+                    {/* Profile Card */}
+                    <LinearGradient
+                        colors={['#BA55D3', '#9370DB', '#6200ee']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.profileCard}
                     >
-                        {avatarUri ? (
-                            <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                        <TouchableOpacity
+                            style={styles.avatarContainer}
+                            onPress={handlePickImage}
+                            activeOpacity={0.8}
+                        >
+                            {avatarUri ? (
+                                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                            ) : (
+                                <LinearGradient
+                                    colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']}
+                                    style={styles.avatarPlaceholder}
+                                >
+                                    <Text style={styles.avatarText}>
+                                        {(profileData.name?.charAt(0) || user?.email?.charAt(0) || '?').toUpperCase()}
+                                    </Text>
+                                </LinearGradient>
+                            )}
+                            <View style={styles.cameraIcon}>
+                                <Text style={styles.cameraEmoji}>📷</Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        {isEditing ? (
+                            <View style={styles.editContainer}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Your Name"
+                                    placeholderTextColor="#999"
+                                    value={profileData.name}
+                                    onChangeText={(text) => setProfileData({ ...profileData, name: text })}
+                                />
+                                <TextInput
+                                    style={[styles.input, styles.inputDisabled]}
+                                    placeholder="Email"
+                                    placeholderTextColor="#999"
+                                    value={profileData.email}
+                                    editable={false}
+                                />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Role (e.g., Music Producer)"
+                                    placeholderTextColor="#999"
+                                    value={profileData.role}
+                                    onChangeText={(text) => setProfileData({ ...profileData, role: text })}
+                                />
+                                <TextInput
+                                    style={[styles.input, styles.textArea]}
+                                    placeholder="Bio (optional)"
+                                    placeholderTextColor="#999"
+                                    value={profileData.bio}
+                                    onChangeText={(text) => setProfileData({ ...profileData, bio: text })}
+                                    multiline
+                                    numberOfLines={3}
+                                />
+
+                                <View style={styles.editButtons}>
+                                    <TouchableOpacity
+                                        style={[styles.editButton, styles.cancelButton]}
+                                        onPress={() => {
+                                            setIsEditing(false);
+                                            loadProfileData();
+                                        }}
+                                    >
+                                        <Text style={styles.editButtonText}>Cancel</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.editButton, styles.saveButton]}
+                                        onPress={saveProfileData}
+                                    >
+                                        <Text style={styles.editButtonText}>Save</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
                         ) : (
-                            <Text style={styles.avatarText}>
-                                {(profileData.name?.charAt(0) || user?.email?.charAt(0) || '?').toUpperCase()}
-                            </Text>
-                        )}
-                        <View style={styles.cameraIcon}>
-                            <Text style={styles.cameraEmoji}>📷</Text>
-                        </View>
-                    </TouchableOpacity>
+                            <View style={styles.profileInfo}>
+                                <Text style={styles.profileName}>
+                                    {profileData.name || 'Set your name'}
+                                </Text>
+                                <Text style={styles.profileEmail}>{profileData.email || 'Not logged in'}</Text>
+                                <View style={styles.roleBadge}>
+                                    <Text style={styles.profileLabel}>{profileData.role}</Text>
+                                </View>
+                                {profileData.bio ? (
+                                    <Text style={styles.profileBio}>{profileData.bio}</Text>
+                                ) : null}
 
-                    {isEditing ? (
-                        <View style={styles.editContainer}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Your Name"
-                                placeholderTextColor="#ccc"
-                                value={profileData.name}
-                                onChangeText={(text) => setProfileData({ ...profileData, name: text })}
-                            />
-                            <TextInput
-                                style={[styles.input, styles.inputDisabled]}
-                                placeholder="Email"
-                                placeholderTextColor="#ccc"
-                                value={profileData.email}
-                                editable={false}
-                            />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Role (e.g., Music Producer)"
-                                placeholderTextColor="#ccc"
-                                value={profileData.role}
-                                onChangeText={(text) => setProfileData({ ...profileData, role: text })}
-                            />
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
-                                placeholder="Bio (optional)"
-                                placeholderTextColor="#ccc"
-                                value={profileData.bio}
-                                onChangeText={(text) => setProfileData({ ...profileData, bio: text })}
-                                multiline
-                                numberOfLines={3}
-                            />
-
-                            <View style={styles.editButtons}>
                                 <TouchableOpacity
-                                    style={[styles.editButton, styles.cancelButton]}
-                                    onPress={() => {
-                                        setIsEditing(false);
-                                        loadProfileData();
-                                    }}
+                                    style={styles.editProfileButton}
+                                    onPress={() => setIsEditing(true)}
                                 >
-                                    <Text style={styles.editButtonText}>Cancel</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.editButton, styles.saveButton]}
-                                    onPress={saveProfileData}
-                                >
-                                    <Text style={styles.editButtonText}>Save</Text>
+                                    <Text style={styles.editProfileText}>✏️ Edit Profile</Text>
                                 </TouchableOpacity>
                             </View>
+                        )}
+                    </LinearGradient>
+
+                    {/* Stats Section */}
+                    <View style={styles.statsContainer}>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statValue}>0</Text>
+                            <Text style={styles.statLabel}>Projects</Text>
                         </View>
-                    ) : (
-                        <View style={styles.profileInfo}>
-                            <Text style={styles.profileName}>
-                                {profileData.name || 'Set your name'}
-                            </Text>
-                            <Text style={styles.profileEmail}>{profileData.email || 'Not logged in'}</Text>
-                            <Text style={styles.profileLabel}>{profileData.role}</Text>
-                            {profileData.bio ? (
-                                <Text style={styles.profileBio}>{profileData.bio}</Text>
-                            ) : null}
-
-                            <TouchableOpacity
-                                style={styles.editProfileButton}
-                                onPress={() => setIsEditing(true)}
-                            >
-                                <Text style={styles.editProfileText}>✏️ Edit Profile</Text>
-                            </TouchableOpacity>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statValue}>0</Text>
+                            <Text style={styles.statLabel}>Recordings</Text>
                         </View>
-                    )}
-                </LinearGradient>
+                        <View style={styles.statCard}>
+                            <Text style={styles.statValue}>0</Text>
+                            <Text style={styles.statLabel}>Tracks</Text>
+                        </View>
+                    </View>
 
-                {/* Log Out Button */}
-                <TouchableOpacity style={styles.logOutButton} onPress={handleLogOut}>
-                    <Text style={styles.logOutIcon}>🚪</Text>
-                    <Text style={styles.logOutText}>Log Out</Text>
-                </TouchableOpacity>
+                    {/* Log Out Button */}
+                    <TouchableOpacity style={styles.logOutButton} onPress={handleLogOut}>
+                        <Text style={styles.logOutIcon}>🚪</Text>
+                        <Text style={styles.logOutText}>Log Out</Text>
+                    </TouchableOpacity>
 
-                <View style={{ height: 60 }} />
+                    {/* Developer Credit */}
+                    <View style={styles.creditContainer}>
+                        <View style={styles.divider} />
+                        <Text style={styles.creditText}>Developed by</Text>
+                        <LinearGradient
+                            colors={['#BA55D3', '#FFD700']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.studioBadge}
+                        >
+                            <Text style={styles.studioText}>UJ STUDIO</Text>
+                        </LinearGradient>
+                        <Text style={styles.versionText}>v1.0.0</Text>
+                    </View>
+
+                    <View style={{ height: 40 }} />
+                </Animated.View>
             </ScrollView>
         </SafeAreaView>
     );
@@ -237,29 +308,33 @@ const styles = StyleSheet.create({
     profileCard: {
         margin: SPACING.lg,
         padding: SPACING.xl,
-        borderRadius: 20,
+        borderRadius: 24,
         alignItems: 'center',
-        elevation: 10,
+        elevation: 12,
         ...Platform.select({
             web: {
-                boxShadow: '0 4px 8px rgba(98, 0, 238, 0.3)',
+                boxShadow: '0 8px 24px rgba(186, 85, 211, 0.4)',
             }
         })
     },
     avatarContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        marginBottom: SPACING.lg,
+        borderWidth: 4,
+        borderColor: 'rgba(255, 255, 255, 0.4)',
+        overflow: 'hidden',
+        elevation: 8,
+    },
+    avatarPlaceholder: {
+        width: '100%',
+        height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: SPACING.md,
-        borderWidth: 4,
-        borderColor: 'rgba(255, 255, 255, 0.3)',
-        overflow: 'hidden',
     },
     avatarText: {
-        fontSize: 48,
+        fontSize: 56,
         fontWeight: 'bold',
         color: '#fff',
     },
@@ -269,127 +344,212 @@ const styles = StyleSheet.create({
     },
     cameraIcon: {
         position: 'absolute',
-        bottom: 0,
-        right: 0,
-        backgroundColor: '#03dac6',
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        bottom: 4,
+        right: 4,
+        backgroundColor: '#FFD700',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 3,
-        borderColor: '#6200ee',
+        borderColor: '#fff',
+        elevation: 4,
     },
     cameraEmoji: {
-        fontSize: 18,
+        fontSize: 20,
     },
     profileInfo: {
         alignItems: 'center',
         width: '100%',
     },
     profileName: {
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: 'bold',
         color: '#fff',
-        marginBottom: 4,
+        marginBottom: 6,
+        textShadowColor: 'rgba(0, 0, 0, 0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
     profileEmail: {
         fontSize: 16,
-        color: 'rgba(255, 255, 255, 0.9)',
-        marginBottom: 4,
+        color: 'rgba(255, 255, 255, 0.95)',
+        marginBottom: 12,
+    },
+    roleBadge: {
+        backgroundColor: 'rgba(255, 215, 0, 0.2)',
+        paddingHorizontal: 16,
+        paddingVertical: 6,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 215, 0, 0.4)',
+        marginBottom: 12,
     },
     profileLabel: {
         fontSize: 14,
-        color: 'rgba(255, 255, 255, 0.7)',
-        marginBottom: 8,
+        color: '#FFD700',
+        fontWeight: '600',
     },
     profileBio: {
-        fontSize: 13,
-        color: 'rgba(255, 255, 255, 0.8)',
+        fontSize: 14,
+        color: 'rgba(255, 255, 255, 0.85)',
         textAlign: 'center',
         marginTop: 8,
         fontStyle: 'italic',
+        lineHeight: 20,
     },
     editProfileButton: {
-        marginTop: 16,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        paddingHorizontal: 24,
-        paddingVertical: 10,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.3)',
+        marginTop: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        paddingHorizontal: 28,
+        paddingVertical: 12,
+        borderRadius: 24,
+        borderWidth: 2,
+        borderColor: 'rgba(255, 255, 255, 0.4)',
     },
     editProfileText: {
         color: '#fff',
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: 15,
+        fontWeight: '700',
     },
     editContainer: {
         width: '100%',
     },
     input: {
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        borderRadius: 12,
-        padding: 14,
-        marginBottom: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderRadius: 14,
+        padding: 16,
+        marginBottom: 14,
         fontSize: 16,
         color: '#333',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
     },
     inputDisabled: {
-        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        backgroundColor: 'rgba(255, 255, 255, 0.6)',
         color: '#666',
     },
     textArea: {
-        height: 80,
+        height: 90,
         textAlignVertical: 'top',
     },
     editButtons: {
         flexDirection: 'row',
         gap: 12,
-        marginTop: 8,
+        marginTop: 12,
     },
     editButton: {
         flex: 1,
-        padding: 14,
-        borderRadius: 12,
+        padding: 16,
+        borderRadius: 14,
         alignItems: 'center',
     },
     cancelButton: {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.3)',
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        borderWidth: 2,
+        borderColor: 'rgba(255, 255, 255, 0.4)',
     },
     saveButton: {
-        backgroundColor: '#03dac6',
+        backgroundColor: '#FFD700',
     },
     editButtonText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
     },
+    statsContainer: {
+        flexDirection: 'row',
+        marginHorizontal: SPACING.lg,
+        marginTop: SPACING.md,
+        gap: 12,
+    },
+    statCard: {
+        flex: 1,
+        backgroundColor: '#2a2a2a',
+        borderRadius: 16,
+        padding: SPACING.md,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#3a3a3a',
+        elevation: 4,
+    },
+    statValue: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#BA55D3',
+        marginBottom: 4,
+    },
+    statLabel: {
+        fontSize: 12,
+        color: '#aaa',
+        fontWeight: '600',
+    },
     logOutButton: {
         backgroundColor: '#cf6679',
-        borderRadius: 12,
+        borderRadius: 16,
         padding: SPACING.md,
         marginHorizontal: SPACING.lg,
         marginTop: SPACING.xl,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        elevation: 5,
+        elevation: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
         ...Platform.select({
             web: {
-                boxShadow: '0 4px 8px rgba(207, 102, 121, 0.3)',
+                boxShadow: '0 4px 12px rgba(207, 102, 121, 0.4)',
             }
         })
     },
     logOutIcon: {
-        fontSize: 20,
+        fontSize: 22,
         marginRight: SPACING.sm,
     },
     logOutText: {
         color: '#fff',
+        fontSize: 17,
+        fontWeight: 'bold',
+    },
+    creditContainer: {
+        alignItems: 'center',
+        marginTop: SPACING.xl * 2,
+        paddingHorizontal: SPACING.lg,
+    },
+    divider: {
+        width: '40%',
+        height: 1,
+        backgroundColor: '#3a3a3a',
+        marginBottom: SPACING.md,
+    },
+    creditText: {
+        fontSize: 12,
+        color: '#888',
+        marginBottom: 8,
+        letterSpacing: 1,
+    },
+    studioBadge: {
+        paddingHorizontal: 24,
+        paddingVertical: 10,
+        borderRadius: 20,
+        elevation: 4,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 4px 12px rgba(186, 85, 211, 0.3)',
+            }
+        })
+    },
+    studioText: {
         fontSize: 16,
         fontWeight: 'bold',
+        color: '#fff',
+        letterSpacing: 2,
+    },
+    versionText: {
+        fontSize: 11,
+        color: '#666',
+        marginTop: 12,
+        fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     },
 });

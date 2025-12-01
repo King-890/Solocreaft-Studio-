@@ -29,7 +29,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#6200ee"
+        "backgroundColor": "#1a0a33"
       },
       "package": "com.ujstudios.solocraft",
       "versionCode": 1,
