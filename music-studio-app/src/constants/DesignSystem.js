@@ -87,7 +87,7 @@ export const SHADOWS = {
 
 export const ASSETS = {
     // We will use require() in the components, but keys here for reference
-    homeBackground: require('../../assets/blossom_goddess.png'),
+    homeBackground: require('../../assets/blossom_goddess.jpg'),
 };
 
 export default {

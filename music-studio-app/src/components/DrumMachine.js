@@ -1,26 +1,44 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import WebAudioEngine from '../services/WebAudioEngine';
+import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useProject } from '../contexts/ProjectContext';
 
-const PADS = Array.from({ length: 16 }, (_, i) => i + 1);
+const DRUM_PADS = [
+    { id: 'kick', label: 'Kick', color: '#ff4444' },
+    { id: 'snare', label: 'Snare', color: '#44ff44' },
+    { id: 'hihat', label: 'Hi-Hat', color: '#4444ff' },
+    { id: 'tom1', label: 'Tom 1', color: '#ffaa44' },
+    { id: 'tom2', label: 'Tom 2', color: '#ff44aa' },
+    { id: 'crash', label: 'Crash', color: '#44aaff' },
+    { id: 'ride', label: 'Ride', color: '#aaff44' },
+];
 
 export default function DrumMachine() {
-    const handlePadPress = (padId) => {
-        console.log(`Drum Pad ${padId} pressed`);
-        WebAudioEngine.playDrumSound(padId);
+    const { tracks } = useProject();
+
+    // Find the Drums track
+    const track = tracks.find(t => t.name === 'Drums') || { volume: 0.9, pan: 0, muted: false };
+
+    const handlePadPress = (pad) => {
+        if (track.muted) return;
+        console.log(`Drum Pad ${pad.label} pressed`);
+        // Map to note names expected by UnifiedAudioEngine for drums
+        // Kick -> C1, Snare -> D1, etc. if using MIDI mapping
+        // Or pass the ID directly if UnifiedAudioEngine handles it
+        UnifiedAudioEngine.playDrumSound(pad.id, track.volume, track.pan);
     };
 
     return (
         <View style={styles.container}>
             <View style={styles.grid}>
-                {PADS.map((pad) => (
+                {DRUM_PADS.map((pad) => (
                     <TouchableOpacity
-                        key={pad}
-                        style={styles.pad}
+                        key={pad.id}
+                        style={[styles.pad, { borderColor: pad.color }]}
                         onPress={() => handlePadPress(pad)}
                         activeOpacity={0.6}
                     >
-                        <Text style={styles.padText}>{pad}</Text>
+                        <Text style={[styles.padText, { color: pad.color }]}>{pad.label}</Text>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -37,21 +55,21 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'center',
-        width: 340, // 4 * 80 + margins
+        width: 340,
+        gap: 15,
     },
     pad: {
-        width: 70,
-        height: 70,
-        backgroundColor: '#333',
-        margin: 5,
-        borderRadius: 8,
+        width: 90,
+        height: 90,
+        backgroundColor: '#1e1e1e',
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: '#444',
+        elevation: 5,
     },
     padText: {
-        color: '#666',
-        fontSize: 12,
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });

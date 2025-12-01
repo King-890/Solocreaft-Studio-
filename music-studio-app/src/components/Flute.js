@@ -1,13 +1,13 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native';
-import WebAudioEngine from '../services/WebAudioEngine';
+import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 
 const NOTES = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5', 'C6'];
 
 export default function Flute() {
     const handleNotePress = (note) => {
         console.log(`Flute note ${note} played`);
-        WebAudioEngine.playSound(note);
+        UnifiedAudioEngine.playSound(note, 'flute');
     };
 
     return (

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import WebAudioEngine from '../services/WebAudioEngine';
+import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 
 const VALVES = [1, 2, 3];
 
@@ -17,7 +17,7 @@ export default function Trumpet() {
         // Play note based on valve combination
         const note = getNoteFromValves(newPressed);
         console.log(`Trumpet playing ${note} with valves:`, newPressed);
-        WebAudioEngine.playSound(note);
+        UnifiedAudioEngine.playSound(note, 'trumpet');
     };
 
     const getNoteFromValves = (valves) => {

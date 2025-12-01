@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import WebAudioEngine from '../services/WebAudioEngine';
+import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useProject } from '../contexts/ProjectContext';
 
 const PERCUSSION = [
     { id: 1, name: 'Conga High', note: 'C4' },
@@ -14,9 +15,15 @@ const PERCUSSION = [
 ];
 
 export default function WorldPercussion() {
+    const { tracks } = useProject();
+
+    // Find the World Percussion track
+    const track = tracks.find(t => t.name === 'World Percussion') || { volume: 0.8, pan: 0, muted: false };
+
     const handlePadPress = (percussion) => {
+        if (track.muted) return;
         console.log(`${percussion.name} played`);
-        WebAudioEngine.playDrumSound(percussion.id);
+        UnifiedAudioEngine.playDrumSound(percussion.id, track.volume, track.pan);
     };
 
     return (

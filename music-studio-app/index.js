@@ -1,4 +1,5 @@
-import { AppRegistry, Platform, LogBox } from 'react-native';
+import { registerRootComponent } from 'expo';
+import { Platform, LogBox } from 'react-native';
 import App from './App';
 
 // Suppress specific warnings
@@ -10,9 +11,6 @@ LogBox.ignoreLogs([
     'useNativeDriver',
     'pointerEvents'
 ]);
-import appJson from './app.json';
-const appName = appJson.expo.slug;
-console.log('🚀 index.js: Registering component', appName);
 
 // Disable console logs in production for better performance
 if (!__DEV__) {
@@ -20,13 +18,6 @@ if (!__DEV__) {
     console.warn = () => { };
     console.error = () => { };
 }
-
-// REMOVED: InteractionManager.setDeadline(100) was too aggressive
-// and could interfere with animations and timing-sensitive UI.
-// The default deadline is sufficient for most use cases.
-// if (Platform.OS === 'android') {
-//     require('react-native').InteractionManager.setDeadline(100);
-// }
 
 // Patch console.warn to filter out specific warnings on Web that LogBox might miss
 if (Platform.OS === 'web') {
@@ -39,12 +30,7 @@ if (Platform.OS === 'web') {
     };
 }
 
-AppRegistry.registerComponent(appName, () => App);
-
-// Web-specific mounting
-if (Platform.OS === 'web') {
-    const rootTag = document.getElementById('root') || document.getElementById('main');
-    if (rootTag) {
-        AppRegistry.runApplication(appName, { rootTag });
-    }
-}
+// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
+// It also ensures that whether you load the app in Expo Go or in a native build,
+// the environment is set up appropriately
+registerRootComponent(App);

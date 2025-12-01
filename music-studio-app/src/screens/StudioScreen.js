@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated, Alert, TextInput, Modal, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert, TextInput, Modal, Platform } from 'react-native';
 import AudioRecorder from '../components/AudioRecorder';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Piano from '../components/Piano';
 import DrumMachine from '../components/DrumMachine';
 import BassGuitar from '../components/BassGuitar';
@@ -17,6 +18,7 @@ import ExportModal from '../components/ExportModal';
 import { useProject } from '../contexts/ProjectContext';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import ProjectManager from '../services/ProjectManager';
 import AnimatedCard from '../components/AnimatedCard';
 import ImmersiveBackground from '../components/ImmersiveBackground';
@@ -47,6 +49,24 @@ export default function StudioScreen({ route }) {
 
     // Animations
     const fadeAnim = useRef(new Animated.Value(1)).current;
+
+
+
+    useEffect(() => {
+        // Lock to landscape
+        async function lockLandscape() {
+            await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+        }
+        lockLandscape();
+
+        return () => {
+            // Unlock on exit
+            async function unlockOrientation() {
+                await ScreenOrientation.unlockAsync();
+            }
+            unlockOrientation();
+        };
+    }, []);
 
     useEffect(() => {
         if (route?.params?.initialInstrument) {

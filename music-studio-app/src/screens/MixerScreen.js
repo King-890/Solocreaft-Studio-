@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView as RNSafeAreaView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import MixerModal from '../components/MixerModal';
 
@@ -7,8 +8,8 @@ export default function MixerScreen() {
     const navigation = useNavigation();
 
     const handleClose = () => {
-        // Navigate back to Home screen
-        navigation.navigate('Home');
+        // Navigate back to previous screen (Studio)
+        navigation.goBack();
     };
 
     return (

@@ -1,0 +1,43 @@
+{
+    "cli": {
+        "version": ">= 13.2.2",
+        "appVersionSource": "remote"
+    },
+    "build": {
+        "development": {
+            "developmentClient": true,
+            "distribution": "internal",
+            "android": {
+                "buildType": "apk",
+                "gradleCommand": ":app:assembleDebug"
+            }
+        },
+        "preview": {
+            "distribution": "internal",
+            "android": {
+                "buildType": "apk",
+                "image": "latest"
+            },
+            "ios": {
+                "simulator": true,
+                "image": "latest"
+            },
+            "env": {
+                "EXPO_NO_CAPABILITY_SYNC": "1",
+                "GRADLE_OPTS": "-Xmx4g -Dorg.gradle.daemon=false"
+            }
+        },
+        "production": {
+            "android": {
+                "buildType": "app-bundle",
+                "resourceClass": "medium"
+            },
+            "ios": {
+                "resourceClass": "m-medium"
+            }
+        }
+    },
+    "submit": {
+        "production": {}
+    }
+}

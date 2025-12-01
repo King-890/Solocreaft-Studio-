@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native';
-import WebAudioEngine from '../services/WebAudioEngine';
+import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 
 const STRINGS = ['E', 'A', 'D', 'G'];
 const FRETS = 12;
@@ -19,7 +19,7 @@ export default function BassGuitar() {
     const handleFretPress = (string, fret) => {
         const note = getNoteForFret(string, fret);
         console.log(`Playing ${note}`);
-        WebAudioEngine.playSound(note);
+        UnifiedAudioEngine.playSound(note, 'bass');
     };
 
     return (

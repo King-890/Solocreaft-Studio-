@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import WebAudioEngine from '../services/WebAudioEngine';
+import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 
 const STRINGS = ['G', 'D', 'A', 'E'];
 
@@ -9,7 +9,7 @@ export default function Violin() {
         console.log(`Violin string ${string} played`);
         // Map strings to notes
         const noteMap = { 'G': 'G3', 'D': 'D4', 'A': 'A4', 'E': 'E5' };
-        WebAudioEngine.playSound(noteMap[string]);
+        UnifiedAudioEngine.playSound(noteMap[string], 'violin');
     };
 
     return (

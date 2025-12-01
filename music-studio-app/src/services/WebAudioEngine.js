@@ -2,6 +2,8 @@
 // This provides basic beep sounds for demo purposes
 // Replace with real audio samples for production
 
+import { Platform } from 'react-native';
+
 class WebAudioEngine {
     constructor() {
         this.audioContext = null;
@@ -14,8 +16,18 @@ class WebAudioEngine {
     }
 
     init() {
+        // WebAudioEngine only works on web platform
+        if (Platform.OS !== 'web') {
+            // console.log('ℹ️ WebAudioEngine is only available on web platform');
+            return false;
+        }
+
         if (!this.audioContext) {
             try {
+                if (typeof window === 'undefined' || !window.AudioContext) {
+                    console.warn('⚠️ AudioContext not available');
+                    return false;
+                }
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 this.initialized = true;
                 console.log('✅ WebAudioEngine initialized');
@@ -46,8 +58,8 @@ class WebAudioEngine {
         return true;
     }
 
-    async playSound(noteName) {
-        console.log(`🎵 Playing sound: ${noteName}`);
+    async playSound(noteName, instrument = 'piano') {
+        console.log(`🎵 Playing sound: ${noteName} (${instrument})`);
 
         if (!this.init()) {
             console.error('❌ Cannot play sound - init failed');
@@ -77,6 +89,22 @@ class WebAudioEngine {
         // Calculate frequency for the octave (A4 = 440Hz is octave 4)
         const frequency = baseFreq * Math.pow(2, octave - 4);
 
+        // Map instrument to waveform (matching NativeAudioEngine)
+        let waveform = 'sine';
+        switch (instrument.toLowerCase()) {
+            case 'piano': waveform = 'sine'; break;
+            case 'guitar': waveform = 'sawtooth'; break;
+            case 'bass': waveform = 'triangle'; break;
+            case 'synth': waveform = 'square'; break;
+            case 'violin': waveform = 'sawtooth'; break;
+            case 'flute': waveform = 'sine'; break;
+            // case 'sitar': waveform = 'sawtooth'; break;
+            case 'veena': waveform = 'sawtooth'; break;
+            case 'trumpet': waveform = 'square'; break;
+            case 'saxophone': waveform = 'sawtooth'; break;
+            default: waveform = 'sine';
+        }
+
         try {
             // Create oscillator for beep sound
             const oscillator = this.audioContext.createOscillator();
@@ -86,7 +114,7 @@ class WebAudioEngine {
             gainNode.connect(this.audioContext.destination);
 
             oscillator.frequency.value = frequency;
-            oscillator.type = 'sine'; // Can be 'sine', 'square', 'sawtooth', 'triangle'
+            oscillator.type = waveform;
 
             // Envelope: quick attack, short sustain, quick release
             const now = this.audioContext.currentTime;
@@ -98,7 +126,7 @@ class WebAudioEngine {
             oscillator.start(now);
             oscillator.stop(now + 0.3);
 
-            console.log(`✅ Played ${noteName} at ${frequency.toFixed(2)}Hz`);
+            console.log(`✅ Played ${noteName} (${instrument}) at ${frequency.toFixed(2)}Hz with ${waveform} wave`);
         } catch (error) {
             console.error('❌ Error playing sound:', error);
         }

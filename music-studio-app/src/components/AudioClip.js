@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useProject } from '../contexts/ProjectContext';
 
 export default function AudioClip({ clip, pixelsPerSecond, trackColor }) {
@@ -14,9 +14,14 @@ export default function AudioClip({ clip, pixelsPerSecond, trackColor }) {
     };
 
     const handleDelete = () => {
-        if (confirm('Delete this clip?')) {
-            deleteClip(clip.id);
-        }
+        Alert.alert(
+            'Delete Clip',
+            'Are you sure you want to delete this clip?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: () => deleteClip(clip.id) }
+            ]
+        );
     };
 
     return (

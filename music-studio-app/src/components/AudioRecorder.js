@@ -1,171 +1,122 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
-import { useAudioRecorder } from 'expo-audio';
+import { Audio } from 'expo-av';
 import { requestAudioPermissions } from '../utils/audioHelpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useProject } from '../contexts/ProjectContext';
-import { supabase } from '../services/supabase';
 import { saveFileToLocal } from '../utils/webStorage';
 
 export default function AudioRecorder({ onRecordingSaved, tracks }) {
     const [duration, setDuration] = useState(0);
     const [uploading, setUploading] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const recordingRef = useRef(null);
+    const durationIntervalRef = useRef(null);
+
     const { user } = useAuth();
     const { addClip, addRecording } = useProject();
 
-    const [localIsRecording, setLocalIsRecording] = useState(false);
-    const [starting, setStarting] = useState(false);
-
-    // useAudioRecorder hook handles the recording state and logic
-    const audioRecorder = useAudioRecorder({
-        onStatusUpdate: (status) => {
-            setDuration(status.durationMillis);
-        }
-    });
-
-    // Use local state for Web reliability, fallback to hook state for others
-    const isRecording = Platform.OS === 'web' ? localIsRecording : audioRecorder.isRecording;
-
-    // Timer effect for Web
-    useEffect(() => {
-        let interval;
-        if (isRecording && Platform.OS === 'web') {
-            interval = setInterval(() => {
-                setDuration(prev => prev + 1000);
-            }, 1000);
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [isRecording]);
-
-    // Cleanup effect on unmount
+    // Cleanup on unmount
     useEffect(() => {
         return () => {
-            if (audioRecorder.isRecording) {
-                audioRecorder.stop();
+            if (recordingRef.current) {
+                recordingRef.current.stopAndUnloadAsync();
+            }
+            if (durationIntervalRef.current) {
+                clearInterval(durationIntervalRef.current);
             }
         };
     }, []);
 
     const startRecording = async () => {
-        if (starting || isRecording) return;
+        if (isRecording) return;
 
         try {
-            setStarting(true);
             const hasPermission = await requestAudioPermissions();
             if (!hasPermission) {
-                console.error('Audio permission denied');
-                alert('Microphone permission is required to record audio. Please enable it in your device settings.');
-                setStarting(false);
+                alert('Microphone permission is required to record audio.');
                 return;
             }
 
             console.log('Starting recording...');
-            await audioRecorder.prepareToRecordAsync({
-                android: {
-                    extension: '.wav',
-                    outputFormat: 'mpeg_4',
-                    audioEncoder: 'aac',
-                },
-                ios: {
-                    extension: '.wav',
-                    audioQuality: 'high',
-                    sampleRate: 44100,
-                    numberOfChannels: 2,
-                    bitRate: 128000,
-                    linearPCMBitDepth: 16,
-                    linearPCMIsBigEndian: false,
-                    linearPCMIsFloat: false,
-                },
-                web: {
-                    mimeType: 'audio/webm', // Changed to webm for better browser support
-                    bitsPerSecond: 128000,
-                },
+
+            await Audio.setAudioModeAsync({
+                allowsRecordingIOS: true,
+                playsInSilentModeIOS: true,
+                shouldDuckAndroid: true,
+                playThroughEarpieceAndroid: false,
+                staysActiveInBackground: true,
             });
 
-            audioRecorder.record();
-            setLocalIsRecording(true);
+            const { recording } = await Audio.Recording.createAsync(
+                Audio.RecordingOptionsPresets.HIGH_QUALITY
+            );
+
+            recordingRef.current = recording;
+            setIsRecording(true);
             setDuration(0);
+
+            // Start timer
+            durationIntervalRef.current = setInterval(() => {
+                setDuration(prev => prev + 1000);
+            }, 1000);
+
             console.log('Recording started');
         } catch (error) {
             console.error('Failed to start recording:', error);
-            alert(`Failed to start recording: ${error.message || 'Unknown error'}`);
-            setLocalIsRecording(false);
-        } finally {
-            setStarting(false);
+            alert(`Failed to start recording: ${error.message}`);
         }
     };
 
     const stopRecording = async () => {
-        if (starting) return;
+        if (!isRecording || !recordingRef.current) return;
 
         try {
-            setUploading(true); // Start loading state
-            await audioRecorder.stop();
-            setLocalIsRecording(false);
-            const localUri = audioRecorder.uri;
+            setUploading(true);
+            clearInterval(durationIntervalRef.current);
 
-            if (!localUri) {
-                console.error('Recording stopped but no URI returned');
-                alert('Recording failed to save. Please try again.');
-                setUploading(false);
-                return;
+            console.log('Stopping recording...');
+            await recordingRef.current.stopAndUnloadAsync();
+            const uri = recordingRef.current.getURI();
+
+            setIsRecording(false);
+            recordingRef.current = null;
+
+            if (!uri) {
+                throw new Error('No URI returned from recording');
             }
 
-            console.log('Recording stopped. Local URI:', localUri, 'Duration:', duration);
+            console.log('Recording stopped. URI:', uri);
 
-            let finalUri = localUri;
-
-            // Upload to Supabase if user is logged in
-            // REVERTED: User requested local storage only for now
-            /*
-            if (user) {
-                try {
-                    // ... upload logic removed ...
-                } catch (uploadError) {
-                    console.error('Failed to upload recording:', uploadError);
-                }
-            }
-            */
-
-            // Use local URI directly
-            console.log('Saving recording locally:', localUri);
-
-            // Persist on Web
-            let savedUri = finalUri;
-            const recordingId = `recording_${Date.now()}`; // Generate ID here
+            // Save locally
+            const recordingId = `recording_${Date.now()}`;
+            let savedUri = uri;
 
             if (Platform.OS === 'web') {
-                savedUri = await saveFileToLocal(finalUri, recordingId);
-                console.log('Web persistent URI:', savedUri);
+                savedUri = await saveFileToLocal(uri, recordingId);
             }
 
-            // Add to recordings library (auto-save)
-            // Pass the ID so we can rehydrate it later
-            const savedRecording = addRecording(savedUri, duration, recordingId);
-            console.log('✅ Recording auto-saved to library:', savedRecording.name);
+            // Add to library
+            const savedRecording = await addRecording(savedUri, duration, recordingId, 'voice', null);
+            console.log('✅ Recording saved:', savedRecording.name);
 
-            // Also add clip to timeline if vocals track exists
+            // Add to timeline if vocals track exists
             const vocalsTrack = tracks?.find(t => t.name === 'Lead Vocals' || t.name === 'Vocals');
-            if (vocalsTrack && finalUri && duration > 0) {
-                addClip(vocalsTrack.id, savedUri, duration, recordingId);
-                console.log('✅ Clip added to timeline');
+            if (vocalsTrack && duration > 0) {
+                addClip(vocalsTrack.id, savedRecording.uri, duration, recordingId);
             }
 
-            // Show success feedback
             if (onRecordingSaved) {
-                onRecordingSaved({ uri: finalUri, duration, recording: savedRecording });
+                onRecordingSaved({ uri: savedUri, duration, recording: savedRecording });
             }
 
-            // Reset duration
             setDuration(0);
         } catch (error) {
             console.error('Failed to stop recording:', error);
-            alert(`Failed to save recording: ${error.message || 'Unknown error'}`);
+            alert(`Failed to save recording: ${error.message}`);
         } finally {
             setUploading(false);
-            setLocalIsRecording(false);
+            setIsRecording(false);
         }
     };
 
@@ -176,7 +127,6 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
         return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     };
 
-    // Simple visualizer based on recording state
     const visualizerHeight = isRecording ? 50 : 0;
 
     return (
@@ -247,7 +197,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 4,
         borderColor: '#e0e0e0',
-        boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.3)',
         elevation: 8,
     },
     recordingButton: {

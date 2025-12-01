@@ -25,7 +25,7 @@ export default function LoginScreen({ navigation }) {
     // COMMENTED OUT: OAuth functionality disabled
     // const [socialLoading, setSocialLoading] = useState({ google: false, facebook: false });
     const [errorMsg, setErrorMsg] = useState('');
-    const { signIn } = useAuth(); // Removed: signInWithGoogle, signInWithFacebook
+    const { signIn, resetPassword } = useAuth(); // Removed: signInWithGoogle, signInWithFacebook
 
     // Animation values
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -86,6 +86,32 @@ export default function LoginScreen({ navigation }) {
                 setErrorMsg(getUserFriendlyErrorMessage(error));
                 UISounds.playError();
             } else {
+                UISounds.playSuccess();
+            }
+        } catch (err) {
+            setErrorMsg(getUserFriendlyErrorMessage(err));
+            UISounds.playError();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleForgotPassword = async () => {
+        if (!email) {
+            setErrorMsg('Please enter your email address first');
+            UISounds.playError();
+            return;
+        }
+
+        setLoading(true);
+        setErrorMsg('');
+        try {
+            const { error } = await resetPassword(email);
+            if (error) {
+                setErrorMsg(getUserFriendlyErrorMessage(error));
+                UISounds.playError();
+            } else {
+                setErrorMsg('✅ Password reset email sent! Check your inbox.');
                 UISounds.playSuccess();
             }
         } catch (err) {
@@ -248,9 +274,18 @@ export default function LoginScreen({ navigation }) {
                                 name="password"
                             />
 
+                            <TouchableOpacity
+                                onPress={handleForgotPassword}
+                                disabled={loading}
+                                activeOpacity={0.7}
+                                style={styles.forgotPasswordButton}
+                            >
+                                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                            </TouchableOpacity>
+
                             {errorMsg ? (
                                 <Animated.View style={styles.errorContainer}>
-                                    <Text style={styles.errorText}>⚠️ {errorMsg}</Text>
+                                    <Text style={styles.errorText}>{errorMsg.startsWith('✅') ? errorMsg : `⚠️ ${errorMsg}`}</Text>
                                 </Animated.View>
                             ) : null}
 
@@ -389,6 +424,16 @@ const styles = StyleSheet.create({
     signupLink: {
         color: '#BA55D3',
         fontWeight: 'bold',
+        textDecorationLine: 'underline',
+    },
+    forgotPasswordButton: {
+        alignSelf: 'flex-end',
+        marginTop: 8,
+        marginBottom: 12,
+    },
+    forgotPasswordText: {
+        color: '#BA55D3',
+        fontSize: 12,
         textDecorationLine: 'underline',
     },
     decorativeContainer: {

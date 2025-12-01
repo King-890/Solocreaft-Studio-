@@ -69,6 +69,7 @@ export default function ProjectsLibrary() {
                 </View>
             ) : (
                 <FlatList
+                    scrollEnabled={false}
                     data={filteredProjects}
                     keyExtractor={(item) => item.id}
                     renderItem={({ item }) => (

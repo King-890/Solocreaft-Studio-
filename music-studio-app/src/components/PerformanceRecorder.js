@@ -222,10 +222,9 @@ export default function PerformanceRecorder({
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        bottom: 30,
-        left: 0,
-        right: 0,
-        alignItems: 'center',
+        top: 80, // Below header
+        right: 20,
+        alignItems: 'flex-end',
         zIndex: 100,
     },
     countInOverlay: {
@@ -259,10 +258,10 @@ const styles = StyleSheet.create({
         elevation: 8,
     },
     recordButton: {
-        paddingHorizontal: 32,
-        paddingVertical: 16,
-        borderRadius: 50,
-        minWidth: 250,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 30,
+        minWidth: 160,
     },
     recordPulse: {
         position: 'absolute',
@@ -280,11 +279,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     recordIcon: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
         backgroundColor: '#fff',
-        marginRight: 12,
+        marginRight: 8,
     },
     recordIconActive: {
         borderRadius: 4,
@@ -294,13 +293,13 @@ const styles = StyleSheet.create({
     },
     recordButtonText: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 14,
         fontWeight: 'bold',
         fontFamily: 'Montserrat-Bold',
     },
     recordDuration: {
         color: 'rgba(255, 255, 255, 0.9)',
-        fontSize: 14,
+        fontSize: 11,
         fontFamily: 'Orbitron-Medium',
         marginTop: 2,
     },

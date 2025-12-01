@@ -1,7 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Animated } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import { Audio } from 'expo-av';
+import { useProject } from '../contexts/ProjectContext';
 import PerformanceRecorder from '../components/PerformanceRecorder';
 import Piano from '../components/Piano';
 import DrumMachine from '../components/DrumMachine';
@@ -14,6 +18,7 @@ import Trumpet from '../components/Trumpet';
 import Saxophone from '../components/Saxophone';
 import WorldPercussion from '../components/WorldPercussion';
 import Tabla from '../components/Tabla';
+import Dholak from '../components/Dholak';
 
 // Instrument-specific themes
 const INSTRUMENT_THEMES = {
@@ -83,12 +88,12 @@ const INSTRUMENT_THEMES = {
         name: 'Tabla Studio',
         icon: '🪘',
     },
-    sitar: {
-        colors: ['#3a2a1a', '#4a3520', '#5a4025'],
-        accent: '#FFB74D',
-        name: 'Sitar Studio',
-        icon: '🪕',
-    },
+    // sitar: {
+    //     colors: ['#3a2a1a', '#4a3520', '#5a4025'],
+    //     accent: '#FFB74D',
+    //     name: 'Sitar Studio',
+    //     icon: '🪕',
+    // },
     veena: {
         colors: ['#2a1a2a', '#3a2535', '#4a3040'],
         accent: '#CE93D8',
@@ -113,14 +118,36 @@ export default function InstrumentRoomScreen() {
     const navigation = useNavigation();
     const route = useRoute();
     const { instrumentType = 'piano' } = route.params || {};
+    const { addRecording } = useProject();
 
     const [isRecording, setIsRecording] = useState(false);
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
     const theme = INSTRUMENT_THEMES[instrumentType] || INSTRUMENT_THEMES.piano;
 
+    // Lock to landscape orientation on mount
+    useEffect(() => {
+        const lockOrientation = async () => {
+            try {
+                await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+                console.log('🔒 Locked to landscape mode');
+            } catch (error) {
+                console.warn('⚠️ Could not lock orientation:', error);
+            }
+        };
+
+        lockOrientation();
+
+        // Unlock orientation when leaving the screen
+        return () => {
+            ScreenOrientation.unlockAsync().catch(err =>
+                console.warn('⚠️ Could not unlock orientation:', err)
+            );
+        };
+    }, []);
+
     // Fade in on mount
-    React.useEffect(() => {
+    useEffect(() => {
         Animated.timing(fadeAnim, {
             toValue: 1,
             duration: 600,
@@ -128,18 +155,54 @@ export default function InstrumentRoomScreen() {
         }).start();
     }, []);
 
-    const handleStartRecording = () => {
-        setIsRecording(true);
-        // TODO: Start actual audio recording
-        console.log('Recording started');
+    const [recording, setRecording] = useState(null);
+
+    const handleStartRecording = async () => {
+        try {
+            console.log('Requesting permissions..');
+            const permission = await Audio.requestPermissionsAsync();
+            if (permission.status === 'granted') {
+                await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: true,
+                    playsInSilentModeIOS: true,
+                });
+
+                console.log('Starting recording..');
+                const { recording } = await Audio.Recording.createAsync(
+                    Audio.RecordingOptionsPresets.HIGH_QUALITY
+                );
+                setRecording(recording);
+                setIsRecording(true);
+                console.log('Recording started');
+            } else {
+                console.warn('Permission to record audio not granted');
+            }
+        } catch (err) {
+            console.error('Failed to start recording', err);
+        }
     };
 
-    const handleStopRecording = () => {
+    const handleStopRecording = async () => {
         setIsRecording(false);
-        // TODO: Stop audio recording and save to timeline
-        console.log('Recording stopped');
+        if (!recording) return;
 
-        // Navigate back to studio with success feedback
+        console.log('Stopping recording..');
+        setRecording(undefined);
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        console.log('Recording stopped and stored at', uri);
+
+        // Save to project context
+        if (uri) {
+            // Calculate duration (approximate)
+            const status = await recording.getStatusAsync();
+            const duration = status.durationMillis;
+
+            await addRecording(uri, duration, null, 'instrument', instrumentType);
+            console.log('Performance saved to library');
+        }
+
+        // Navigate back
         setTimeout(() => {
             navigation.goBack();
         }, 1000);
@@ -170,12 +233,12 @@ export default function InstrumentRoomScreen() {
                 return <WorldPercussion />;
             case 'tabla':
                 return <Tabla />;
-            case 'sitar':
-                return <AcousticGuitar />; // Reuse guitar for now (same string instrument)
+            // case 'sitar':
+            //     return <AcousticGuitar instrument="sitar" />;
             case 'veena':
                 return <Violin />; // Reuse violin for now (similar string instrument)
             case 'dholak':
-                return <DrumMachine />; // Reuse drums for percussion
+                return <Dholak />;
             default:
                 return <Piano />;
         }
@@ -199,7 +262,7 @@ export default function InstrumentRoomScreen() {
                 pointerEvents="none"
             />
 
-            <SafeAreaView style={styles.safeArea}>
+            <SafeAreaView style={styles.safeArea} edges={['right', 'left']}>
                 {/* Header */}
                 <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
                     <TouchableOpacity

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import WebAudioEngine from '../services/WebAudioEngine';
+import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 
 const OCTAVES = 4; // Reduced for performance/demo
 const START_OCTAVE = 3;
@@ -8,7 +8,7 @@ const START_OCTAVE = 3;
 export default function Piano() {
     const handleNotePress = (note) => {
         console.log(`Playing ${note}`);
-        WebAudioEngine.playSound(note);
+        UnifiedAudioEngine.playSound(note, 'piano');
     };
 
     const renderKeys = () => {

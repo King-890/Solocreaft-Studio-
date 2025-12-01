@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, StatusBar, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, StatusBar, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import InstrumentCard from '../components/InstrumentCard';
 import CategoryHeader from '../components/CategoryHeader';
 import { COLORS, SPACING, INSTRUMENT_CATEGORIES } from '../constants/UIConfig';

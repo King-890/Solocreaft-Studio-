@@ -4,6 +4,7 @@
  */
 
 import { Dimensions, Platform } from 'react-native';
+import { INSTRUMENTS, getInstrumentsByCategory } from './InstrumentConfig';
 
 // Lazy dimension getter to avoid web platform issues
 const getDimensions = () => {
@@ -189,43 +190,45 @@ export const LAYOUT = {
 
 // ==================== INSTRUMENT CATEGORIES ====================
 export const INSTRUMENT_CATEGORIES = {
+    keyboard: {
+        name: 'Keyboard',
+        icon: '🎹',
+        color: '#6bcf7f',
+        instruments: getInstrumentsByCategory('keyboard').map(inst => ({
+            id: inst.id,
+            name: inst.displayName,
+            icon: inst.icon
+        })),
+    },
     strings: {
         name: 'Strings',
         icon: '🎸',
         color: '#ff6b9d',
-        instruments: [
-            { id: 'guitar', name: 'Guitar', icon: '🎸' },
-            { id: 'sitar', name: 'Sitar', icon: '🪕' },
-            { id: 'veena', name: 'Veena', icon: '🎻' },
-        ],
+        instruments: getInstrumentsByCategory('strings').map(inst => ({
+            id: inst.id,
+            name: inst.displayName,
+            icon: inst.icon
+        })),
     },
     percussion: {
         name: 'Percussion',
         icon: '🥁',
         color: '#ffd93d',
-        instruments: [
-            { id: 'tabla', name: 'Tabla', icon: '🥁' },
-            { id: 'drums', name: 'Drums', icon: '🥁' },
-            { id: 'dholak', name: 'Dholak', icon: '🪘' },
-        ],
-    },
-    keys: {
-        name: 'Keys',
-        icon: '🎹',
-        color: '#6bcf7f',
-        instruments: [
-            { id: 'piano', name: 'Piano', icon: '🎹' },
-            { id: 'synthesizer', name: 'Synthesizer', icon: '🎛️' },
-        ],
+        instruments: getInstrumentsByCategory('percussion').map(inst => ({
+            id: inst.id,
+            name: inst.displayName,
+            icon: inst.icon
+        })),
     },
     wind: {
         name: 'Wind',
         icon: '🎺',
         color: '#4d9de0',
-        instruments: [
-            { id: 'flute', name: 'Flute', icon: '🪈' },
-            { id: 'saxophone', name: 'Saxophone', icon: '🎷' },
-        ],
+        instruments: getInstrumentsByCategory('wind').map(inst => ({
+            id: inst.id,
+            name: inst.displayName,
+            icon: inst.icon
+        })),
     },
 };
 

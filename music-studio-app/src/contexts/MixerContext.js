@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { INSTRUMENT_IDS } from '../constants/InstrumentConfig';
 
 const MixerContext = createContext();
 
@@ -24,25 +25,6 @@ const DEFAULT_INSTRUMENT_SETTINGS = {
     },
 };
 
-// All available instruments
-const INSTRUMENTS = [
-    'piano',
-    'drums',
-    'guitar',
-    'bass',
-    'synth',
-    'synthesizer',
-    'violin',
-    'flute',
-    'trumpet',
-    'saxophone',
-    'world',
-    'tabla',
-    'sitar',
-    'veena',
-    'dholak',
-];
-
 // Initialize default settings for all instruments
 const createDefaultMixerState = () => {
     const state = {
@@ -51,7 +33,7 @@ const createDefaultMixerState = () => {
         instruments: {},
     };
 
-    INSTRUMENTS.forEach(instrument => {
+    INSTRUMENT_IDS.forEach(instrument => {
         state.instruments[instrument] = { ...DEFAULT_INSTRUMENT_SETTINGS };
     });
 

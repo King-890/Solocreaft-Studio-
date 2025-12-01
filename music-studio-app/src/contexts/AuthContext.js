@@ -49,57 +49,29 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
-    // COMMENTED OUT: OAuth functionality disabled
-    // Get the appropriate redirect URL based on platform
-    // const getRedirectUrl = () => {
-    //     if (Platform.OS === 'web') {
-    //         // For web, use the current origin if available
-    //         if (typeof window !== 'undefined' && window.location) {
-    //             return window.location.origin;
-    //         }
-    //         return 'http://localhost:19006';
-    //     }
-    //     // For mobile, use the custom scheme from app.json
-    //     return 'solocraft://';
-    // };
-
     const value = {
         user,
         session,
         loading,
         error,
         signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
-        signUp: (email, password) => supabase.auth.signUp({ email, password }),
+        signUp: (email, password) => supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                emailRedirectTo: Platform.OS === 'web'
+                    ? (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081')
+                    : 'solocraft://auth/callback'
+            }
+        }),
+        resetPassword: async (email) => {
+            return await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: Platform.OS === 'web'
+                    ? (typeof window !== 'undefined' ? window.location.origin + '/reset-password' : 'http://localhost:8081/reset-password')
+                    : 'solocraft://reset-password'
+            });
+        },
         signOut: () => supabase.auth.signOut(),
-        // COMMENTED OUT: OAuth functionality disabled
-        // signInWithGoogle: async () => {
-        //     try {
-        //         return await supabase.auth.signInWithOAuth({
-        //             provider: 'google',
-        //             options: {
-        //                 redirectTo: getRedirectUrl(),
-        //                 skipBrowserRedirect: Platform.OS !== 'web',
-        //             }
-        //         });
-        //     } catch (error) {
-        //         console.error('Google sign-in error:', error);
-        //         return { error };
-        //     }
-        // },
-        // signInWithFacebook: async () => {
-        //     try {
-        //         return await supabase.auth.signInWithOAuth({
-        //             provider: 'facebook',
-        //             options: {
-        //                 redirectTo: getRedirectUrl(),
-        //                 skipBrowserRedirect: Platform.OS !== 'web',
-        //             }
-        //         });
-        //     } catch (error) {
-        //         console.error('Facebook sign-in error:', error);
-        //         return { error };
-        //     }
-        // },
     };
 
     // FIXED: Always render children, don't hide them when loading

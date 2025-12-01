@@ -8,27 +8,23 @@ import {
     ImageBackground,
     Alert,
     ActivityIndicator,
+    Platform,
+    ActionSheetIOS,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useTheme } from '../contexts/ThemeContext';
 import UISounds from '../utils/UISounds';
+import { useResponsive, getResponsiveColumns } from '../utils/responsive';
 
-function ThemeCard({ theme, isActive, isUserTheme, onSelect, onDelete }) {
-    let player = null;
-
-    if (theme.type === 'video') {
-        const videoSource = theme.source ? theme.source : { uri: theme.uri };
-        player = useVideoPlayer(videoSource, player => {
-            player.loop = true;
-            player.muted = true;
-            player.play();
-        });
-    }
-
+function ThemeCard({ theme, isActive, isUserTheme, onSelect, onDelete, cardWidth }) {
     return (
         <TouchableOpacity
-            style={[styles.themeCard, isActive && styles.activeThemeCard]}
+            style={[
+                styles.themeCard,
+                cardWidth && { width: cardWidth },
+                isActive && styles.activeThemeCard
+            ]}
             onPress={() => onSelect(theme)}
             onLongPress={isUserTheme ? () => onDelete(theme.id) : undefined}
         >
@@ -40,17 +36,7 @@ function ThemeCard({ theme, isActive, isUserTheme, onSelect, onDelete }) {
                     end={{ x: 1, y: 1 }}
                 />
             ) : theme.type === 'video' ? (
-                <View style={styles.themePreview}>
-                    <VideoView
-                        player={player}
-                        style={StyleSheet.absoluteFill}
-                        contentFit="cover"
-                        nativeControls={false}
-                    />
-                    <View style={styles.videoIndicator}>
-                        <Text style={styles.videoIcon}>🎥</Text>
-                    </View>
-                </View>
+                <VideoThemePreview theme={theme} />
             ) : (
                 <ImageBackground
                     source={theme.source ? theme.source : { uri: theme.uri }}
@@ -58,8 +44,47 @@ function ThemeCard({ theme, isActive, isUserTheme, onSelect, onDelete }) {
                     resizeMode="cover"
                 />
             )}
-            {isActive && <Text style={styles.activeLabel}>ACTIVE</Text>}
+            <View style={styles.cardOverlay}>
+                <Text style={styles.themeName} numberOfLines={1}>{theme.name}</Text>
+                {isActive && <Text style={styles.activeLabel}>ACTIVE</Text>}
+            </View>
         </TouchableOpacity>
+    );
+}
+
+function VideoThemePreview({ theme }) {
+    if (Platform.OS === 'web') {
+        return (
+            <View style={styles.themePreview}>
+                <View style={[styles.themePreview, { backgroundColor: '#000' }]}>
+                    <Text style={{ fontSize: 40 }}>🎥</Text>
+                </View>
+                <View style={styles.videoIndicator}>
+                    <Text style={styles.videoIcon}>🎥</Text>
+                </View>
+            </View>
+        );
+    }
+
+    const videoSource = theme.source ? theme.source : { uri: theme.uri };
+    const player = useVideoPlayer(videoSource, player => {
+        player.loop = true;
+        player.muted = true;
+        player.play();
+    });
+
+    return (
+        <View style={styles.themePreview}>
+            <VideoView
+                player={player}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                nativeControls={false}
+            />
+            <View style={styles.videoIndicator}>
+                <Text style={styles.videoIcon}>🎥</Text>
+            </View>
+        </View>
     );
 }
 
@@ -75,6 +100,48 @@ export default function ThemeGallery({ onClose }) {
     } = useTheme();
 
     const [uploading, setUploading] = useState(false);
+    const { wp, SCREEN_WIDTH } = useResponsive();
+
+    // Calculate responsive grid columns
+    // Use more columns on larger screens to prevent huge cards
+    const columns = getResponsiveColumns(2, 3, 4);
+    const cardWidth = wp((100 / columns) - 2);
+
+    const handleUpload = () => {
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: ['Cancel', 'Upload Photo', 'Upload Video'],
+                    cancelButtonIndex: 0,
+                },
+                (buttonIndex) => {
+                    if (buttonIndex === 1) handleUploadPhoto();
+                    else if (buttonIndex === 2) handleUploadVideo();
+                }
+            );
+        } else {
+            // For Android/Web, simple alert or custom modal could be used
+            // For now, we'll just default to Photo for simplicity or toggle
+            // Let's use Alert to ask
+            if (Platform.OS === 'web') {
+                // Web doesn't support Alert.alert with options well, so we might need a custom UI
+                // For now, let's just try to upload photo as default or ask user
+                const choice = window.confirm("Click OK to upload a Photo, or Cancel to upload a Video.");
+                if (choice) handleUploadPhoto();
+                else handleUploadVideo();
+            } else {
+                Alert.alert(
+                    'Upload Theme',
+                    'Choose theme type',
+                    [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Photo', onPress: handleUploadPhoto },
+                        { text: 'Video', onPress: handleUploadVideo },
+                    ]
+                );
+            }
+        }
+    };
 
     const handleUploadPhoto = async () => {
         try {
@@ -138,34 +205,19 @@ export default function ThemeGallery({ onClose }) {
             </View>
 
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                {/* Upload Buttons */}
+                {/* Upload Button */}
                 <View style={styles.uploadSection}>
                     <TouchableOpacity
                         style={[styles.uploadButton, uploading && styles.uploadButtonDisabled]}
-                        onPress={handleUploadPhoto}
+                        onPress={handleUpload}
                         disabled={uploading}
                     >
                         {uploading ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
                             <>
-                                <Text style={styles.uploadIcon}>🖼️</Text>
-                                <Text style={styles.uploadText}>Upload Photo</Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.uploadButton, uploading && styles.uploadButtonDisabled]}
-                        onPress={handleUploadVideo}
-                        disabled={uploading}
-                    >
-                        {uploading ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <>
-                                <Text style={styles.uploadIcon}>🎥</Text>
-                                <Text style={styles.uploadText}>Upload Video (Max 15s)</Text>
+                                <Text style={styles.uploadIcon}>🎨</Text>
+                                <Text style={styles.uploadText}>Upload Custom Theme</Text>
                             </>
                         )}
                     </TouchableOpacity>
@@ -185,11 +237,13 @@ export default function ThemeGallery({ onClose }) {
                                     isUserTheme={true}
                                     onSelect={handleSelectTheme}
                                     onDelete={handleDeleteTheme}
+                                    cardWidth={cardWidth}
                                 />
                             ))}
                         </View>
                     </View>
                 )}
+
                 {/* App Themes */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>App Themes</Text>
@@ -202,6 +256,7 @@ export default function ThemeGallery({ onClose }) {
                                 isUserTheme={false}
                                 onSelect={handleSelectTheme}
                                 onDelete={handleDeleteTheme}
+                                cardWidth={cardWidth}
                             />
                         ))}
                     </View>
@@ -242,18 +297,15 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     uploadSection: {
-        flexDirection: 'row',
         padding: 15,
-        gap: 10,
     },
     uploadButton: {
-        flex: 1,
         backgroundColor: '#6200ee',
         padding: 20,
         borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: 100,
+        minHeight: 80,
     },
     uploadButtonDisabled: {
         opacity: 0.5,
@@ -264,8 +316,8 @@ const styles = StyleSheet.create({
     },
     uploadText: {
         color: '#fff',
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     section: {
         padding: 15,
@@ -288,18 +340,23 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-start',
     },
     themeCard: {
-        width: '47%',
-        maxWidth: 200,
         backgroundColor: '#1e1e1e',
         borderRadius: 12,
         overflow: 'hidden',
         borderWidth: 2,
         borderColor: 'transparent',
         aspectRatio: 1,
+        marginBottom: 12,
     },
     activeThemeCard: {
         borderColor: '#03dac6',
-        boxShadow: '0 0 20px rgba(3, 218, 198, 0.5)',
+        // boxShadow is not supported in RN directly like this, use elevation or shadow props
+        // But for web it works. For native we can use elevation.
+        elevation: 5,
+        shadowColor: '#03dac6',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: 10,
     },
     themePreview: {
         width: '100%',
@@ -309,28 +366,34 @@ const styles = StyleSheet.create({
     },
     videoIndicator: {
         position: 'absolute',
+        top: 5,
+        right: 5,
         backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        padding: 10,
-        borderRadius: 25,
+        padding: 5,
+        borderRadius: 15,
     },
     videoIcon: {
-        fontSize: 24,
+        fontSize: 16,
+    },
+    cardOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        padding: 8,
     },
     themeName: {
         color: '#fff',
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: '600',
-        padding: 8,
-        paddingTop: 6,
         textAlign: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
     },
     activeLabel: {
         color: '#03dac6',
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: 'bold',
         textAlign: 'center',
-        paddingBottom: 6,
-        backgroundColor: 'rgba(3, 218, 198, 0.1)',
+        marginTop: 2,
     },
 });

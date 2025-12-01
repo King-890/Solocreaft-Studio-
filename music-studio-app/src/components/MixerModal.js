@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useProject } from '../contexts/ProjectContext';
 import { useMixer } from '../contexts/MixerContext';
@@ -141,8 +141,15 @@ export default function MixerModal({ visible, onClose, fullScreen = false }) {
             </ScrollView>
 
             <View style={styles.footer}>
-                <TouchableOpacity style={styles.applyButton} onPress={onClose}>
-                    <Text style={styles.applyButtonText}>Apply</Text>
+                <TouchableOpacity
+                    style={styles.applyButton}
+                    onPress={() => {
+                        // Settings are already applied in real-time via context
+                        // Just close the modal
+                        onClose();
+                    }}
+                >
+                    <Text style={styles.applyButtonText}>Apply & Close</Text>
                 </TouchableOpacity>
             </View>
         </View>

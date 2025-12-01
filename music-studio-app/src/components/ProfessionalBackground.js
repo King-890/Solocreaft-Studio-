@@ -42,7 +42,7 @@ export default function ProfessionalBackground({
         return (
             <ImageBackground
                 source={source}
-                style={[styles.container, { width, height }]}
+                style={styles.container}
                 resizeMode="cover" // Prevents stretching
             >
                 {overlay && (

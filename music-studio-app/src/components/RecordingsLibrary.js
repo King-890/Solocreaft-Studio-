@@ -1,40 +1,66 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useProject } from '../contexts/ProjectContext';
 import AudioPlaybackService from '../services/AudioPlaybackService';
 
 export default function RecordingsLibrary() {
+    const navigation = useNavigation();
     const { recordings, deleteRecording } = useProject();
     const [searchQuery, setSearchQuery] = useState('');
     const [playingId, setPlayingId] = useState(null);
 
-    const filteredRecordings = recordings.filter(r =>
+    const filteredRecordings = (recordings || []).filter(r =>
         r.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const handlePlay = async (recording) => {
-        if (playingId === recording.id) {
-            AudioPlaybackService.stopAll();
-            setPlayingId(null);
-        } else {
-            AudioPlaybackService.stopAll();
-            setPlayingId(recording.id);
-            await AudioPlaybackService.playClip(
-                { id: recording.id, audioUri: recording.uri, startTime: 0, duration: recording.duration },
-                0
-            );
+        try {
+            if (playingId === recording.id) {
+                AudioPlaybackService.stopAll();
+                setPlayingId(null);
+            } else {
+                AudioPlaybackService.stopAll();
+                setPlayingId(recording.id);
+                await AudioPlaybackService.playClip(
+                    { id: recording.id, audioUri: recording.uri, startTime: 0, duration: recording.duration },
+                    0
+                );
+                setPlayingId(null);
+            }
+        } catch (error) {
+            console.error('Playback error:', error);
+            Alert.alert('Playback Error', 'Could not play this recording. It may have been deleted.');
             setPlayingId(null);
         }
     };
 
     const handleDelete = (recordingId) => {
-        if (confirm('Delete this recording?')) {
-            deleteRecording(recordingId);
-            if (playingId === recordingId) {
-                AudioPlaybackService.stopAll();
-                setPlayingId(null);
-            }
-        }
+        Alert.alert(
+            'Delete Recording',
+            'Are you sure you want to delete this recording?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => {
+                        deleteRecording(recordingId);
+                        if (playingId === recordingId) {
+                            AudioPlaybackService.stopAll();
+                            setPlayingId(null);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleImportToStudio = (recording) => {
+        navigation.navigate('Studio', {
+            projectId: 'new',
+            importRecording: recording
+        });
     };
 
     const formatDuration = (ms) => {
@@ -72,34 +98,54 @@ export default function RecordingsLibrary() {
                 </View>
             ) : (
                 <FlatList
+                    scrollEnabled={false}
                     data={filteredRecordings}
                     keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                        <View style={styles.recordingCard}>
-                            <View style={styles.recordingInfo}>
-                                <Text style={styles.recordingName}>{item.name}</Text>
-                                <Text style={styles.recordingMeta}>
-                                    {formatDuration(item.duration)} • {formatDate(item.createdAt)}
-                                </Text>
-                            </View>
-                            <View style={styles.recordingActions}>
-                                <TouchableOpacity
-                                    style={[styles.actionButton, styles.playButton]}
-                                    onPress={() => handlePlay(item)}
-                                >
-                                    <Text style={styles.actionText}>
-                                        {playingId === item.id ? '⏸' : '▶'}
+                    renderItem={({ item }) => {
+                        const sourceIcon = item.source === 'voice' ? '🎤' : '🎹';
+                        const sourceLabel = item.source === 'voice'
+                            ? 'Vocals'
+                            : (item.instrumentType ? item.instrumentType.charAt(0).toUpperCase() + item.instrumentType.slice(1) : 'Instrument');
+
+                        return (
+                            <View style={styles.recordingCard}>
+                                <View style={styles.recordingInfo}>
+                                    <View style={styles.recordingHeader}>
+                                        <Text style={styles.sourceIcon}>{sourceIcon}</Text>
+                                        <View style={styles.recordingTitleContainer}>
+                                            <Text style={styles.recordingName}>{item.name}</Text>
+                                            <Text style={styles.sourceLabel}>{sourceLabel}</Text>
+                                        </View>
+                                    </View>
+                                    <Text style={styles.recordingMeta}>
+                                        {formatDuration(item.duration)} • {formatDate(item.createdAt)}
                                     </Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.actionButton, styles.deleteButton]}
-                                    onPress={() => handleDelete(item.id)}
-                                >
-                                    <Text style={styles.actionText}>🗑</Text>
-                                </TouchableOpacity>
+                                </View>
+                                <View style={styles.recordingActions}>
+                                    <TouchableOpacity
+                                        style={[styles.actionButton, styles.playButton]}
+                                        onPress={() => handlePlay(item)}
+                                    >
+                                        <Text style={styles.actionText}>
+                                            {playingId === item.id ? '⏸' : '▶'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.actionButton, styles.studioButton]}
+                                        onPress={() => handleImportToStudio(item)}
+                                    >
+                                        <Text style={styles.actionText}>🎹</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.actionButton, styles.deleteButton]}
+                                        onPress={() => handleDelete(item.id)}
+                                    >
+                                        <Text style={styles.actionText}>🗑</Text>
+                                    </TouchableOpacity>
+                                </View>
                             </View>
-                        </View>
-                    )}
+                        );
+                    }}
                 />
             )}
         </View>
@@ -153,11 +199,27 @@ const styles = StyleSheet.create({
     recordingInfo: {
         flex: 1,
     },
+    recordingHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    sourceIcon: {
+        fontSize: 20,
+        marginRight: 8,
+    },
+    recordingTitleContainer: {
+        flex: 1,
+    },
     recordingName: {
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
-        marginBottom: 4,
+    },
+    sourceLabel: {
+        color: '#03dac6',
+        fontSize: 12,
+        marginTop: 2,
     },
     recordingMeta: {
         color: '#888',
@@ -176,6 +238,9 @@ const styles = StyleSheet.create({
     },
     playButton: {
         backgroundColor: '#6200ee',
+    },
+    studioButton: {
+        backgroundColor: '#03dac6',
     },
     deleteButton: {
         backgroundColor: '#cf6679',

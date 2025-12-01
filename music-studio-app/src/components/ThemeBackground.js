@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, StyleSheet, Image, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useTheme } from '../contexts/ThemeContext';
@@ -45,23 +45,25 @@ export default function ThemeBackground({ children, style }) {
 
     // Render video theme
     if (currentTheme.type === 'video') {
-        const videoSource = currentTheme.source
-            ? currentTheme.source
-            : { uri: currentTheme.uri };
+        return <VideoBackground theme={currentTheme} style={style}>{children}</VideoBackground>;
+    }
 
-        const player = useVideoPlayer(videoSource, player => {
-            player.loop = true;
-            player.play();
-            player.muted = true;
-        });
+    // Fallback
+    return (
+        <View style={[styles.container, style]}>
+            {children}
+        </View>
+    );
+}
 
+function VideoBackground({ theme, style, children }) {
+    if (Platform.OS === 'web') {
+        // Fallback for web video background to ensure stability
         return (
-            <View style={[styles.container, style]}>
-                <VideoView
-                    player={player}
+            <View style={[styles.container, style, { backgroundColor: '#121212' }]}>
+                <LinearGradient
+                    colors={['#121212', '#2d2d2d']}
                     style={StyleSheet.absoluteFill}
-                    contentFit="cover"
-                    nativeControls={false}
                 />
                 <View style={[styles.overlay, styles.contentContainer]}>
                     {children}
@@ -70,10 +72,27 @@ export default function ThemeBackground({ children, style }) {
         );
     }
 
-    // Fallback
+    const videoSource = theme.source
+        ? theme.source
+        : { uri: theme.uri };
+
+    const player = useVideoPlayer(videoSource, player => {
+        player.loop = true;
+        player.play();
+        player.muted = true;
+    });
+
     return (
         <View style={[styles.container, style]}>
-            {children}
+            <VideoView
+                player={player}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                nativeControls={false}
+            />
+            <View style={[styles.overlay, styles.contentContainer]}>
+                {children}
+            </View>
         </View>
     );
 }

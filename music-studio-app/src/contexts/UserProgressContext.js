@@ -26,6 +26,10 @@ const initialProgress = {
         saxophone: { level: 1, xp: 0, songsCreated: 0, practiceMinutes: 0, achievements: [] },
         world: { level: 1, xp: 0, songsCreated: 0, practiceMinutes: 0, achievements: [] },
         tabla: { level: 1, xp: 0, songsCreated: 0, practiceMinutes: 0, achievements: [] },
+        // sitar: { level: 1, xp: 0, songsCreated: 0, practiceMinutes: 0, achievements: [] },
+        veena: { level: 1, xp: 0, songsCreated: 0, practiceMinutes: 0, achievements: [] },
+        dholak: { level: 1, xp: 0, songsCreated: 0, practiceMinutes: 0, achievements: [] },
+        synthesizer: { level: 1, xp: 0, songsCreated: 0, practiceMinutes: 0, achievements: [] },
     },
     dailyChallenges: {
         current: null,

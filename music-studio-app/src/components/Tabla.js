@@ -1,19 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, useWindowDimensions, Platform } from 'react-native';
-import AudioPlaybackService from '../services/AudioPlaybackService';
+import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useProject } from '../contexts/ProjectContext';
 
 // Tabla sounds mapping
 const TABLA_SOUNDS = {
     // Dayan (Right Drum) - High pitched
-    'na': { freq: 523.25, type: 'triangle', duration: 0.3 }, // C5
-    'tin': { freq: 493.88, type: 'sine', duration: 0.4 },    // B4
-    'tun': { freq: 587.33, type: 'sine', duration: 0.6 },    // D5
-    'te': { freq: 800, type: 'square', duration: 0.05 },     // Short, sharp
+    'na': { type: 'treble' },
+    'tin': { type: 'treble' },
+    'tun': { type: 'treble' },
+    'te': { type: 'treble' },
 
     // Bayan (Left Drum) - Bass
-    'ge': { freq: 130.81, type: 'sine', duration: 0.8, slide: true }, // C3 with slide
-    'ke': { freq: 100, type: 'sawtooth', duration: 0.1 },    // Muted bass
-    'kat': { freq: 150, type: 'square', duration: 0.05 },    // Sharp bass hit
+    'ge': { type: 'bass' },
+    'ke': { type: 'bass' },
+    'kat': { type: 'bass' },
 };
 
 export default function Tabla() {
@@ -21,10 +22,13 @@ export default function Tabla() {
     const [activeHit, setActiveHit] = useState(null);
     const [dayanAnim] = useState(new Animated.Value(1));
     const [bayanAnim] = useState(new Animated.Value(1));
+    const { tracks } = useProject();
+
+    // Find the Tabla track
+    const track = tracks.find(t => t.name === 'Tabla') || { volume: 0.8, pan: 0, muted: false };
 
     const playSound = (soundName, drum) => {
-        const sound = TABLA_SOUNDS[soundName];
-        if (!sound) return;
+        if (track.muted) return;
 
         // Visual feedback
         setActiveHit(soundName);
@@ -37,29 +41,8 @@ export default function Tabla() {
 
         setTimeout(() => setActiveHit(null), 200);
 
-        // Web Audio API synthesis for Tabla sounds
-        const ctx = AudioPlaybackService.audioContext || new (window.AudioContext || window.webkitAudioContext)();
-        if (!AudioPlaybackService.audioContext) AudioPlaybackService.init();
-
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-
-        osc.type = sound.type;
-        osc.frequency.setValueAtTime(sound.freq, ctx.currentTime);
-
-        if (sound.slide) {
-            osc.frequency.exponentialRampToValueAtTime(sound.freq * 1.2, ctx.currentTime + 0.2);
-            osc.frequency.exponentialRampToValueAtTime(sound.freq, ctx.currentTime + 0.5);
-        }
-
-        gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + sound.duration);
-
-        osc.connect(gainNode);
-        gainNode.connect(ctx.destination);
-
-        osc.start();
-        osc.stop(ctx.currentTime + sound.duration);
+        // Play sound using UnifiedAudioEngine
+        UnifiedAudioEngine.playDrumSound(soundName, track.volume, track.pan);
     };
 
     return (

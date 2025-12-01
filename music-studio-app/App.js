@@ -17,7 +17,7 @@ import InstrumentsLibraryScreen from './src/screens/InstrumentsLibraryScreen';
 import InstrumentRoomScreen from './src/screens/InstrumentRoomScreen';
 import BandRoomScreen from './src/screens/BandRoomScreen';
 import MixerScreen from './src/screens/MixerScreen';
-import SettingsScreen from './src/screens/SettingsScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 import StudioScreen from './src/screens/StudioScreen';
 import DebugScreen from './src/screens/DebugScreen';
 import { View, Text, ActivityIndicator, LogBox } from 'react-native';
@@ -185,7 +185,7 @@ function MainTabs() {
       />
       <Tab.Screen
         name="Profile"
-        component={SettingsScreen}
+        component={ProfileScreen}
         options={{
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>👤</Text>
         }}

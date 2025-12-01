@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 
 /**
@@ -19,6 +19,8 @@ export default function ProfessionalVideoBackground({
     const { width, height } = useWindowDimensions();
     const [isPlaying, setIsPlaying] = useState(false);
 
+    const [hasError, setHasError] = useState(false);
+
     // Create video player with expo-video
     const player = useVideoPlayer(source, (player) => {
         player.loop = true;
@@ -26,51 +28,43 @@ export default function ProfessionalVideoBackground({
         player.volume = volume;
     });
 
-    // Handle user interaction to start playback
-    useEffect(() => {
-        const handleInteraction = () => {
-            if (!isPlaying && player) {
-                player.play();
-                setIsPlaying(true);
-            }
-        };
-
-        // Add event listeners for user interaction
-        if (typeof window !== 'undefined') {
-            window.addEventListener('click', handleInteraction, { once: true });
-            window.addEventListener('touchstart', handleInteraction, { once: true });
-            window.addEventListener('keydown', handleInteraction, { once: true });
-        }
-
-        return () => {
-            if (typeof window !== 'undefined') {
-                window.removeEventListener('click', handleInteraction);
-                window.removeEventListener('touchstart', handleInteraction);
-                window.removeEventListener('keydown', handleInteraction);
-            }
-        };
-    }, [player, isPlaying]);
-
-    // Update muted state when prop changes
+    // Monitor for errors
     useEffect(() => {
         if (player) {
-            player.muted = isMuted;
+            const subscription = player.addListener('statusChange', (status) => {
+                if (status.status === 'error') {
+                    console.warn('Video background error:', status.error);
+                    setHasError(true);
+                }
+            });
+            return () => subscription.remove();
         }
-    }, [isMuted, player]);
+    }, [player]);
 
-    // Update volume when prop changes
+    // Auto-play on mobile (non-web platforms)
     useEffect(() => {
-        if (player) {
-            player.volume = volume;
+        if (player && Platform.OS !== 'web' && !hasError) {
+            // Mobile platforms can auto-play without user interaction
+            player.play();
+            setIsPlaying(true);
         }
-    }, [volume, player]);
+    }, [player, hasError]);
+
+    if (hasError) {
+        // Fallback to a simple gradient or just the content container
+        return (
+            <View style={[styles.container, { backgroundColor: '#1a1a1a' }]}>
+                {children}
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
             {/* Video Background */}
             <VideoView
                 player={player}
-                style={[styles.video, { width, height }]}
+                style={styles.video}
                 contentFit="cover"
                 nativeControls={false}
             />

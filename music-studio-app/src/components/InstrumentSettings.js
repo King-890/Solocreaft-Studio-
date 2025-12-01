@@ -109,7 +109,7 @@ const InstrumentSettings = ({ visible, onClose, instrumentName, instrumentId, on
     const getInstrumentSpecificControls = () => {
         const name = instrumentName?.toLowerCase();
 
-        if (name === 'guitar' || name === 'sitar') {
+        if (name === 'guitar') {
             return [
                 { key: 'distortion', label: '⚡ Distortion', min: 0, max: 1 },
                 { key: 'chorus', label: '🌊 Chorus', min: 0, max: 1 },

@@ -1,10 +1,33 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Image, Animated, Dimensions, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useTheme } from '../contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
+
+// Sub-component to handle video player events safely
+const VideoBackground = ({ player, onError }) => {
+    useEffect(() => {
+        if (player) {
+            const subscription = player.addListener('statusChange', (status) => {
+                if (status.status === 'error') {
+                    onError();
+                }
+            });
+            return () => subscription.remove();
+        }
+    }, [player, onError]);
+
+    return (
+        <VideoView
+            player={player}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            nativeControls={false}
+        />
+    );
+};
 
 /**
  * ImmersiveBackground Component
@@ -17,6 +40,12 @@ const { width, height } = Dimensions.get('window');
 export default function ImmersiveBackground({ children, style }) {
     const { currentTheme } = useTheme();
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const [videoError, setVideoError] = useState(false);
+
+    useEffect(() => {
+        // Reset error state when theme changes
+        setVideoError(false);
+    }, [currentTheme]);
 
     useEffect(() => {
         // Reset opacity when theme changes
@@ -58,6 +87,18 @@ export default function ImmersiveBackground({ children, style }) {
 
         // 3. Video Theme
         if (currentTheme.type === 'video') {
+            // If we have an error, fallback to gradient or dark background
+            if (videoError) {
+                return (
+                    <LinearGradient
+                        colors={['#1a1a1a', '#000000']}
+                        style={StyleSheet.absoluteFill}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    />
+                );
+            }
+
             const videoSource = currentTheme.source
                 ? currentTheme.source
                 : { uri: currentTheme.uri };
@@ -70,11 +111,9 @@ export default function ImmersiveBackground({ children, style }) {
             });
 
             return (
-                <VideoView
+                <VideoBackground
                     player={player}
-                    style={StyleSheet.absoluteFill}
-                    contentFit="cover"
-                    nativeControls={false}
+                    onError={() => setVideoError(true)}
                 />
             );
         }
