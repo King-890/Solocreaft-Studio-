@@ -132,8 +132,14 @@ class WebAudioEngine {
         }
     }
 
-    async playDrumSound(padNumber) {
+    async playDrumSound(padNumber, volume = 0.8, pan = 0) {
         console.log(`🥁 Playing drum pad: ${padNumber}`);
+
+        // Validate padNumber
+        if (typeof padNumber !== 'number' || isNaN(padNumber)) {
+            console.error(`❌ Invalid drum pad number: ${padNumber}`);
+            return;
+        }
 
         if (!this.init()) {
             console.error('❌ Cannot play drum - init failed');
@@ -153,16 +159,20 @@ class WebAudioEngine {
 
             const oscillator = this.audioContext.createOscillator();
             const gainNode = this.audioContext.createGain();
+            const pannerNode = this.audioContext.createStereoPanner();
 
             oscillator.connect(gainNode);
-            gainNode.connect(this.audioContext.destination);
+            gainNode.connect(pannerNode);
+            pannerNode.connect(this.audioContext.destination);
 
             oscillator.frequency.value = frequency;
             oscillator.type = 'sawtooth';
 
+            // Apply volume and pan
             const now = this.audioContext.currentTime;
-            gainNode.gain.setValueAtTime(0.5, now);
+            gainNode.gain.setValueAtTime(volume * 0.5, now);
             gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            pannerNode.pan.value = Math.max(-1, Math.min(1, pan));
 
             oscillator.start(now);
             oscillator.stop(now + 0.1);
