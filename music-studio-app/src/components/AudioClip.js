@@ -6,8 +6,8 @@ export default function AudioClip({ clip, pixelsPerSecond, trackColor }) {
     const { selectedClipId, setSelectedClipId, deleteClip } = useProject();
 
     const isSelected = selectedClipId === clip.id;
-    const clipWidth = (clip.duration / 1000) * pixelsPerSecond;
-    const clipLeft = (clip.startTime / 1000) * pixelsPerSecond;
+    const clipWidth = Math.max(0, (clip.duration / 1000) * pixelsPerSecond) || 0;
+    const clipLeft = Math.max(0, (clip.startTime / 1000) * pixelsPerSecond) || 0;
 
     const handlePress = () => {
         setSelectedClipId(clip.id);
@@ -46,7 +46,7 @@ export default function AudioClip({ clip, pixelsPerSecond, trackColor }) {
 
                 {/* Waveform placeholder */}
                 <View style={styles.waveform}>
-                    {Array.from({ length: Math.floor(clipWidth / 4) }).map((_, i) => (
+                    {clipWidth > 0 && Array.from({ length: Math.min(Math.floor(clipWidth / 4), 50) }).map((_, i) => (
                         <View
                             key={i}
                             style={[

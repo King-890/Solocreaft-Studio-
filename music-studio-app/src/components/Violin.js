@@ -1,44 +1,69 @@
-import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 
 const STRINGS = ['G', 'D', 'A', 'E'];
 
 export default function Violin() {
-    const handleStringPress = (string) => {
+    const { height } = useWindowDimensions();
+    const [activeString, setActiveString] = useState(null);
+    const lastPlayedRef = useRef(null);
+
+    const handleStringPress = async (string) => {
+        // Stop previous sound if any
+        if (lastPlayedRef.current && lastPlayedRef.current !== string) {
+            const prevNoteMap = { 'G': 'G3', 'D': 'D4', 'A': 'A4', 'E': 'E5' };
+            await UnifiedAudioEngine.stopSound(prevNoteMap[lastPlayedRef.current], 'violin');
+        }
+
+        lastPlayedRef.current = string;
+        setActiveString(string);
         console.log(`Violin string ${string} played`);
+
         // Map strings to notes
         const noteMap = { 'G': 'G3', 'D': 'D4', 'A': 'A4', 'E': 'E5' };
         UnifiedAudioEngine.playSound(noteMap[string], 'violin');
     };
 
+    const handleStringRelease = (string) => {
+        setActiveString(null);
+        const noteMap = { 'G': 'G3', 'D': 'D4', 'A': 'A4', 'E': 'E5' };
+        UnifiedAudioEngine.stopSound(noteMap[string], 'violin');
+    };
+
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Violin</Text>
-            <View style={styles.stringsContainer}>
-                {STRINGS.map((string) => (
-                    <TouchableOpacity
-                        key={string}
-                        style={styles.string}
-                        onPressIn={() => handleStringPress(string)}
-                        onPressOut={() => {
-                            const noteMap = { 'G': 'G3', 'D': 'D4', 'A': 'A4', 'E': 'E5' };
-                            UnifiedAudioEngine.stopSound(noteMap[string], 'violin');
-                        }}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={styles.stringText}>{string}</Text>
-                    </TouchableOpacity>
-                ))}
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={true}>
+            <View style={[styles.container, { minHeight: height - 150 }]}>
+                <Text style={styles.title}>Violin</Text>
+                <View style={styles.stringsContainer}>
+                    {STRINGS.map((string) => (
+                        <TouchableOpacity
+                            key={string}
+                            style={[
+                                styles.string,
+                                activeString === string && styles.activeString
+                            ]}
+                            onPressIn={() => handleStringPress(string)}
+                            onPressOut={() => handleStringRelease(string)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.stringLine} />
+                            <Text style={styles.stringText}>{string}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+                <View style={styles.bowArea}>
+                    <Text style={styles.instruction}>Hold to play, release to stop</Text>
+                </View>
             </View>
-            <View style={styles.bowArea}>
-                <Text style={styles.instruction}>Tap strings to play</Text>
-            </View>
-        </View>
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
+    scrollContainer: {
+        flexGrow: 1,
+    },
     container: {
         flex: 1,
         padding: 20,
@@ -54,21 +79,38 @@ const styles = StyleSheet.create({
     stringsContainer: {
         width: '100%',
         maxWidth: 300,
+        gap: 15,
     },
     string: {
-        height: 60,
-        backgroundColor: '#8B4513',
-        marginVertical: 8,
-        borderRadius: 30,
+        height: 70,
+        backgroundColor: '#3e2723', // Dark wood
+        borderRadius: 35,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: '#D2691E',
+        borderColor: '#5d4037',
+        position: 'relative',
+        elevation: 5,
+    },
+    activeString: {
+        borderColor: '#d7ccc8',
+        backgroundColor: '#4e342e',
+    },
+    stringLine: {
+        position: 'absolute',
+        width: '90%',
+        height: 2,
+        backgroundColor: '#bcaaa4', // String color
+        zIndex: 1,
     },
     stringText: {
         color: '#fff',
         fontSize: 28,
         fontWeight: 'bold',
+        zIndex: 2,
+        textShadowColor: 'rgba(0, 0, 0, 0.75)',
+        textShadowOffset: { width: -1, height: 1 },
+        textShadowRadius: 10,
     },
     bowArea: {
         marginTop: 40,

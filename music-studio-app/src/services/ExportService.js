@@ -1,12 +1,17 @@
 // Simple export service for web-based audio export
 // For production, consider using libraries like lamejs for MP3 encoding
 
+import { Platform } from 'react-native';
+
 class ExportService {
     constructor() {
         this.audioContext = null;
     }
 
     init() {
+        if (Platform.OS !== 'web') {
+            return;
+        }
         if (!this.audioContext) {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
@@ -14,6 +19,11 @@ class ExportService {
 
     // Export current timeline as WAV (simple implementation)
     async exportAsWAV(projectName = 'export') {
+        if (Platform.OS !== 'web') {
+            alert('Export is currently only supported on the web version. Mobile export coming soon!');
+            return;
+        }
+
         this.init();
 
         // For MVP: Create a simple beep as placeholder

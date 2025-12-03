@@ -117,8 +117,17 @@ export const ProjectProvider = ({ children }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [tempo, setTempo] = useState(120);
+    const [selectedClipId, setSelectedClipId] = useState(null);
 
     const playheadInterval = useRef(null);
+
+    // Sync initial track settings to AudioPlaybackService
+    React.useEffect(() => {
+        tracks.forEach(track => {
+            AudioPlaybackService.setTrackVolume(track.id, track.muted ? 0 : track.volume);
+            AudioPlaybackService.setTrackPan(track.id, track.pan);
+        });
+    }, []); // Run once on mount
 
     const togglePlayback = () => {
         if (isPlaying) {
@@ -181,22 +190,30 @@ export const ProjectProvider = ({ children }) => {
 
     const updateTrackVolume = (trackId, volume) => {
         setTracks(tracks.map(t => t.id === trackId ? { ...t, volume } : t));
+        AudioPlaybackService.setTrackVolume(trackId, volume);
     };
 
     const updateTrackPan = (trackId, pan) => {
         setTracks(tracks.map(t => t.id === trackId ? { ...t, pan } : t));
+        AudioPlaybackService.setTrackPan(trackId, pan);
     };
 
     const updateTrackGain = (trackId, gain) => {
         setTracks(tracks.map(t => t.id === trackId ? { ...t, gain } : t));
+        AudioPlaybackService.setTrackGain(trackId, gain);
     };
 
     const updateTrackEQ = (trackId, eq) => {
         setTracks(tracks.map(t => t.id === trackId ? { ...t, eq: { ...t.eq, ...eq } } : t));
+        AudioPlaybackService.setTrackEQ(trackId, eq);
     };
 
     const updateTrackMute = (trackId, muted) => {
+        const track = tracks.find(t => t.id === trackId);
         setTracks(tracks.map(t => t.id === trackId ? { ...t, muted } : t));
+        if (track) {
+            AudioPlaybackService.setTrackMute(trackId, muted, track.volume);
+        }
     };
 
     const updateTrackSolo = (trackId, solo) => {
@@ -208,6 +225,7 @@ export const ProjectProvider = ({ children }) => {
             if (t.id === trackId) {
                 const newAuxSends = [...t.auxSends];
                 newAuxSends[sendIndex] = level;
+                AudioPlaybackService.setTrackAuxSend(trackId, sendIndex, level);
                 return { ...t, auxSends: newAuxSends };
             }
             return t;
@@ -216,6 +234,7 @@ export const ProjectProvider = ({ children }) => {
 
     const updateTrackCompressor = (trackId, settings) => {
         setTracks(tracks.map(t => t.id === trackId ? { ...t, compressor: { ...t.compressor, ...settings } } : t));
+        AudioPlaybackService.setTrackCompressor(trackId, settings);
     };
 
     const addClip = (trackId, audioUri, duration) => {
@@ -276,6 +295,10 @@ export const ProjectProvider = ({ children }) => {
         recordings,
         addRecording,
         deleteRecording,
+        zoomLevel: 1, // Default zoom
+        setZoomLevel: () => { }, // Placeholder, should be state
+        selectedClipId,
+        setSelectedClipId,
     };
 
     return (

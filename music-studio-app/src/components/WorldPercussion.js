@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { useProject } from '../contexts/ProjectContext';
 
@@ -15,6 +15,7 @@ const PERCUSSION = [
 ];
 
 export default function WorldPercussion() {
+    const { width } = useWindowDimensions();
     const { tracks } = useProject();
 
     // Find the World Percussion track
@@ -26,26 +27,33 @@ export default function WorldPercussion() {
         UnifiedAudioEngine.playDrumSound(percussion.id, track.volume, track.pan);
     };
 
+    const padWidth = width < 400 ? (width - 60) / 2 : 160;
+
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>World Percussion</Text>
-            <View style={styles.grid}>
-                {PERCUSSION.map((perc) => (
-                    <TouchableOpacity
-                        key={perc.id}
-                        style={styles.pad}
-                        onPress={() => handlePadPress(perc)}
-                        activeOpacity={0.6}
-                    >
-                        <Text style={styles.padText}>{perc.name}</Text>
-                    </TouchableOpacity>
-                ))}
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={true}>
+            <View style={styles.container}>
+                <Text style={styles.title}>World Percussion</Text>
+                <View style={styles.grid}>
+                    {PERCUSSION.map((perc) => (
+                        <TouchableOpacity
+                            key={perc.id}
+                            style={[styles.pad, { width: padWidth }]}
+                            onPress={() => handlePadPress(perc)}
+                            activeOpacity={0.6}
+                        >
+                            <Text style={styles.padText}>{perc.name}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
             </View>
-        </View>
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
+    scrollContainer: {
+        flexGrow: 1,
+    },
     container: {
         flex: 1,
         padding: 20,
@@ -63,10 +71,10 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         justifyContent: 'center',
         gap: 12,
-        maxWidth: 360,
+        maxWidth: 600,
+        width: '100%',
     },
     pad: {
-        width: 160,
         height: 80,
         backgroundColor: '#8B4513',
         borderRadius: 12,
@@ -74,6 +82,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 3,
         borderColor: '#D2691E',
+        elevation: 4,
     },
     padText: {
         color: '#fff',

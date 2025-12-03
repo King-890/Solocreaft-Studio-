@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -128,6 +128,10 @@ export default function InstrumentRoomScreen() {
     // Lock to landscape orientation on mount
     useEffect(() => {
         const lockOrientation = async () => {
+            if (Platform.OS === 'web') {
+                console.log('🌐 Web platform detected, skipping orientation lock');
+                return;
+            }
             try {
                 await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
                 console.log('🔒 Locked to landscape mode');
@@ -140,9 +144,14 @@ export default function InstrumentRoomScreen() {
 
         // Unlock orientation when leaving the screen
         return () => {
-            ScreenOrientation.unlockAsync().catch(err =>
-                console.warn('⚠️ Could not unlock orientation:', err)
-            );
+            if (Platform.OS === 'web') return;
+            try {
+                ScreenOrientation.unlockAsync().catch(err =>
+                    console.warn('⚠️ Could not unlock orientation:', err)
+                );
+            } catch (e) {
+                console.warn('Error unlocking orientation:', e);
+            }
         };
     }, []);
 

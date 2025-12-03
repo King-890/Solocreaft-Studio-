@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, ScrollView, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, ScrollView, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useProject } from '../contexts/ProjectContext';
 import Track from './Track';
 
@@ -20,6 +20,7 @@ export default function Timeline() {
         getProjectDuration,
         loopRegion,
         toggleLoopRegion,
+        addTrack,
     } = useProject();
 
     const rulerScrollRef = useRef(null);
@@ -38,11 +39,17 @@ export default function Timeline() {
     };
 
     const handleZoomIn = () => {
-        setZoomLevel(Math.min(zoomLevel * 1.5, 4));
+        const newZoom = Math.min(zoomLevel * 1.5, 4);
+        if (isFinite(newZoom)) {
+            setZoomLevel(newZoom);
+        }
     };
 
     const handleZoomOut = () => {
-        setZoomLevel(Math.max(zoomLevel / 1.5, 0.5));
+        const newZoom = Math.max(zoomLevel / 1.5, 0.5);
+        if (isFinite(newZoom)) {
+            setZoomLevel(newZoom);
+        }
     };
 
     // Synchronize all track scrolls with ruler scroll
@@ -86,13 +93,32 @@ export default function Timeline() {
                 </View>
 
                 <View style={styles.controlsRight}>
-                    <Text style={styles.zoomLabel}>Zoom:</Text>
-                    <TouchableOpacity style={styles.zoomButton} onPress={handleZoomOut}>
-                        <Text style={styles.zoomText}>−</Text>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => {
+                            addTrack('audio');
+                            // Simple feedback
+                            if (Platform.OS === 'web') {
+                                console.log('Vocal track added');
+                            } else {
+                                Alert.alert('Success', 'Vocal track added');
+                            }
+                        }}
+                    >
+                        <Text style={styles.actionButtonText}>+ Vocal</Text>
                     </TouchableOpacity>
-                    <Text style={styles.zoomValue}>{Math.round(zoomLevel * 100)}%</Text>
-                    <TouchableOpacity style={styles.zoomButton} onPress={handleZoomIn}>
-                        <Text style={styles.zoomText}>+</Text>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => {
+                            addTrack('midi');
+                            if (Platform.OS === 'web') {
+                                console.log('Instrument track added');
+                            } else {
+                                Alert.alert('Success', 'Instrument track added');
+                            }
+                        }}
+                    >
+                        <Text style={styles.actionButtonText}>+ Inst</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -225,28 +251,17 @@ const styles = StyleSheet.create({
         marginLeft: 8,
         minWidth: 60,
     },
-    zoomLabel: {
-        color: '#888',
-        fontSize: 12,
+    actionButton: {
+        backgroundColor: '#6200ee',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 15,
+        marginLeft: 8,
     },
-    zoomButton: {
-        backgroundColor: '#444',
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    zoomText: {
+    actionButtonText: {
         color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    zoomValue: {
-        color: '#03dac6',
         fontSize: 12,
-        minWidth: 40,
-        textAlign: 'center',
+        fontWeight: 'bold',
     },
     timelineArea: {
         flex: 1,

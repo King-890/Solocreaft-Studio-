@@ -79,6 +79,7 @@ export default function StudioScreen({ route }) {
         const landscapeInstruments = ['piano', 'bass', 'flute', 'saxophone'];
 
         async function setOrientation() {
+            if (Platform.OS === 'web') return; // Skip on web
             try {
                 if (landscapeInstruments.includes(activeInstrument)) {
                     // Lock to landscape for Piano, Bass, Flute, Sax
@@ -96,7 +97,13 @@ export default function StudioScreen({ route }) {
 
         return () => {
             // Unlock orientation when leaving screen
-            ScreenOrientation.unlockAsync().catch(err => console.log('Unlock error:', err));
+            if (Platform.OS !== 'web') {
+                try {
+                    ScreenOrientation.unlockAsync().catch(err => console.log('Unlock error:', err));
+                } catch (e) {
+                    console.log('Error unlocking:', e);
+                }
+            }
         };
     }, [activeInstrument]);
 
@@ -192,7 +199,13 @@ export default function StudioScreen({ route }) {
                 <View style={styles.header}>
                     <TouchableOpacity
                         style={styles.backButton}
-                        onPress={() => navigation.goBack()}
+                        onPress={() => {
+                            if (activeInstrument !== 'timeline') {
+                                handleInstrumentChange('timeline');
+                            } else {
+                                navigation.goBack();
+                            }
+                        }}
                     >
                         <Text style={styles.backButtonText}>← Back</Text>
                     </TouchableOpacity>

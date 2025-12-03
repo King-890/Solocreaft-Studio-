@@ -137,7 +137,7 @@ class WebAudioEngine {
         const drumMap = {
             'kick': 1, 'snare': 2, 'hihat': 3, 'tom1': 4, 'tom2': 5,
             'crash': 6, 'ride': 7, 'na': 8, 'tin': 9, 'tun': 10,
-            'te': 11, 'ge': 12, 'ke': 13, 'kat': 14
+            'te': 11, 'ge': 12, 'ke': 13, 'kat': 14, 'dha': 15, 'ta': 16
         };
 
         // Convert string to number if needed
@@ -191,6 +191,28 @@ class WebAudioEngine {
         } catch (error) {
             console.error('❌ Error playing drum:', error);
         }
+    }
+
+    stopSound(noteName, instrument) {
+        // Web Audio API 'stop' is done on the oscillator node which we don't keep a reference to in this simple implementation.
+        // For a full implementation, we would need to track active oscillators.
+        // For now, we'll just log it to prevent crashes.
+        // console.log(`⏹ Stopping sound: ${noteName} (${instrument}) - (Not fully implemented on web)`);
+    }
+
+    stopAll() {
+        if (this.audioContext) {
+            try {
+                this.audioContext.suspend();
+                this.audioContext.resume();
+            } catch (e) {
+                console.warn('Error stopping all sounds on web:', e);
+            }
+        }
+    }
+
+    preload() {
+        return this.init();
     }
 
     // Get audio context state for debugging

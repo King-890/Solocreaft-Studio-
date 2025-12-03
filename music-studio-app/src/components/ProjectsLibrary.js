@@ -4,17 +4,26 @@ import { useProject } from '../contexts/ProjectContext';
 import { useNavigation } from '@react-navigation/native';
 
 export default function ProjectsLibrary() {
-    const { projects, loadProject, deleteProject } = useProject();
+    const { projects = [], loadProject, deleteProject } = useProject();
     const [searchQuery, setSearchQuery] = useState('');
     const navigation = useNavigation();
 
-    const filteredProjects = projects.filter(p =>
+    const filteredProjects = (projects || []).filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleLoadProject = (project) => {
-        loadProject(project.id);
-        navigation.navigate('Studio', { projectId: project.id });
+    const handleLoadProject = async (project) => {
+        try {
+            if (!project || !project.id) {
+                Alert.alert('Error', 'Invalid project data');
+                return;
+            }
+            await loadProject(project.id);
+            navigation.navigate('Studio', { projectId: project.id });
+        } catch (error) {
+            console.error('Failed to load project:', error);
+            Alert.alert('Error', 'Failed to load project. Please try again.');
+        }
     };
 
     const handleDelete = (projectId) => {

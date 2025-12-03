@@ -7,13 +7,27 @@ class AudioPlaybackService {
         this.audioContext = null;
         this.audioBuffers = new Map(); // Store loaded audio buffers (Web)
         this.activeSources = []; // Track active audio sources (Web)
-        this.nativeSounds = new Map(); // Track loaded native sounds (Native)
+        this.trackGainNodes = new Map(); // Track ID -> GainNode (Web)
+        this.nativeSounds = new Map(); // Clip ID -> Sound Object (Native)
+        this.nativeSoundTrackIds = new Map(); // Clip ID -> Track ID (Native)
     }
 
     init() {
         if (Platform.OS === 'web' && !this.audioContext) {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
+    }
+
+    // Get or create a GainNode for a specific track (Web)
+    getTrackGainNode(trackId) {
+        if (!this.audioContext) return null;
+
+        if (!this.trackGainNodes.has(trackId)) {
+            const gainNode = this.audioContext.createGain();
+            gainNode.connect(this.audioContext.destination);
+            this.trackGainNodes.set(trackId, gainNode);
+        }
+        return this.trackGainNodes.get(trackId);
     }
 
     async loadAudioFromUri(uri, clipId) {
@@ -30,8 +44,6 @@ class AudioPlaybackService {
                 throw new Error('Failed to load audio file.');
             }
         } else {
-            // Native: expo-av handles loading during playback creation, 
-            // but we can pre-load if needed. For now, we'll just return true.
             return true;
         }
     }
@@ -60,7 +72,10 @@ class AudioPlaybackService {
 
                 const source = this.audioContext.createBufferSource();
                 source.buffer = audioBuffer;
-                source.connect(this.audioContext.destination);
+
+                // Connect to the specific track's GainNode instead of destination
+                const trackGainNode = this.getTrackGainNode(clip.trackId);
+                source.connect(trackGainNode);
 
                 const clipStartTime = clip.startTime / 1000;
                 const currentPlaybackTime = startOffset / 1000;
@@ -94,11 +109,11 @@ class AudioPlaybackService {
     // --- Native Implementation ---
     async playClipNative(clip, startOffset) {
         try {
-            // Unload existing if any (simple implementation)
             if (this.nativeSounds.has(clip.id)) {
                 const oldSound = this.nativeSounds.get(clip.id);
                 await oldSound.unloadAsync();
                 this.nativeSounds.delete(clip.id);
+                this.nativeSoundTrackIds.delete(clip.id);
             }
 
             const { sound } = await Audio.Sound.createAsync(
@@ -107,13 +122,13 @@ class AudioPlaybackService {
             );
 
             this.nativeSounds.set(clip.id, sound);
+            this.nativeSoundTrackIds.set(clip.id, clip.trackId);
 
-            const clipStartTime = clip.startTime; // ms
-            const currentPlaybackTime = startOffset; // ms
+            const clipStartTime = clip.startTime;
+            const currentPlaybackTime = startOffset;
 
             if (currentPlaybackTime >= clipStartTime) {
                 const offsetIntoClip = currentPlaybackTime - clipStartTime;
-                // Check duration if possible, but for now just play from offset
                 await sound.playFromPositionAsync(offsetIntoClip);
             } else {
                 const delay = clipStartTime - currentPlaybackTime;
@@ -126,11 +141,11 @@ class AudioPlaybackService {
                 }, delay);
             }
 
-            // Cleanup when done
             sound.setOnPlaybackStatusUpdate(async (status) => {
                 if (status.didJustFinish) {
                     await sound.unloadAsync();
                     this.nativeSounds.delete(clip.id);
+                    this.nativeSoundTrackIds.delete(clip.id);
                 }
             });
 
@@ -153,6 +168,7 @@ class AudioPlaybackService {
                 } catch (e) { }
             });
             this.nativeSounds.clear();
+            this.nativeSoundTrackIds.clear();
         }
     }
 
@@ -161,6 +177,66 @@ class AudioPlaybackService {
         const promises = clips.map(clip => this.playClip(clip, startTime));
         await Promise.all(promises);
     }
+
+    // --- Real-time Mixer Controls ---
+
+    setTrackVolume(trackId, volume) {
+        if (Platform.OS === 'web') {
+            const gainNode = this.getTrackGainNode(trackId);
+            if (gainNode) {
+                // Smooth transition to avoid clicks
+                gainNode.gain.setTargetAtTime(volume, this.audioContext.currentTime, 0.02);
+            }
+        } else {
+            // Native: Iterate all active sounds for this track
+            this.nativeSounds.forEach(async (sound, clipId) => {
+                if (this.nativeSoundTrackIds.get(clipId) === trackId) {
+                    try {
+                        await sound.setVolumeAsync(volume);
+                    } catch (e) {
+                        console.warn('Failed to set volume for clip', clipId);
+                    }
+                }
+            });
+        }
+    }
+
+    setTrackMute(trackId, muted, previousVolume) {
+        const targetVolume = muted ? 0 : previousVolume;
+        this.setTrackVolume(trackId, targetVolume);
+    }
+
+    setTrackPan(trackId, pan) {
+        if (Platform.OS === 'web') {
+            // Web Audio API Pan
+            // Note: This requires a StereoPannerNode to be set up in the audio graph
+            // For now, we'll log it as a placeholder or implement if PannerNode exists
+            console.log(`Setting track ${trackId} pan to ${pan}`);
+        } else {
+            console.log('Pan not supported on native expo-av yet');
+        }
+    }
+
+    setTrackGain(trackId, gain) {
+        // Gain is essentially volume, but applied before the fader. 
+        // For simplicity, we might multiply it with volume in the future.
+        console.log(`Setting track ${trackId} gain to ${gain}`);
+    }
+
+    setTrackEQ(trackId, eq) {
+        console.log(`Setting track ${trackId} EQ:`, eq);
+        // Web: BiquadFilterNode
+    }
+
+    setTrackAuxSend(trackId, sendIndex, level) {
+        console.log(`Setting track ${trackId} Aux ${sendIndex} to ${level}`);
+    }
+
+    setTrackCompressor(trackId, settings) {
+        console.log(`Setting track ${trackId} Compressor:`, settings);
+        // Web: DynamicsCompressorNode
+    }
+
     async playTestTone() {
         console.log('🎵 Playing test tone...');
         if (Platform.OS === 'web') {
@@ -170,7 +246,7 @@ class AudioPlaybackService {
                 const gainNode = this.audioContext.createGain();
 
                 oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime); // A4
+                oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime);
 
                 gainNode.gain.setValueAtTime(0.5, this.audioContext.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 1);
@@ -185,7 +261,6 @@ class AudioPlaybackService {
             }
         } else {
             try {
-                // Use UnifiedAudioEngine to play a test tone (A4 = 440Hz)
                 const UnifiedAudioEngine = require('./UnifiedAudioEngine').default;
                 await UnifiedAudioEngine.playSound('A4', 'synth');
                 console.log('✅ Native test tone played (A4 - 440Hz)');

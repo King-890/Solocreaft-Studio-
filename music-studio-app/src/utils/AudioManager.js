@@ -189,6 +189,8 @@ class AudioManager {
 
         // Play random notes from pentatonic scale - SLOWER & SOFTER
         const playNote = () => {
+            if (!this.audioContext) return; // Stop if audio context is gone
+
             const freq = pentatonicScale[Math.floor(Math.random() * pentatonicScale.length)];
             const osc = this.audioContext.createOscillator();
             osc.type = 'sine';

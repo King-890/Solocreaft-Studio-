@@ -97,17 +97,22 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
             }
 
             // Add to library
-            const savedRecording = await addRecording(savedUri, duration, recordingId, 'voice', null);
-            console.log('✅ Recording saved:', savedRecording.name);
+            try {
+                const savedRecording = await addRecording(savedUri, duration);
+                console.log('✅ Recording saved:', savedRecording.name);
 
-            // Add to timeline if vocals track exists
-            const vocalsTrack = tracks?.find(t => t.name === 'Lead Vocals' || t.name === 'Vocals');
-            if (vocalsTrack && duration > 0) {
-                addClip(vocalsTrack.id, savedRecording.uri, duration, recordingId);
-            }
+                // Add to timeline if vocals track exists
+                const vocalsTrack = tracks?.find(t => t.name === 'Lead Vocals' || t.name === 'Vocals');
+                if (vocalsTrack && duration > 0) {
+                    addClip(vocalsTrack.id, savedRecording.uri, duration, recordingId);
+                }
 
-            if (onRecordingSaved) {
-                onRecordingSaved({ uri: savedUri, duration, recording: savedRecording });
+                if (onRecordingSaved) {
+                    onRecordingSaved({ uri: savedUri, duration, recording: savedRecording });
+                }
+            } catch (dbError) {
+                console.error('Database save failed:', dbError);
+                alert('Recording saved locally but failed to add to library.');
             }
 
             setDuration(0);
@@ -115,6 +120,9 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
             console.error('Failed to stop recording:', error);
             alert(`Failed to save recording: ${error.message}`);
         } finally {
+            if (durationIntervalRef.current) {
+                clearInterval(durationIntervalRef.current);
+            }
             setUploading(false);
             setIsRecording(false);
         }
