@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Alert } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Alert, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useProject } from '../contexts/ProjectContext';
-import AudioPlaybackService from '../services/AudioPlaybackService';
+import RecordingPlaybackService from '../services/RecordingPlaybackService';
 
 export default function RecordingsLibrary() {
     const navigation = useNavigation();
-    const { recordings, deleteRecording } = useProject();
+    const { recordings, deleteRecording, updateRecording } = useProject();
     const [searchQuery, setSearchQuery] = useState('');
     const [playingId, setPlayingId] = useState(null);
+    const [isPaused, setIsPaused] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const [editingName, setEditingName] = useState('');
 
     const filteredRecordings = (recordings || []).filter(r =>
         r.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -17,43 +20,96 @@ export default function RecordingsLibrary() {
     const handlePlay = async (recording) => {
         try {
             if (playingId === recording.id) {
-                AudioPlaybackService.stopAll();
-                setPlayingId(null);
+                // Same recording - toggle pause/resume
+                if (isPaused) {
+                    console.log('▶️ Resuming');
+                    await RecordingPlaybackService.resume();
+                    setIsPaused(false);
+                } else {
+                    console.log('⏸️ Pausing');
+                    await RecordingPlaybackService.pause();
+                    setIsPaused(true);
+                }
             } else {
-                AudioPlaybackService.stopAll();
+                // New recording - play it
+                console.log('🎵 Playing:', recording.name);
                 setPlayingId(recording.id);
-                await AudioPlaybackService.playClip(
-                    { id: recording.id, audioUri: recording.uri, startTime: 0, duration: recording.duration },
-                    0
-                );
-                setPlayingId(null);
+                setIsPaused(false);
+
+                // Play in background (don't await)
+                RecordingPlaybackService.play(recording.uri)
+                    .then(() => {
+                        console.log('✅ Finished');
+                        setPlayingId(null);
+                        setIsPaused(false);
+                    })
+                    .catch(error => {
+                        console.error('❌ Error:', error);
+
+                        if (recording.uri.startsWith('blob:')) {
+                            Alert.alert(
+                                'Recording Unavailable',
+                                'This recording has an expired URL. Delete it?',
+                                [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    { text: 'Delete', style: 'destructive', onPress: () => deleteRecording(recording.id) }
+                                ]
+                            );
+                        } else {
+                            Alert.alert('Error', 'Could not play recording.');
+                        }
+
+                        setPlayingId(null);
+                        setIsPaused(false);
+                    });
             }
         } catch (error) {
-            console.error('Playback error:', error);
-            Alert.alert('Playback Error', 'Could not play this recording. It may have been deleted.');
+            console.error('❌ Play error:', error);
             setPlayingId(null);
+            setIsPaused(false);
         }
     };
 
-    const handleDelete = (recordingId) => {
-        Alert.alert(
-            'Delete Recording',
-            'Are you sure you want to delete this recording?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: () => {
-                        deleteRecording(recordingId);
-                        if (playingId === recordingId) {
-                            AudioPlaybackService.stopAll();
-                            setPlayingId(null);
-                        }
-                    }
-                }
-            ]
-        );
+    const handleDelete = async (recordingId) => {
+        const confirmed = Platform.OS === 'web'
+            ? window.confirm('Delete this recording?')
+            : await new Promise(resolve => {
+                Alert.alert(
+                    'Delete Recording',
+                    'Are you sure?',
+                    [
+                        { text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+                        { text: 'Delete', onPress: () => resolve(true), style: 'destructive' }
+                    ]
+                );
+            });
+
+        if (confirmed) {
+            if (playingId === recordingId) {
+                await RecordingPlaybackService.stop();
+                setPlayingId(null);
+                setIsPaused(false);
+            }
+            await deleteRecording(recordingId);
+        }
+    };
+
+    const handleEditName = (recording) => {
+        setEditingId(recording.id);
+        setEditingName(recording.name);
+    };
+
+    const handleSaveName = (recordingId) => {
+        if (editingName.trim()) {
+            updateRecording(recordingId, { name: editingName.trim() });
+        }
+        setEditingId(null);
+        setEditingName('');
+    };
+
+    const handleCancelEdit = () => {
+        setEditingId(null);
+        setEditingName('');
     };
 
     const handleImportToStudio = (recording) => {
@@ -113,7 +169,29 @@ export default function RecordingsLibrary() {
                                     <View style={styles.recordingHeader}>
                                         <Text style={styles.sourceIcon}>{sourceIcon}</Text>
                                         <View style={styles.recordingTitleContainer}>
-                                            <Text style={styles.recordingName}>{item.name}</Text>
+                                            {editingId === item.id ? (
+                                                <View style={styles.editContainer}>
+                                                    <TextInput
+                                                        style={styles.editInput}
+                                                        value={editingName}
+                                                        onChangeText={setEditingName}
+                                                        autoFocus
+                                                        selectTextOnFocus
+                                                        onSubmitEditing={() => handleSaveName(item.id)}
+                                                    />
+                                                    <TouchableOpacity onPress={() => handleSaveName(item.id)}>
+                                                        <Text style={styles.saveButton}>✓</Text>
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity onPress={handleCancelEdit}>
+                                                        <Text style={styles.cancelButton}>✕</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            ) : (
+                                                <TouchableOpacity onPress={() => handleEditName(item)} style={styles.nameContainer}>
+                                                    <Text style={styles.recordingName}>{item.name}</Text>
+                                                    <Text style={styles.editIcon}>✎</Text>
+                                                </TouchableOpacity>
+                                            )}
                                             <Text style={styles.sourceLabel}>{sourceLabel}</Text>
                                         </View>
                                     </View>
@@ -127,7 +205,7 @@ export default function RecordingsLibrary() {
                                         onPress={() => handlePlay(item)}
                                     >
                                         <Text style={styles.actionText}>
-                                            {playingId === item.id ? '⏸' : '▶'}
+                                            {playingId === item.id && !isPaused ? '⏸' : '▶'}
                                         </Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
@@ -214,6 +292,43 @@ const styles = StyleSheet.create({
     recordingName: {
         color: '#fff',
         fontSize: 16,
+        fontWeight: 'bold',
+        flex: 1,
+    },
+    nameContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    editIcon: {
+        color: '#888',
+        fontSize: 14,
+        opacity: 0.6,
+    },
+    editContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4,
+    },
+    editInput: {
+        flex: 1,
+        backgroundColor: '#1a1a1a',
+        color: '#fff',
+        padding: 6,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: '#03dac6',
+        fontSize: 14,
+    },
+    saveButton: {
+        color: '#34d399',
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    cancelButton: {
+        color: '#ff6b6b',
+        fontSize: 20,
         fontWeight: 'bold',
     },
     sourceLabel: {

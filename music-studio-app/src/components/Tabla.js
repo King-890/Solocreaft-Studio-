@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, useWindowDimensions, Platform, ScrollView } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useInstrumentMixer } from '../hooks/useInstrumentMixer';
 import { useProject } from '../contexts/ProjectContext';
 
 // Tabla sounds mapping
@@ -19,6 +20,7 @@ const TABLA_SOUNDS = {
 
 export default function Tabla() {
     const { width } = useWindowDimensions();
+    useInstrumentMixer('tabla');
     const [activeHit, setActiveHit] = useState(null);
     const [dayanAnim] = useState(new Animated.Value(1));
     const [bayanAnim] = useState(new Animated.Value(1));

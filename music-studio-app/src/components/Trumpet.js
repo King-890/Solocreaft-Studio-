@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useInstrumentMixer } from '../hooks/useInstrumentMixer';
 
 const VALVES = [1, 2, 3];
 
 export default function Trumpet() {
     const [pressedValves, setPressedValves] = useState([]);
+
+    // Connect to mixer
+    useInstrumentMixer('trumpet');
 
     const handleValvePress = (valve) => {
         const newPressed = pressedValves.includes(valve)

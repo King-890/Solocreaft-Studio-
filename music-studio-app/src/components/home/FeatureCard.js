@@ -20,7 +20,7 @@ export default function FeatureCard({
     const handlePressIn = () => {
         Animated.spring(scaleAnim, {
             toValue: 0.95,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start();
     };
 
@@ -28,7 +28,7 @@ export default function FeatureCard({
         Animated.spring(scaleAnim, {
             toValue: 1,
             friction: 3,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start();
     };
 

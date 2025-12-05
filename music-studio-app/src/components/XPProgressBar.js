@@ -32,12 +32,12 @@ export default function XPProgressBar({
                 Animated.timing(glowAnim, {
                     toValue: 1,
                     duration: 1500,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
                 Animated.timing(glowAnim, {
                     toValue: 0,
                     duration: 1500,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
             ])
         ).start();

@@ -10,6 +10,7 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
     const [duration, setDuration] = useState(0);
     const [uploading, setUploading] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
     const recordingRef = useRef(null);
     const durationIntervalRef = useRef(null);
 
@@ -68,6 +69,30 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
         }
     };
 
+    const pauseRecording = async () => {
+        if (!isRecording || !recordingRef.current || isPaused) return;
+        try {
+            await recordingRef.current.pauseAsync();
+            setIsPaused(true);
+            clearInterval(durationIntervalRef.current);
+        } catch (error) {
+            console.error('Failed to pause recording:', error);
+        }
+    };
+
+    const resumeRecording = async () => {
+        if (!isRecording || !recordingRef.current || !isPaused) return;
+        try {
+            await recordingRef.current.startAsync();
+            setIsPaused(false);
+            durationIntervalRef.current = setInterval(() => {
+                setDuration(prev => prev + 1000);
+            }, 1000);
+        } catch (error) {
+            console.error('Failed to resume recording:', error);
+        }
+    };
+
     const stopRecording = async () => {
         if (!isRecording || !recordingRef.current) return;
 
@@ -80,6 +105,7 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
             const uri = recordingRef.current.getURI();
 
             setIsRecording(false);
+            setIsPaused(false);
             recordingRef.current = null;
 
             if (!uri) {
@@ -96,9 +122,9 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
                 savedUri = await saveFileToLocal(uri, recordingId);
             }
 
-            // Add to library
+            // Add to library with source metadata
             try {
-                const savedRecording = await addRecording(savedUri, duration);
+                const savedRecording = await addRecording(savedUri, duration, 'voice', null);
                 console.log('✅ Recording saved:', savedRecording.name);
 
                 // Add to timeline if vocals track exists
@@ -148,13 +174,38 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
             <View style={styles.controls}>
                 {uploading ? (
                     <ActivityIndicator size="large" color="#03dac6" />
-                ) : (
+                ) : !isRecording ? (
                     <TouchableOpacity
-                        style={[styles.recordButton, isRecording && styles.recordingButton]}
-                        onPress={isRecording ? stopRecording : startRecording}
+                        style={styles.recordButton}
+                        onPress={startRecording}
                     >
-                        <View style={isRecording ? styles.stopIcon : styles.recordIcon} />
+                        <View style={styles.recordIcon} />
                     </TouchableOpacity>
+                ) : (
+                    <View style={styles.recordingControls}>
+                        {isPaused ? (
+                            <TouchableOpacity
+                                style={[styles.controlButton, styles.resumeButton]}
+                                onPress={resumeRecording}
+                            >
+                                <Text style={styles.controlIcon}>▶</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                style={[styles.controlButton, styles.pauseButton]}
+                                onPress={pauseRecording}
+                            >
+                                <Text style={styles.controlIcon}>⏸</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        <TouchableOpacity
+                            style={[styles.controlButton, styles.stopButton]}
+                            onPress={stopRecording}
+                        >
+                            <View style={styles.stopIcon} />
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
             <Text style={styles.statusText}>
@@ -208,19 +259,49 @@ const styles = StyleSheet.create({
         elevation: 8,
     },
     recordingButton: {
-        borderColor: '#ff0000',
+        borderColor: '#ff4444',
     },
     recordIcon: {
         width: 24,
         height: 24,
         borderRadius: 12,
-        backgroundColor: '#ff0000',
+        backgroundColor: '#ff4444',
+    },
+    recordingControls: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: 160,
+        alignItems: 'center',
+    },
+    controlButton: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+    },
+    pauseButton: {
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: '#fbbf24',
+    },
+    resumeButton: {
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: '#34d399',
+    },
+    stopButton: {
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: '#ff4444',
+    },
+    controlIcon: {
+        fontSize: 24,
+        color: '#fff',
     },
     stopIcon: {
-        width: 24,
-        height: 24,
+        width: 20,
+        height: 20,
+        backgroundColor: '#ff4444',
         borderRadius: 4,
-        backgroundColor: '#ff0000',
     },
     statusText: {
         color: '#888',

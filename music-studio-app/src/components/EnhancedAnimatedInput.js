@@ -26,30 +26,33 @@ const EnhancedAnimatedInput = ({
 
     const labelStyle = {
         position: 'absolute',
-        left: 10,
+        left: 12,
         top: animatedValue.interpolate({
             inputRange: [0, 1],
-            outputRange: [12, -8],
+            outputRange: [14, 4], // Keep inside the box
         }),
         fontSize: animatedValue.interpolate({
             inputRange: [0, 1],
-            outputRange: [16, 12],
+            outputRange: [16, 11],
         }),
         color: animatedValue.interpolate({
             inputRange: [0, 1],
-            outputRange: ['#aaa', '#007AFF'],
+            outputRange: ['rgba(255, 255, 255, 0.6)', '#BA55D3'], // Higher contrast
         }),
-        backgroundColor: '#1a1a1a',
-        paddingHorizontal: 4,
+        backgroundColor: 'transparent', // Transparent to work with gradients
+        zIndex: 1,
     };
 
     return (
         <View style={[styles.container, style]}>
-            <Animated.Text style={labelStyle}>
+            <Animated.Text style={labelStyle} pointerEvents="none">
                 {label}
             </Animated.Text>
             <TextInput
-                style={styles.input}
+                style={[
+                    styles.input,
+                    { borderColor: isFocused ? '#BA55D3' : 'rgba(255, 255, 255, 0.3)' }
+                ]}
                 value={value}
                 onChangeText={onChangeText}
                 secureTextEntry={secureTextEntry}
@@ -58,7 +61,7 @@ const EnhancedAnimatedInput = ({
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 placeholder=""
-                placeholderTextColor="#666"
+                placeholderTextColor="transparent"
                 nativeID={id}
                 name={name}
             />
@@ -68,21 +71,22 @@ const EnhancedAnimatedInput = ({
 
 const styles = StyleSheet.create({
     container: {
-        marginVertical: 8,
+        marginVertical: 10,
         height: 56,
         justifyContent: 'center',
-        width: '100%', // Ensure full width
+        width: '100%',
     },
     input: {
-        height: 50,
-        borderWidth: 1,
-        borderColor: '#444',
-        borderRadius: 8,
+        height: 56,
+        borderWidth: 1.5,
+        borderRadius: 12,
         paddingHorizontal: 12,
+        paddingTop: 18, // Make room for label
+        paddingBottom: 4,
         fontSize: 16,
-        color: 'white',
-        backgroundColor: '#2a2a2a',
-        width: '100%', // Ensure full width
+        color: '#FFFFFF',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)', // Darker semi-transparent background
+        width: '100%',
     },
 });
 

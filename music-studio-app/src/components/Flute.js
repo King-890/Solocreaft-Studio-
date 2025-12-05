@@ -1,16 +1,26 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useInstrumentMixer } from '../hooks/useInstrumentMixer';
+import { createShadow } from '../utils/shadows';
 
 const NOTES = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5', 'C6'];
 
 export default function Flute() {
     const { height } = useWindowDimensions();
+    useInstrumentMixer('flute');
 
-    const handleNotePress = (note) => {
-        console.log(`Flute note ${note} played`);
+    const handleNotePress = useCallback((note) => {
+        // Defer logging to prevent blocking
+        requestAnimationFrame(() => {
+            console.log(`Flute note ${note} played`);
+        });
         UnifiedAudioEngine.playSound(note, 'flute');
-    };
+    }, []);
+
+    const handleNoteRelease = useCallback((note) => {
+        UnifiedAudioEngine.stopSound(note, 'flute');
+    }, []);
 
     return (
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={true}>
@@ -22,7 +32,9 @@ export default function Flute() {
                             <TouchableOpacity
                                 key={note}
                                 style={styles.key}
-                                onPress={() => handleNotePress(note)}
+                                onPressIn={() => handleNotePress(note)}
+                                onPressOut={() => handleNoteRelease(note)}
+                                delayPressIn={0}
                                 activeOpacity={0.7}
                             >
                                 <View style={styles.hole} />
@@ -72,11 +84,7 @@ const styles = StyleSheet.create({
         paddingVertical: 20,
         borderWidth: 2,
         borderColor: '#A9A9A9',
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
+        ...createShadow({ offsetY: 2, opacity: 0.3, radius: 3, elevation: 5 }),
     },
     hole: {
         width: 30,
@@ -85,10 +93,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#333',
         borderWidth: 2,
         borderColor: '#666',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.8,
-        shadowRadius: 2,
+        ...createShadow({ offsetY: 1, opacity: 0.8, radius: 2, elevation: 2 }),
     },
     keyText: {
         color: '#000',

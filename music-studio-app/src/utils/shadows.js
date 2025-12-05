@@ -48,6 +48,38 @@ export function createShadow({
 }
 
 /**
+ * Creates platform-specific text shadow styles
+ * On web: uses textShadow
+ * On native: uses textShadowColor, textShadowOffset, textShadowRadius
+ * 
+ * @param {Object} config - Text shadow configuration
+ * @param {string} config.color - Shadow color (hex or rgba)
+ * @param {number} config.offsetX - Horizontal offset (default: 0)
+ * @param {number} config.offsetY - Vertical offset (default: 2)
+ * @param {number} config.radius - Blur radius (default: 4)
+ * @returns {Object} Platform-specific text shadow styles
+ */
+export function createTextShadow({
+    color = 'rgba(0, 0, 0, 0.3)',
+    offsetX = 0,
+    offsetY = 2,
+    radius = 4,
+}) {
+    if (Platform.OS === 'web') {
+        return {
+            textShadow: `${offsetX}px ${offsetY}px ${radius}px ${color}`,
+        };
+    }
+
+    // Native platforms (iOS, Android)
+    return {
+        textShadowColor: color,
+        textShadowOffset: { width: offsetX, height: offsetY },
+        textShadowRadius: radius,
+    };
+}
+
+/**
  * Predefined shadow presets
  */
 export const ShadowPresets = {

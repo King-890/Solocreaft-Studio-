@@ -1,35 +1,38 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useInstrumentMixer } from '../hooks/useInstrumentMixer';
 
 const STRINGS = ['G', 'D', 'A', 'E'];
+const NOTE_MAP = { 'G': 'G3', 'D': 'D4', 'A': 'A4', 'E': 'E5' };
 
 export default function Violin() {
     const { height } = useWindowDimensions();
+    useInstrumentMixer('violin');
     const [activeString, setActiveString] = useState(null);
     const lastPlayedRef = useRef(null);
 
-    const handleStringPress = async (string) => {
+    const handleStringPress = useCallback(async (string) => {
         // Stop previous sound if any
         if (lastPlayedRef.current && lastPlayedRef.current !== string) {
-            const prevNoteMap = { 'G': 'G3', 'D': 'D4', 'A': 'A4', 'E': 'E5' };
-            await UnifiedAudioEngine.stopSound(prevNoteMap[lastPlayedRef.current], 'violin');
+            await UnifiedAudioEngine.stopSound(NOTE_MAP[lastPlayedRef.current], 'violin');
         }
 
         lastPlayedRef.current = string;
         setActiveString(string);
-        console.log(`Violin string ${string} played`);
 
-        // Map strings to notes
-        const noteMap = { 'G': 'G3', 'D': 'D4', 'A': 'A4', 'E': 'E5' };
-        UnifiedAudioEngine.playSound(noteMap[string], 'violin');
-    };
+        // Defer logging to prevent blocking
+        requestAnimationFrame(() => {
+            console.log(`Violin string ${string} played`);
+        });
 
-    const handleStringRelease = (string) => {
+        UnifiedAudioEngine.playSound(NOTE_MAP[string], 'violin');
+    }, []);
+
+    const handleStringRelease = useCallback((string) => {
         setActiveString(null);
-        const noteMap = { 'G': 'G3', 'D': 'D4', 'A': 'A4', 'E': 'E5' };
-        UnifiedAudioEngine.stopSound(noteMap[string], 'violin');
-    };
+        UnifiedAudioEngine.stopSound(NOTE_MAP[string], 'violin');
+    }, []);
 
     return (
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={true}>
@@ -45,6 +48,8 @@ export default function Violin() {
                             ]}
                             onPressIn={() => handleStringPress(string)}
                             onPressOut={() => handleStringRelease(string)}
+                            delayPressIn={0}
+                            delayPressOut={0}
                             activeOpacity={0.7}
                         >
                             <View style={styles.stringLine} />

@@ -86,12 +86,21 @@ export default function SignupScreen({ navigation }) {
                 UISounds.playError();
             } else {
                 UISounds.playSuccess();
+                // Show improved confirmation dialog
+                const message = 'Account created successfully!\n\nPlease check your email inbox (and spam folder) for a verification link to activate your account.\n\nYou can close this page and click the link in your email to verify.';
                 if (Platform.OS === 'web') {
-                    window.alert('Success! Check your email for the confirmation link!');
+                    window.alert(message);
                 } else {
-                    Alert.alert('Success', 'Check your email for the confirmation link!');
+                    Alert.alert(
+                        '✅ Success!',
+                        message,
+                        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+                    );
                 }
-                navigation.navigate('Login');
+                // Don't navigate immediately on web - let user read the message
+                if (Platform.OS !== 'web') {
+                    navigation.navigate('Login');
+                }
             }
         } catch (err) {
             setErrorMsg(err.message);

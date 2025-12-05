@@ -1,30 +1,59 @@
-import React from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useInstrumentMixer } from '../hooks/useInstrumentMixer';
+import { createShadow } from '../utils/shadows';
 
 const OCTAVES = 4; // Reduced for performance/demo
 const START_OCTAVE = 3;
+const WHITE_KEY_WIDTH = 50;
 
 export default function Piano() {
-    const handleNotePress = (note) => {
-        console.log(`Playing ${note}`);
-        UnifiedAudioEngine.playSound(note, 'piano');
-    };
+    // Connect to mixer
+    useInstrumentMixer('piano');
 
-    const renderKeys = () => {
+    // Zoom state
+    const [zoomLevel, setZoomLevel] = useState(1);
+    const [pressedKeys, setPressedKeys] = useState(new Set());
+
+    // Memoized handler to prevent recreation on every render
+    const handleNotePress = useCallback((note) => {
+        setPressedKeys(prev => new Set(prev).add(note));
+        // Use requestAnimationFrame to defer non-critical work
+        requestAnimationFrame(() => {
+            console.log(`Playing ${note}`);
+        });
+        // Play sound immediately for responsiveness
+        UnifiedAudioEngine.playSound(note, 'piano');
+    }, []);
+
+    const handleNoteRelease = useCallback((note) => {
+        setPressedKeys(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(note);
+            return newSet;
+        });
+    }, []);
+
+    // Memoize white keys rendering
+    const whiteKeys = useMemo(() => {
         const keys = [];
+        const whiteNotes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+
         for (let i = 0; i < OCTAVES; i++) {
             const octave = START_OCTAVE + i;
-            // White Keys: C, D, E, F, G, A, B
-            const whiteNotes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
             whiteNotes.forEach((note) => {
+                const noteName = `${note}${octave}`;
+                const isPressed = pressedKeys.has(noteName);
                 keys.push(
                     <TouchableOpacity
-                        key={`${note}${octave}`}
-                        style={styles.whiteKey}
-                        onPressIn={() => handleNotePress(`${note}${octave}`)}
-                        onPressOut={() => UnifiedAudioEngine.stopSound(`${note}${octave}`, 'piano')}
+                        key={noteName}
+                        style={[styles.whiteKey, isPressed && styles.whiteKeyPressed]}
+                        onPressIn={() => handleNotePress(noteName)}
+                        onPressOut={() => handleNoteRelease(noteName)}
+                        delayPressIn={0}
+                        delayPressOut={0}
                         activeOpacity={0.9}
                     >
                         <Text style={styles.keyLabel}>{note}{octave}</Text>
@@ -33,65 +62,81 @@ export default function Piano() {
             });
         }
         return keys;
-    };
+    }, [handleNotePress, handleNoteRelease, pressedKeys]);
 
-    const renderBlackKeys = () => {
+    // Memoize black keys rendering
+    const blackKeys = useMemo(() => {
         const keys = [];
-        const whiteKeyWidth = 50;
-        let offset = 0;
+        const blackNotes = [
+            { note: 'C#', offset: 35 },
+            { note: 'D#', offset: 85 },
+            { note: 'F#', offset: 185 },
+            { note: 'G#', offset: 235 },
+            { note: 'A#', offset: 285 }
+        ];
 
         for (let i = 0; i < OCTAVES; i++) {
             const octave = START_OCTAVE + i;
-            // Black Keys positions relative to white keys
-            // C# (between C and D), D# (between D and E)
-            // F# (between F and G), G# (between G and A), A# (between A and B)
+            const octaveOffset = i * 7 * WHITE_KEY_WIDTH;
 
-            // C is at offset
-            // C# is at offset + width - half_black_width
-
-            const blackNotes = [
-                { note: 'C#', offset: 1 },
-                { note: 'D#', offset: 2 },
-                // Skip E-F gap
-                { note: 'F#', offset: 4 },
-                { note: 'G#', offset: 5 },
-                { note: 'A#', offset: 6 }
-            ];
-
-            blackNotes.forEach(({ note, offset: keyOffset }) => {
-                const leftPosition = (i * 7 * whiteKeyWidth) + (keyOffset * whiteKeyWidth) - (whiteKeyWidth / 2) - 10; // Adjust
-
-                // Better calculation:
-                // C=0, D=50, E=100, F=150, G=200, A=250, B=300
-                // C# ~ 35, D# ~ 85, F# ~ 185, G# ~ 235, A# ~ 285
-
-                let left = 0;
-                if (note.startsWith('C')) left = (i * 7 * whiteKeyWidth) + 35;
-                if (note.startsWith('D')) left = (i * 7 * whiteKeyWidth) + 85;
-                if (note.startsWith('F')) left = (i * 7 * whiteKeyWidth) + 185;
-                if (note.startsWith('G')) left = (i * 7 * whiteKeyWidth) + 235;
-                if (note.startsWith('A')) left = (i * 7 * whiteKeyWidth) + 285;
+            blackNotes.forEach(({ note, offset }) => {
+                const noteName = `${note}${octave}`;
+                const left = octaveOffset + offset;
+                const isPressed = pressedKeys.has(noteName);
 
                 keys.push(
                     <TouchableOpacity
-                        key={`${note}${octave}`}
-                        style={[styles.blackKey, { left: left }]}
-                        onPressIn={() => handleNotePress(`${note}${octave}`)}
-                        onPressOut={() => UnifiedAudioEngine.stopSound(`${note}${octave}`, 'piano')}
+                        key={noteName}
+                        style={[styles.blackKey, { left }, isPressed && styles.blackKeyPressed]}
+                        onPressIn={() => handleNotePress(noteName)}
+                        onPressOut={() => handleNoteRelease(noteName)}
+                        delayPressIn={0}
+                        delayPressOut={0}
                         activeOpacity={0.9}
                     />
                 );
             });
         }
         return keys;
-    };
+    }, [handleNotePress, handleNoteRelease, pressedKeys]);
+
+    const handleZoomOut = useCallback(() => {
+        setZoomLevel(prev => Math.max(0.5, prev - 0.25));
+    }, []);
+
+    const handleZoomIn = useCallback(() => {
+        setZoomLevel(prev => Math.min(2, prev + 0.25));
+    }, []);
 
     return (
         <View style={styles.container}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={styles.scrollContent}>
+            {/* Zoom Controls */}
+            <View style={styles.zoomControls}>
+                <TouchableOpacity
+                    style={styles.zoomButton}
+                    onPress={handleZoomOut}
+                >
+                    <Text style={styles.zoomButtonText}>−</Text>
+                </TouchableOpacity>
+                <Text style={styles.zoomText}>{Math.round(zoomLevel * 100)}%</Text>
+                <TouchableOpacity
+                    style={styles.zoomButton}
+                    onPress={handleZoomIn}
+                >
+                    <Text style={styles.zoomButtonText}>+</Text>
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={true}
+                contentContainerStyle={[styles.scrollContent, { transform: [{ scale: zoomLevel }] }]}
+                scrollEnabled={true}
+                nestedScrollEnabled={true}
+            >
                 <View style={styles.keysContainer}>
-                    {renderKeys()}
-                    {renderBlackKeys()}
+                    {whiteKeys}
+                    {blackKeys}
                 </View>
             </ScrollView>
         </View>
@@ -100,7 +145,7 @@ export default function Piano() {
 
 const styles = StyleSheet.create({
     container: {
-        height: 240,
+        height: 280,
         backgroundColor: '#1a1a1a',
         marginTop: 20,
         borderRadius: 15,
@@ -110,21 +155,49 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.5,
         shadowRadius: 15,
         elevation: 10,
+    },
+    zoomControls: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 10,
+        paddingVertical: 8,
+        backgroundColor: '#2a2a2a',
+        borderRadius: 10,
+    },
+    zoomButton: {
+        width: 40,
+        height: 40,
+        backgroundColor: '#3a3a3a',
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginHorizontal: 10,
         borderWidth: 1,
-        borderColor: '#333',
+        borderColor: '#4a4a4a',
+    },
+    zoomButtonText: {
+        color: '#fff',
+        fontSize: 24,
+        fontWeight: 'bold',
+    },
+    zoomText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+        minWidth: 60,
+        textAlign: 'center',
     },
     scrollContent: {
-        flexGrow: 1,
         paddingHorizontal: 10,
     },
     keysContainer: {
         flexDirection: 'row',
+        height: 200,
         position: 'relative',
-        height: '100%',
-        alignItems: 'flex-start',
     },
     whiteKey: {
-        width: 50,
+        width: WHITE_KEY_WIDTH,
         height: 200,
         backgroundColor: '#f5f5f5',
         borderWidth: 1,
@@ -152,11 +225,15 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 6,
         borderWidth: 1,
         borderColor: '#333',
-        shadowColor: '#000',
-        shadowOffset: { width: 2, height: 4 },
-        shadowOpacity: 0.6,
-        shadowRadius: 4,
-        elevation: 5,
+        ...createShadow({ offsetX: 2, offsetY: 4, opacity: 0.6, radius: 4, elevation: 5 }),
+    },
+    whiteKeyPressed: {
+        backgroundColor: '#d0d0d0',
+        transform: [{ scale: 0.98 }],
+    },
+    blackKeyPressed: {
+        backgroundColor: '#333',
+        transform: [{ scale: 0.95 }],
     },
     keyLabel: {
         color: '#888',

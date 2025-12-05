@@ -55,7 +55,7 @@ export default function ImmersiveBackground({ children, style }) {
         Animated.timing(fadeAnim, {
             toValue: 1,
             duration: 800, // Cinematic slow fade
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start();
     }, [currentTheme]);
 

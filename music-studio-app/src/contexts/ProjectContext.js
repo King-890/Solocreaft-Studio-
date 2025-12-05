@@ -1,9 +1,14 @@
 import React, { createContext, useState, useContext, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import AudioPlaybackService from '../services/AudioPlaybackService';
+import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { supabase } from '../services/supabase';
+import { useAuth } from './AuthContext';
 
 const ProjectContext = createContext({});
 
 export const ProjectProvider = ({ children }) => {
+    const { user } = useAuth();
     const [tracks, setTracks] = useState([
         {
             id: '1',
@@ -113,6 +118,7 @@ export const ProjectProvider = ({ children }) => {
 
     const [clips, setClips] = useState([]);
     const [recordings, setRecordings] = useState([]);
+    const [areRecordingsLoaded, setAreRecordingsLoaded] = useState(false);
 
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -120,6 +126,19 @@ export const ProjectProvider = ({ children }) => {
     const [selectedClipId, setSelectedClipId] = useState(null);
 
     const playheadInterval = useRef(null);
+
+    // Load recordings on mount
+    React.useEffect(() => {
+        loadRecordings();
+    }, []);
+
+    // Save recordings when they change
+    React.useEffect(() => {
+        // Only save if we have finished loading the initial data
+        if (areRecordingsLoaded) {
+            saveRecordings();
+        }
+    }, [recordings, areRecordingsLoaded]);
 
     // Sync initial track settings to AudioPlaybackService
     React.useEffect(() => {
@@ -171,6 +190,31 @@ export const ProjectProvider = ({ children }) => {
         setCurrentTime(0);
     };
 
+    // Load recordings from AsyncStorage
+    const loadRecordings = async () => {
+        try {
+            const stored = await AsyncStorage.getItem('@recordings');
+            if (stored) {
+                setRecordings(JSON.parse(stored));
+                console.log('Recordings loaded:', JSON.parse(stored).length);
+            }
+        } catch (error) {
+            console.error('Failed to load recordings:', error);
+        } finally {
+            setAreRecordingsLoaded(true);
+        }
+    };
+
+    // Save recordings to AsyncStorage
+    const saveRecordings = async () => {
+        try {
+            await AsyncStorage.setItem('@recordings', JSON.stringify(recordings));
+            console.log('Recordings saved:', recordings.length);
+        } catch (error) {
+            console.error('Failed to save recordings:', error);
+        }
+    };
+
     const addTrack = (type = 'audio') => {
         const newTrack = {
             id: Date.now().toString(),
@@ -189,8 +233,27 @@ export const ProjectProvider = ({ children }) => {
     };
 
     const updateTrackVolume = (trackId, volume) => {
+        const track = tracks.find(t => t.id === trackId);
         setTracks(tracks.map(t => t.id === trackId ? { ...t, volume } : t));
         AudioPlaybackService.setTrackVolume(trackId, volume);
+
+        // Sync to UnifiedAudioEngine mixer
+        if (track) {
+            const instrumentMap = {
+                'Lead Vocals': 'vocal',
+                'Piano': 'piano',
+                'Drums': 'drums',
+                'Bass Guitar': 'bass',
+                'Electric Guitar': 'guitar',
+                'Synth Pad': 'synth',
+                'Strings': 'violin',
+                'Backing Vocals': 'vocal'
+            };
+            const instrumentId = instrumentMap[track.name];
+            if (instrumentId) {
+                UnifiedAudioEngine.setMixerSettings(instrumentId, { volume });
+            }
+        }
     };
 
     const updateTrackPan = (trackId, pan) => {
@@ -250,27 +313,131 @@ export const ProjectProvider = ({ children }) => {
         console.log('Clip added to timeline:', newClip);
     };
 
+    const deleteClip = (clipId) => {
+        setClips(clips.filter(c => c.id !== clipId));
+        if (selectedClipId === clipId) {
+            setSelectedClipId(null);
+        }
+    };
+
     // Calculate total project duration based on clips
     const getProjectDuration = () => {
         if (clips.length === 0) return 0;
         return Math.max(...clips.map(clip => clip.startTime + clip.duration));
     };
 
-    const addRecording = (uri, duration) => {
+    const addRecording = async (uri, duration, source = 'instrument', instrumentType = null) => {
         const newRecording = {
             id: Date.now().toString(),
-            name: `Recording ${recordings.length + 1}`,
+            name: source === 'voice'
+                ? `Vocal Recording ${recordings.filter(r => r.source === 'voice').length + 1}`
+                : `${instrumentType || 'Instrument'} Recording ${recordings.filter(r => r.source === 'instrument').length + 1}`,
             uri,
             duration,
+            source, // 'voice' or 'instrument'
+            instrumentType, // e.g., 'piano', 'drums', 'guitar', null for voice
             createdAt: new Date().toISOString(),
         };
+
+        // Save to Supabase if user is logged in
+        if (user) {
+            try {
+                const { data, error } = await supabase
+                    .from('recordings')
+                    .insert({
+                        id: newRecording.id,
+                        user_id: user.id,
+                        name: newRecording.name,
+                        uri: newRecording.uri,
+                        duration: newRecording.duration,
+                        source: newRecording.source,
+                        instrument_type: newRecording.instrumentType,
+                        created_at: newRecording.createdAt
+                    })
+                    .select()
+                    .single();
+
+                if (error) {
+                    console.error('Error saving recording to Supabase:', error);
+                } else {
+                    console.log('Recording saved to Supabase:', data);
+                }
+            } catch (error) {
+                console.error('Failed to save recording to database:', error);
+            }
+        }
+
         setRecordings([...recordings, newRecording]);
         console.log('Recording added to library:', newRecording);
         return newRecording;
     };
 
-    const deleteRecording = (recordingId) => {
+    const deleteRecording = async (recordingId) => {
+        // Find the recording to get its URI
+        const recording = recordings.find(r => r.id === recordingId);
+
+        // Delete from Supabase if user is logged in
+        if (user) {
+            try {
+                const { error } = await supabase
+                    .from('recordings')
+                    .delete()
+                    .eq('id', recordingId)
+                    .eq('user_id', user.id);
+
+                if (error) {
+                    console.error('Error deleting recording from Supabase:', error);
+                } else {
+                    console.log('Recording deleted from Supabase');
+                }
+            } catch (error) {
+                console.error('Failed to delete recording from database:', error);
+            }
+        }
+
+        // Delete from IndexedDB if on web and has idb:// URI
+        if (recording && recording.uri.startsWith('idb://')) {
+            try {
+                const { deleteFileFromLocal } = require('../utils/webStorage');
+                await deleteFileFromLocal(recording.uri);
+                console.log('Recording deleted from IndexedDB');
+            } catch (error) {
+                console.error('Failed to delete recording from IndexedDB:', error);
+            }
+        }
+
+        // Delete from local state
         setRecordings(recordings.filter(r => r.id !== recordingId));
+        console.log('Recording deleted from local state');
+    };
+
+    const updateRecording = async (recordingId, updates) => {
+        // Update local state
+        setRecordings(recordings.map(r =>
+            r.id === recordingId ? { ...r, ...updates } : r
+        ));
+
+        // Update in Supabase if user is logged in
+        if (user) {
+            try {
+                const { error } = await supabase
+                    .from('recordings')
+                    .update({
+                        name: updates.name,
+                        // Add other fields as needed
+                    })
+                    .eq('id', recordingId)
+                    .eq('user_id', user.id);
+
+                if (error) {
+                    console.error('Error updating recording in Supabase:', error);
+                } else {
+                    console.log('Recording updated in Supabase');
+                }
+            } catch (error) {
+                console.error('Failed to update recording in database:', error);
+            }
+        }
     };
 
     const value = {
@@ -291,10 +458,12 @@ export const ProjectProvider = ({ children }) => {
         updateTrackAuxSend,
         updateTrackCompressor,
         addClip,
+        deleteClip,
         getProjectDuration,
         recordings,
         addRecording,
         deleteRecording,
+        updateRecording,
         zoomLevel: 1, // Default zoom
         setZoomLevel: () => { }, // Placeholder, should be state
         selectedClipId,

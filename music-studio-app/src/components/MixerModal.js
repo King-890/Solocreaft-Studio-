@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: '#2a2a2a',
         backgroundColor: '#1a1a1a',
-        alignItems: 'flex-end',
+        alignItems: 'center',  // Changed from 'flex-end' to 'center'
     },
     applyButton: {
         backgroundColor: '#6200ee',

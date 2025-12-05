@@ -173,6 +173,9 @@ class AudioManager {
     createInstrumentSound() {
         if (!this.audioContext) return;
 
+        // Store reference to current context to prevent cross-context connections
+        const ctx = this.audioContext;
+
         // Lower pentatonic scale for more peaceful sound
         const pentatonicScale = [
             130.81, // C3
@@ -183,33 +186,36 @@ class AudioManager {
             261.63, // C4
         ];
 
-        const gainNode = this.audioContext.createGain();
+        const gainNode = ctx.createGain();
         gainNode.gain.value = AUDIO_CONFIG.instrument.volume * 0.7;
-        gainNode.connect(this.audioContext.destination);
+        gainNode.connect(ctx.destination);
 
         // Play random notes from pentatonic scale - SLOWER & SOFTER
         const playNote = () => {
-            if (!this.audioContext) return; // Stop if audio context is gone
+            // Validate context is still the same and not closed
+            if (!this.audioContext || this.audioContext !== ctx || ctx.state === 'closed') {
+                return; // Stop if audio context changed or was closed
+            }
 
             const freq = pentatonicScale[Math.floor(Math.random() * pentatonicScale.length)];
-            const osc = this.audioContext.createOscillator();
+            const osc = ctx.createOscillator();
             osc.type = 'sine';
             osc.frequency.value = freq;
 
-            const noteGain = this.audioContext.createGain();
+            const noteGain = ctx.createGain();
             noteGain.gain.value = 0;
 
             // Gentle ADSR envelope - longer attack and release
-            const now = this.audioContext.currentTime;
+            const now = ctx.currentTime;
             noteGain.gain.setValueAtTime(0, now);
             noteGain.gain.linearRampToValueAtTime(0.08, now + 0.8);
             noteGain.gain.linearRampToValueAtTime(0.06, now + 1.5);
             noteGain.gain.exponentialRampToValueAtTime(0.001, now + 5);
 
             // Add subtle vibrato for more natural sound
-            const vibrato = this.audioContext.createOscillator();
+            const vibrato = ctx.createOscillator();
             vibrato.frequency.value = 3;
-            const vibratoGain = this.audioContext.createGain();
+            const vibratoGain = ctx.createGain();
             vibratoGain.gain.value = 2;
             vibrato.connect(vibratoGain);
             vibratoGain.connect(osc.frequency);

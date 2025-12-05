@@ -1,16 +1,22 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useInstrumentMixer } from '../hooks/useInstrumentMixer';
+import { createShadow } from '../utils/shadows';
 
 const NOTES = ['C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4'];
 
 export default function Saxophone() {
     const { width, height } = useWindowDimensions();
+    useInstrumentMixer('saxophone');
 
-    const handleNotePress = (note) => {
-        console.log(`Saxophone note ${note} played`);
+    const handleNotePress = useCallback((note) => {
+        // Defer logging to prevent blocking
+        requestAnimationFrame(() => {
+            console.log(`Saxophone note ${note} played`);
+        });
         UnifiedAudioEngine.playSound(note, 'saxophone');
-    };
+    }, []);
 
     return (
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={true}>
@@ -23,6 +29,7 @@ export default function Saxophone() {
                                 key={note}
                                 style={styles.key}
                                 onPress={() => handleNotePress(note)}
+                                delayPressIn={0}
                                 activeOpacity={0.7}
                             >
                                 <Text style={styles.keyText}>{note}</Text>
@@ -72,11 +79,7 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
         borderWidth: 2,
         borderColor: '#DAA520',
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
+        ...createShadow({ offsetY: 2, opacity: 0.3, radius: 3, elevation: 5 }),
     },
     keyDetail: {
         width: 40,

@@ -1,29 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useInstrumentMixer } from '../hooks/useInstrumentMixer';
 
 const WAVEFORMS = ['sine', 'square', 'sawtooth', 'triangle'];
 
 export default function SynthPad() {
+    useInstrumentMixer('synth');
     const [waveform, setWaveform] = useState('sine');
     const [params, setParams] = useState({ cutoff: 50, res: 20, lfo: 0 });
 
-    const handlePressIn = () => {
-        console.log(`Synth playing ${waveform}`);
+    const handlePressIn = useCallback(() => {
+        // Defer logging to prevent blocking
+        requestAnimationFrame(() => {
+            console.log(`Synth playing ${waveform}`);
+        });
         UnifiedAudioEngine.playSound('C4', 'synth'); // In real app, pass waveform
-    };
+    }, [waveform]);
 
-    const handlePressOut = () => {
-        console.log('Synth Pad Press Out');
+    const handlePressOut = useCallback(() => {
+        requestAnimationFrame(() => {
+            console.log('Synth Pad Press Out');
+        });
         UnifiedAudioEngine.stopSound('C4', 'synth');
-    };
+    }, []);
 
-    const toggleParam = (param) => {
+    const toggleParam = useCallback((param) => {
         setParams(prev => ({
             ...prev,
             [param]: (prev[param] + 25) % 100
         }));
-    };
+    }, []);
+
+    const handleWaveformChange = useCallback((w) => {
+        setWaveform(w);
+    }, []);
 
     return (
         <View style={styles.container}>
@@ -35,7 +46,7 @@ export default function SynthPad() {
                             styles.waveformBtn,
                             waveform === w && styles.waveformBtnActive
                         ]}
-                        onPress={() => setWaveform(w)}
+                        onPress={() => handleWaveformChange(w)}
                     >
                         <Text style={[
                             styles.waveformText,
@@ -52,6 +63,8 @@ export default function SynthPad() {
                 activeOpacity={0.8}
                 onPressIn={handlePressIn}
                 onPressOut={handlePressOut}
+                delayPressIn={0}
+                delayPressOut={0}
             >
                 <Text style={styles.text}>HOLD TO PLAY</Text>
                 <Text style={styles.subtext}>{waveform.toUpperCase()} WAVE</Text>

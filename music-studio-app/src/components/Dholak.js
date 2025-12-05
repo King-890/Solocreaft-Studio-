@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, useWindowDimensions, Platform } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useInstrumentMixer } from '../hooks/useInstrumentMixer';
 import { useProject } from '../contexts/ProjectContext';
 
 export default function Dholak() {
     const { width } = useWindowDimensions();
+    useInstrumentMixer('dholak');
     const [activeHit, setActiveHit] = useState(null);
     const [leftAnim] = useState(new Animated.Value(1));
     const [rightAnim] = useState(new Animated.Value(1));

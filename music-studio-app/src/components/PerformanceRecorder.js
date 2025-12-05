@@ -39,12 +39,12 @@ export default function PerformanceRecorder({
                 Animated.spring(countInScale, {
                     toValue: 1,
                     friction: 4,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
                 Animated.timing(countInScale, {
                     toValue: 0,
                     duration: 800,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
             ]).start();
         }
@@ -58,12 +58,12 @@ export default function PerformanceRecorder({
                     Animated.timing(recordPulse, {
                         toValue: 1.2,
                         duration: 600,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                     Animated.timing(recordPulse, {
                         toValue: 1,
                         duration: 600,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                 ])
             ).start();
@@ -136,7 +136,7 @@ export default function PerformanceRecorder({
     const handlePressIn = () => {
         Animated.spring(buttonScale, {
             toValue: 0.95,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start();
     };
 
@@ -144,7 +144,7 @@ export default function PerformanceRecorder({
         Animated.spring(buttonScale, {
             toValue: 1,
             friction: 3,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start();
     };
 

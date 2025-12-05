@@ -15,25 +15,13 @@
         "preview": {
             "distribution": "internal",
             "android": {
-                "buildType": "apk",
-                "image": "latest"
-            },
-            "ios": {
-                "simulator": true,
-                "image": "latest"
-            },
-            "env": {
-                "EXPO_NO_CAPABILITY_SYNC": "1",
-                "GRADLE_OPTS": "-Xmx4g -Dorg.gradle.daemon=false"
+                "buildType": "apk"
             }
         },
         "production": {
             "android": {
-                "buildType": "apk",
-                "resourceClass": "medium"
-            },
-            "ios": {
-                "resourceClass": "m-medium"
+                "buildType": "app-bundle",
+                "gradleCommand": ":app:bundleRelease"
             }
         }
     },

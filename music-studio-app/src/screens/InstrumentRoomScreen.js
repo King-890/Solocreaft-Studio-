@@ -160,7 +160,7 @@ export default function InstrumentRoomScreen() {
         Animated.timing(fadeAnim, {
             toValue: 1,
             duration: 600,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start();
     }, []);
 

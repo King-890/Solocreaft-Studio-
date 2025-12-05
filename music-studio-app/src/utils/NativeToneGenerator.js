@@ -44,24 +44,45 @@ export const generateTone = (frequency, durationMs = 500, waveform = 'sine', vol
     // Data size
     view.setUint32(40, dataSize, true);
 
-    // Generate PCM data
+    // Generate PCM data with improved synthesis
     const dataOffset = 44;
+    const durationSec = durationMs / 1000;
+
     for (let i = 0; i < numSamples; i++) {
         const t = i / SAMPLE_RATE;
         let sample = 0;
 
         switch (waveform) {
             case 'sine':
+                // Add harmonics for richer piano-like sound
                 sample = Math.sin(2 * Math.PI * frequency * t);
+                sample += 0.3 * Math.sin(4 * Math.PI * frequency * t); // 2nd harmonic
+                sample += 0.15 * Math.sin(6 * Math.PI * frequency * t); // 3rd harmonic
+                sample /= 1.45; // Normalize
                 break;
             case 'square':
-                sample = Math.sin(2 * Math.PI * frequency * t) > 0 ? 1 : -1;
+                // Softer square wave with limited harmonics
+                sample = Math.sin(2 * Math.PI * frequency * t);
+                sample += (1 / 3) * Math.sin(6 * Math.PI * frequency * t);
+                sample += (1 / 5) * Math.sin(10 * Math.PI * frequency * t);
+                sample /= 1.5;
                 break;
             case 'sawtooth':
-                sample = 2 * (t * frequency - Math.floor(t * frequency + 0.5));
+                // Richer sawtooth with controlled harmonics
+                sample = 0;
+                for (let h = 1; h <= 8; h++) {
+                    sample += (1 / h) * Math.sin(2 * Math.PI * frequency * h * t);
+                }
+                sample /= 2;
                 break;
             case 'triangle':
-                sample = 2 * Math.abs(2 * (t * frequency - Math.floor(t * frequency + 0.5))) - 1;
+                // Smoother triangle wave
+                sample = 0;
+                for (let h = 1; h <= 7; h += 2) {
+                    const sign = (h % 4 === 1) ? 1 : -1;
+                    sample += sign * (1 / (h * h)) * Math.sin(2 * Math.PI * frequency * h * t);
+                }
+                sample *= 8 / (Math.PI * Math.PI);
                 break;
             case 'noise':
                 sample = Math.random() * 2 - 1;
@@ -70,21 +91,32 @@ export const generateTone = (frequency, durationMs = 500, waveform = 'sine', vol
                 sample = Math.sin(2 * Math.PI * frequency * t);
         }
 
-        // Apply simple envelope (attack/release) to avoid clicking
-        const attackTime = 0.05;
-        const releaseTime = 0.1;
-        const durationSec = durationMs / 1000;
+        // Improved ADSR envelope for more natural sound
+        const attackTime = 0.02;  // Quick attack
+        const decayTime = 0.05;   // Short decay
+        const sustainLevel = 0.7; // Sustain level
+        const releaseTime = 0.15; // Smooth release
 
         let envelope = 1;
         if (t < attackTime) {
-            envelope = t / attackTime;
-        } else if (t > durationSec - releaseTime) {
-            envelope = (durationSec - t) / releaseTime;
+            // Attack phase - exponential curve
+            envelope = Math.pow(t / attackTime, 0.5);
+        } else if (t < attackTime + decayTime) {
+            // Decay phase
+            const decayProgress = (t - attackTime) / decayTime;
+            envelope = 1 - (1 - sustainLevel) * decayProgress;
+        } else if (t < durationSec - releaseTime) {
+            // Sustain phase
+            envelope = sustainLevel;
+        } else {
+            // Release phase - exponential curve
+            const releaseProgress = (durationSec - t) / releaseTime;
+            envelope = sustainLevel * Math.pow(releaseProgress, 2);
         }
 
         sample *= volume * envelope;
 
-        // Convert to 16-bit PCM
+        // Convert to 16-bit PCM with soft clipping
         const s = Math.max(-1, Math.min(1, sample));
         view.setInt16(dataOffset + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
     }

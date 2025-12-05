@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useInstrumentMixer } from '../hooks/useInstrumentMixer';
 import { useProject } from '../contexts/ProjectContext';
 
 const PERCUSSION = [
@@ -16,16 +17,22 @@ const PERCUSSION = [
 
 export default function WorldPercussion() {
     const { width } = useWindowDimensions();
+    useInstrumentMixer('world');
     const { tracks } = useProject();
 
     // Find the World Percussion track
     const track = tracks.find(t => t.name === 'World Percussion') || { volume: 0.8, pan: 0, muted: false };
 
-    const handlePadPress = (percussion) => {
+    const handlePadPress = useCallback((percussion) => {
         if (track.muted) return;
-        console.log(`${percussion.name} played`);
+
+        // Defer logging to prevent blocking
+        requestAnimationFrame(() => {
+            console.log(`${percussion.name} played`);
+        });
+
         UnifiedAudioEngine.playDrumSound(percussion.id, track.volume, track.pan);
-    };
+    }, [track.muted, track.volume, track.pan]);
 
     const padWidth = width < 400 ? (width - 60) / 2 : 160;
 
@@ -39,6 +46,7 @@ export default function WorldPercussion() {
                             key={perc.id}
                             style={[styles.pad, { width: padWidth }]}
                             onPress={() => handlePadPress(perc)}
+                            delayPressIn={0}
                             activeOpacity={0.6}
                         >
                             <Text style={styles.padText}>{perc.name}</Text>

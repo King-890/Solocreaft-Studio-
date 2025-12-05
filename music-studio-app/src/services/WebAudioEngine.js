@@ -59,17 +59,14 @@ class WebAudioEngine {
     }
 
     async playSound(noteName, instrument = 'piano') {
-        console.log(`🎵 Playing sound: ${noteName} (${instrument})`);
-
-        if (!this.init()) {
-            console.error('❌ Cannot play sound - init failed');
+        // Initialize on first call only
+        if (!this.audioContext && !this.init()) {
             return;
         }
 
-        const resumed = await this.resumeContext();
-        if (!resumed) {
-            console.error('❌ Cannot play sound - resume failed');
-            return;
+        // Resume context if suspended (only first time)
+        if (this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
         }
 
         // Parse note name (e.g., "C4", "F#3")
@@ -125,8 +122,6 @@ class WebAudioEngine {
 
             oscillator.start(now);
             oscillator.stop(now + 0.3);
-
-            console.log(`✅ Played ${noteName} (${instrument}) at ${frequency.toFixed(2)}Hz with ${waveform} wave`);
         } catch (error) {
             console.error('❌ Error playing sound:', error);
         }

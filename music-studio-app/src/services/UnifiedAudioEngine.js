@@ -8,6 +8,10 @@ class NativeAudioEngine {
         this.sounds = {};
         this.activeSounds = {}; // Track active sounds for stopping
         this.toneCache = {}; // Cache generated WAV URIs
+        this.soundPool = {}; // Pool of reusable sound objects
+        this.maxConcurrentSounds = 8; // Limit concurrent sounds to prevent lag
+        this.playQueue = []; // Queue for pending playback requests
+        this.isProcessingQueue = false;
         this.soundFiles = {
             piano: {
                 'C4': require('../../assets/sounds/piano/C4.mp3'),
@@ -103,25 +107,56 @@ class NativeAudioEngine {
         console.log('✨ Audio preloading complete');
     }
 
-    async playSound(noteName, instrument = 'piano') {
-        // console.log(`🎵 [Native] Playing sound: ${noteName} (${instrument})`);
+    // Optimized playSound with non-blocking execution
+    playSound(noteName, instrument = 'piano', volume = 0.8) {
+        // Don't await - fire and forget for better performance
+        this._playSoundAsync(noteName, instrument, volume).catch(error => {
+            // Silent error handling to prevent blocking
+            if (__DEV__) {
+                console.warn('Audio playback error:', error.message);
+            }
+        });
+    }
+
+    async _playSoundAsync(noteName, instrument, volume) {
         try {
             // Ensure audio is initialized
             await this.init();
 
-            // Stop existing sound for this note if any (monophonic per note)
-            await this.stopSound(noteName, instrument);
+            // Limit concurrent sounds to prevent overload
+            const activeCount = Object.keys(this.activeSounds).length;
+            if (activeCount >= this.maxConcurrentSounds) {
+                // Remove oldest sound
+                const oldestKey = Object.keys(this.activeSounds)[0];
+                await this._stopSoundQuiet(oldestKey);
+            }
 
             // Check if we have a sample for this instrument
             const instrumentKey = instrument.toLowerCase();
             if (this.soundFiles[instrumentKey]) {
-                await this.playSampledSound(noteName, instrumentKey);
+                await this.playSampledSound(noteName, instrumentKey, volume);
             } else {
                 // Fallback to synthesis
-                await this.playSynthesizedSound(noteName, instrument);
+                await this.playSynthesizedSound(noteName, instrument, volume);
             }
         } catch (error) {
-            console.warn('Failed to play native sound:', error);
+            // Silently handle errors in production
+            if (__DEV__) {
+                console.warn('Failed to play native sound:', error);
+            }
+        }
+    }
+
+    async _stopSoundQuiet(key) {
+        const soundObject = this.activeSounds[key];
+        if (soundObject) {
+            try {
+                await soundObject.stopAsync();
+                await soundObject.unloadAsync();
+                delete this.activeSounds[key];
+            } catch (e) {
+                // Ignore errors
+            }
         }
     }
 
@@ -135,12 +170,15 @@ class NativeAudioEngine {
                 await soundObject.unloadAsync();
                 delete this.activeSounds[key];
             } catch (error) {
-                console.warn('Error stopping sound:', error);
+                // Ignore "sound is not loaded" errors as they are benign
+                if (error.message && !error.message.includes('not loaded')) {
+                    console.warn('Error stopping sound:', error);
+                }
             }
         }
     }
 
-    async playSampledSound(noteName, instrument) {
+    async playSampledSound(noteName, instrument, volume = 0.8) {
         try {
             // Percussion handling
             if (['drums', 'tabla', 'dholak'].includes(instrument)) {
@@ -162,7 +200,7 @@ class NativeAudioEngine {
 
                 if (sampleKey && this.soundFiles[instrument][sampleKey]) {
                     const source = this.soundFiles[instrument][sampleKey];
-                    const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true });
+                    const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true, volume });
                     sound.setOnPlaybackStatusUpdate(async (status) => {
                         if (status.didJustFinish) await sound.unloadAsync();
                     });
@@ -200,7 +238,7 @@ class NativeAudioEngine {
 
             const { sound } = await Audio.Sound.createAsync(
                 source,
-                { shouldPlay: true, rate: rate }
+                { shouldPlay: true, rate: rate, volume }
             );
 
             // Store active sound
@@ -223,7 +261,7 @@ class NativeAudioEngine {
         }
     }
 
-    async playSynthesizedSound(noteName, instrument) {
+    async playSynthesizedSound(noteName, instrument, volume = 0.8) {
         // Map note name to frequency
         const frequency = this.getFrequency(noteName);
 
@@ -256,7 +294,7 @@ class NativeAudioEngine {
 
         const { sound } = await Audio.Sound.createAsync(
             { uri },
-            { shouldPlay: true }
+            { shouldPlay: true, volume }
         );
 
         // Store active sound
@@ -302,9 +340,12 @@ class NativeAudioEngine {
             else if (this.soundFiles.dholak[id]) source = this.soundFiles.dholak[id];
 
             if (source) {
-                // Play the sample
+                // Play the sample with proper volume
                 try {
-                    const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true });
+                    const { sound } = await Audio.Sound.createAsync(source, {
+                        shouldPlay: true,
+                        volume: volume
+                    });
                     sound.setOnPlaybackStatusUpdate(async (status) => {
                         if (status.didJustFinish) await sound.unloadAsync();
                     });
@@ -439,6 +480,27 @@ class NativeAudioEngine {
 const nativeEngine = new NativeAudioEngine();
 
 const UnifiedAudioEngine = {
+    // Mixer settings storage
+    mixerSettings: {},
+
+    // Set mixer settings for an instrument
+    setMixerSettings(instrument, settings) {
+        this.mixerSettings[instrument] = {
+            ...this.mixerSettings[instrument],
+            ...settings
+        };
+    },
+
+    // Get mixer settings for an instrument
+    getMixerSettings(instrument) {
+        return this.mixerSettings[instrument] || {
+            volume: 0.8,
+            pan: 0,
+            mute: false,
+            solo: false
+        };
+    },
+
     init: async () => {
         if (Platform.OS === 'web') {
             return WebAudioEngine.init();
@@ -447,10 +509,24 @@ const UnifiedAudioEngine = {
         }
     },
     playSound: async (noteName, instrument) => {
+        // Get mixer settings
+        const mixerSettings = UnifiedAudioEngine.getMixerSettings(instrument);
+
+        // Don't play if muted
+        if (mixerSettings.mute) {
+            return;
+        }
+
+        // Check solo logic (if any instrument is soloed, only play soloed instruments)
+        const anySolo = Object.values(UnifiedAudioEngine.mixerSettings).some(s => s && s.solo);
+        if (anySolo && !mixerSettings.solo) {
+            return;
+        }
+
         if (Platform.OS === 'web') {
             return WebAudioEngine.playSound(noteName, instrument);
         } else {
-            return nativeEngine.playSound(noteName, instrument);
+            return nativeEngine.playSound(noteName, instrument, mixerSettings.volume);
         }
     },
     playDrumSound: async (padId) => {

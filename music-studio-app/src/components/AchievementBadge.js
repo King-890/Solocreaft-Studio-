@@ -88,12 +88,12 @@ export default function AchievementBadge({ achievementId, onDismiss, autoHide = 
                         toValue: 100,
                         friction: 8,
                         tension: 40,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                     Animated.spring(scaleAnim, {
                         toValue: 1,
                         friction: 6,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                 ]),
                 // Glow effect
@@ -102,12 +102,12 @@ export default function AchievementBadge({ achievementId, onDismiss, autoHide = 
                         Animated.timing(glowAnim, {
                             toValue: 1,
                             duration: 1000,
-                            useNativeDriver: true,
+                            useNativeDriver: Platform.OS !== 'web',
                         }),
                         Animated.timing(glowAnim, {
                             toValue: 0,
                             duration: 1000,
-                            useNativeDriver: true,
+                            useNativeDriver: Platform.OS !== 'web',
                         }),
                     ]),
                     { iterations: 2 }
@@ -119,12 +119,12 @@ export default function AchievementBadge({ achievementId, onDismiss, autoHide = 
                     Animated.timing(slideAnim, {
                         toValue: -200,
                         duration: 400,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                     Animated.timing(scaleAnim, {
                         toValue: 0,
                         duration: 400,
-                        useNativeDriver: true,
+                        useNativeDriver: Platform.OS !== 'web',
                     }),
                 ]),
             ]).start(() => {
@@ -203,19 +203,19 @@ function ConfettiParticle({ delay }) {
                 toValue: 200,
                 duration: 2000,
                 delay,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
             Animated.timing(rotateAnim, {
                 toValue: 1,
                 duration: 2000,
                 delay,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
             Animated.timing(opacityAnim, {
                 toValue: 0,
                 duration: 2000,
                 delay,
-                useNativeDriver: true,
+                useNativeDriver: Platform.OS !== 'web',
             }),
         ]).start();
     }, []);

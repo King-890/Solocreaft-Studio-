@@ -76,7 +76,7 @@ const Particle = ({ type, startX, delay }) => {
     );
 };
 
-export default function ParticleSystem({ count = 30 }) {
+export default function ParticleSystem({ count = Platform.OS === 'web' ? 10 : 30 }) {
     const { width } = useWindowDimensions();
     const [particles, setParticles] = useState([]);
 

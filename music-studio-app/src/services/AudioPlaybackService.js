@@ -213,7 +213,7 @@ class AudioPlaybackService {
             // For now, we'll log it as a placeholder or implement if PannerNode exists
             console.log(`Setting track ${trackId} pan to ${pan}`);
         } else {
-            console.log('Pan not supported on native expo-av yet');
+            // console.log('Pan not supported on native expo-av yet');
         }
     }
 

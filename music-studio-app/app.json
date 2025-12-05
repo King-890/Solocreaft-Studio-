@@ -2,7 +2,7 @@
   "expo": {
     "name": "SoloCraft Studio",
     "slug": "solocraft-studio",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ujstudios.solocraft",
-      "buildNumber": "1.0.0",
+      "buildNumber": "1.0.2",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "This app needs access to your microphone to record audio and create music.",
         "NSCameraUsageDescription": "This app needs access to your camera to capture photos for themes.",
@@ -32,20 +32,33 @@
         "backgroundColor": "#1a0a33"
       },
       "package": "com.ujstudios.solocraft",
-      "versionCode": 1,
+      "versionCode": 3,
       "edgeToEdgeEnabled": true,
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "pan",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "solocraft",
+              "host": "auth"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "plugins": [

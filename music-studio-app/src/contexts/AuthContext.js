@@ -55,15 +55,43 @@ export const AuthProvider = ({ children }) => {
         loading,
         error,
         signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
-        signUp: (email, password) => supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                emailRedirectTo: Platform.OS === 'web'
-                    ? (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081')
-                    : 'solocraft://auth/callback'
+        signUp: async (email, password) => {
+            // Check if email already exists
+            const { data: existingUsers, error: checkError } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('email', email)
+                .limit(1);
+
+            if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+                console.error('Error checking existing email:', checkError);
             }
-        }),
+
+            if (existingUsers && existingUsers.length > 0) {
+                throw new Error('An account with this email already exists. Please sign in instead.');
+            }
+
+            // Determine the correct redirect URL
+            let redirectUrl = 'http://localhost:8081'; // Default fallback
+
+            if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                // Use current origin for web (works with localhost, ngrok, and production)
+                redirectUrl = window.location.origin;
+            } else if (Platform.OS !== 'web') {
+                // Use deep link for mobile
+                redirectUrl = 'solocraft://auth/callback';
+            }
+
+            console.log('📧 Signup redirect URL:', redirectUrl);
+
+            return supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    emailRedirectTo: redirectUrl
+                }
+            });
+        },
         resetPassword: async (email) => {
             return await supabase.auth.resetPasswordForEmail(email, {
                 redirectTo: Platform.OS === 'web'

@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useInstrumentMixer } from '../hooks/useInstrumentMixer';
 
 const CHORDS = ['C', 'G', 'D', 'A', 'E', 'Am', 'Em', 'Dm'];
 
 export default function AcousticGuitar({ instrument = 'guitar' }) {
+    useInstrumentMixer(instrument);
     const handleChordPress = (chord) => {
         console.log(`Playing ${chord} chord (${instrument})`);
         // Play root note of chord

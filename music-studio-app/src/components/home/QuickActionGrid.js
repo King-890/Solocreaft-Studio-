@@ -30,7 +30,7 @@ function QuickActionItem({ icon, label, color, onPress, theme }) {
     const handlePressIn = () => {
         Animated.spring(scaleAnim, {
             toValue: 0.9,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start();
     };
 
@@ -38,7 +38,7 @@ function QuickActionItem({ icon, label, color, onPress, theme }) {
         Animated.spring(scaleAnim, {
             toValue: 1,
             friction: 3,
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== 'web',
         }).start();
     };
 

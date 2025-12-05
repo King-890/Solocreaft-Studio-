@@ -1,11 +1,12 @@
 import { Platform } from 'react-native';
 
 const DB_NAME = 'MusicAppStorage';
-const STORE_NAME = 'files';
+export const STORE_NAME = 'files';
 
 let dbInstance = null;
+const blobURLCache = new Map(); // Track created blob URLs for cleanup
 
-const initDB = () => {
+export const initDB = () => {
     if (dbInstance) return Promise.resolve(dbInstance);
 
     if (Platform.OS !== 'web' || typeof indexedDB === 'undefined') {
@@ -30,7 +31,7 @@ const initDB = () => {
 
 /**
  * Saves a file (from URI) to IndexedDB on Web.
- * Returns the original URI on Native, or a new persistent Blob URI on Web.
+ * Returns a persistent key reference instead of a temporary blob URL.
  */
 export const saveFileToLocal = async (uri, key) => {
     if (Platform.OS !== 'web') return uri;
@@ -49,8 +50,9 @@ export const saveFileToLocal = async (uri, key) => {
             store.put(blob, key);
 
             tx.oncomplete = () => {
-                // Create a new URL for the stored blob
-                resolve(URL.createObjectURL(blob));
+                // Return the key instead of a blob URL
+                // The key will be used to retrieve the blob later
+                resolve(`idb://${key}`);
             };
             tx.onerror = () => reject(tx.error);
         });
@@ -61,15 +63,18 @@ export const saveFileToLocal = async (uri, key) => {
 };
 
 /**
- * Retrieves a file from IndexedDB on Web.
+ * Retrieves a file from IndexedDB on Web and creates a fresh blob URL.
  * Returns null if not found or not on Web.
  */
-export const getFileFromLocal = async (key) => {
-    if (Platform.OS !== 'web') return null;
+export const getFileFromLocal = async (keyOrUri) => {
+    if (Platform.OS !== 'web') return keyOrUri;
+
+    // Extract key from idb:// URI or use as-is
+    const key = keyOrUri?.startsWith('idb://') ? keyOrUri.slice(6) : keyOrUri;
 
     try {
         const db = await initDB();
-        if (!db) return null;
+        if (!db) return keyOrUri;
 
         return new Promise((resolve, reject) => {
             const tx = db.transaction(STORE_NAME, 'readonly');
@@ -79,7 +84,15 @@ export const getFileFromLocal = async (key) => {
             request.onsuccess = () => {
                 const blob = request.result;
                 if (blob) {
-                    resolve(URL.createObjectURL(blob));
+                    // Revoke old URL if exists
+                    if (blobURLCache.has(key)) {
+                        URL.revokeObjectURL(blobURLCache.get(key));
+                    }
+
+                    // Create fresh blob URL
+                    const blobURL = URL.createObjectURL(blob);
+                    blobURLCache.set(key, blobURL);
+                    resolve(blobURL);
                 } else {
                     resolve(null);
                 }
@@ -93,14 +106,23 @@ export const getFileFromLocal = async (key) => {
 };
 
 /**
- * Deletes a file from IndexedDB on Web.
+ * Deletes a file from IndexedDB on Web and revokes its blob URL.
  */
-export const deleteFileFromLocal = async (key) => {
+export const deleteFileFromLocal = async (keyOrUri) => {
     if (Platform.OS !== 'web') return;
+
+    // Extract key from idb:// URI or use as-is
+    const key = keyOrUri?.startsWith('idb://') ? keyOrUri.slice(6) : keyOrUri;
 
     try {
         const db = await initDB();
         if (!db) return;
+
+        // Revoke blob URL if exists
+        if (blobURLCache.has(key)) {
+            URL.revokeObjectURL(blobURLCache.get(key));
+            blobURLCache.delete(key);
+        }
 
         return new Promise((resolve, reject) => {
             const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -113,4 +135,16 @@ export const deleteFileFromLocal = async (key) => {
     } catch (error) {
         console.error('Error deleting from IDB:', error);
     }
+};
+
+/**
+ * Cleanup all blob URLs (call on app unmount)
+ */
+export const cleanupBlobURLs = () => {
+    if (Platform.OS !== 'web') return;
+
+    blobURLCache.forEach((url) => {
+        URL.revokeObjectURL(url);
+    });
+    blobURLCache.clear();
 };

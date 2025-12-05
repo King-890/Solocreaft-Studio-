@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import { useInstrumentMixer } from '../hooks/useInstrumentMixer';
 import { useProject } from '../contexts/ProjectContext';
 
 const DRUM_PADS = [
@@ -14,6 +15,7 @@ const DRUM_PADS = [
 ];
 
 export default function DrumMachine() {
+    useInstrumentMixer('drums');
     const { tracks } = useProject();
 
     // Find the Drums track
