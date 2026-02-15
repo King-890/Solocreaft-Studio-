@@ -16,7 +16,20 @@ export const INSTRUMENTS = {
   SAXOPHONE: 'alto_sax',
   TRUMPET: 'trumpet',
   CELLO: 'cello',
-  STRINGS: 'string_ensemble_1'
+  STRINGS: 'string_ensemble_1',
+  HARP: 'orchestral_harp',
+  MARIMBA: 'marimba',
+  ACCORDION: 'accordion',
+  BANJO: 'banjo',
+  CLARINET: 'clarinet',
+  OBOE: 'oboe',
+  TUBA: 'tuba',
+  FRENCH_HORN: 'french_horn',
+  SHAMISEN: 'shamisen',
+  KOTO: 'koto',
+  KALIMBA: 'kalimba',
+  SYNTH: 'pad_1_new_age',
+  CHOIR: 'choir_aahs'
 };
 
 /**

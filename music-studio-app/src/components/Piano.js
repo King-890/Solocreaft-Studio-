@@ -8,9 +8,9 @@ const OCTAVES = 4; // Reduced for performance/demo
 const START_OCTAVE = 3;
 const WHITE_KEY_WIDTH = 50;
 
-export default function Piano() {
+export default function Piano({ instrument = 'piano' }) {
     // Connect to mixer
-    useInstrumentMixer('piano');
+    useInstrumentMixer(instrument);
 
     // Zoom state
     const [zoomLevel, setZoomLevel] = useState(1);
@@ -21,11 +21,11 @@ export default function Piano() {
         setPressedKeys(prev => new Set(prev).add(note));
         // Use requestAnimationFrame to defer non-critical work
         requestAnimationFrame(() => {
-            console.log(`Playing ${note}`);
+            console.log(`Playing ${note} (${instrument})`);
         });
         // Play sound immediately for responsiveness
-        UnifiedAudioEngine.playSound(note, 'piano');
-    }, []);
+        UnifiedAudioEngine.playSound(note, instrument);
+    }, [instrument]);
 
     const handleNoteRelease = useCallback((note) => {
         setPressedKeys(prev => {
@@ -33,7 +33,8 @@ export default function Piano() {
             newSet.delete(note);
             return newSet;
         });
-    }, []);
+        UnifiedAudioEngine.stopSound(note, instrument);
+    }, [instrument]);
 
     // Memoize white keys rendering
     const whiteKeys = useMemo(() => {

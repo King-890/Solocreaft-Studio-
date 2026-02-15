@@ -112,6 +112,60 @@ const INSTRUMENT_THEMES = {
         name: 'Synthesizer Lab',
         icon: '🎛️',
     },
+    harp: {
+        colors: ['#2a1a2e', '#3a2142', '#4a2a5a'],
+        accent: '#E1BEE7',
+        name: 'Harp Studio',
+        icon: '🪜',
+    },
+    banjo: {
+        colors: ['#2c1a12', '#3e261a', '#4a2c1a'],
+        accent: '#FFCC80',
+        name: 'Banjo Room',
+        icon: '🪕',
+    },
+    accordion: {
+        colors: ['#2a1a1a', '#4a1a1a', '#6a1a1a'],
+        accent: '#F48FB1',
+        name: 'Accordion Hall',
+        icon: '🪗',
+    },
+    marimba: {
+        colors: ['#1a2a1a', '#253a25', '#304a30'],
+        accent: '#8D6E63',
+        name: 'Marimba Room',
+        icon: '🪵',
+    },
+    choir: {
+        colors: ['#1a1a2e', '#1a2e3a', '#1a3e4a'],
+        accent: '#F0F4C3',
+        name: 'Choir Hall',
+        icon: '👥',
+    },
+    clarinet: {
+        colors: ['#1a2a2a', '#203a3a', '#2a4a4a'],
+        accent: '#B2DFDB',
+        name: 'Woodwind Studio',
+        icon: '🎷',
+    },
+    oboe: {
+        colors: ['#1a2a2a', '#203a3a', '#2a4a4a'],
+        accent: '#80CBC4',
+        name: 'Oboe Room',
+        icon: '🎷',
+    },
+    tuba: {
+        colors: ['#2a2a1a', '#3a3a20', '#4a4a2a'],
+        accent: '#FFB74D',
+        name: 'Brass Hall',
+        icon: '🎺',
+    },
+    kalimba: {
+        colors: ['#2a1a12', '#3e261a', '#4a2c1a'],
+        accent: '#A1887F',
+        name: 'Kalimba Studio',
+        icon: '🖐️',
+    },
 };
 
 export default function InstrumentRoomScreen() {
@@ -231,6 +285,7 @@ export default function InstrumentRoomScreen() {
             case 'synthesizer':  // Handle both synth and synthesizer IDs
                 return <SynthPad />;
             case 'violin':
+            case 'veena':
                 return <Violin />;
             case 'flute':
                 return <Flute />;
@@ -242,12 +297,28 @@ export default function InstrumentRoomScreen() {
                 return <WorldPercussion />;
             case 'tabla':
                 return <Tabla />;
-            // case 'sitar':
-            //     return <AcousticGuitar instrument="sitar" />;
-            case 'veena':
-                return <Violin />; // Reuse violin for now (similar string instrument)
             case 'dholak':
                 return <Dholak />;
+            case 'harp':
+            case 'shamisen':
+            case 'koto':
+                return <Violin instrument={instrumentType} />; // Reuse string interface
+            case 'banjo':
+                return <AcousticGuitar instrument="banjo" />;
+            case 'accordion':
+                return <Piano />; // Reuse keyboard interface
+            case 'marimba':
+                return <Piano instrument="marimba" />;
+            case 'choir':
+                return <Piano instrument="choir" />;
+            case 'clarinet':
+                return <Piano instrument="clarinet" />; // Reuse piano for simple note selection
+            case 'oboe':
+                return <Piano instrument="oboe" />;
+            case 'tuba':
+                return <Piano instrument="tuba" />;
+            case 'kalimba':
+                return <Piano instrument="kalimba" />;
             default:
                 return <Piano />;
         }

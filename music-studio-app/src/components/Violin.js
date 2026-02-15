@@ -6,16 +6,16 @@ import { useInstrumentMixer } from '../hooks/useInstrumentMixer';
 const STRINGS = ['G', 'D', 'A', 'E'];
 const NOTE_MAP = { 'G': 'G3', 'D': 'D4', 'A': 'A4', 'E': 'E5' };
 
-export default function Violin() {
+export default function Violin({ instrument = 'violin' }) {
     const { height } = useWindowDimensions();
-    useInstrumentMixer('violin');
+    useInstrumentMixer(instrument);
     const [activeString, setActiveString] = useState(null);
     const lastPlayedRef = useRef(null);
 
     const handleStringPress = useCallback(async (string) => {
         // Stop previous sound if any
         if (lastPlayedRef.current && lastPlayedRef.current !== string) {
-            await UnifiedAudioEngine.stopSound(NOTE_MAP[lastPlayedRef.current], 'violin');
+            await UnifiedAudioEngine.stopSound(NOTE_MAP[lastPlayedRef.current], instrument);
         }
 
         lastPlayedRef.current = string;
@@ -23,16 +23,16 @@ export default function Violin() {
 
         // Defer logging to prevent blocking
         requestAnimationFrame(() => {
-            console.log(`Violin string ${string} played`);
+            console.log(`${instrument} string ${string} played`);
         });
 
-        UnifiedAudioEngine.playSound(NOTE_MAP[string], 'violin');
-    }, []);
+        UnifiedAudioEngine.playSound(NOTE_MAP[string], instrument);
+    }, [instrument]);
 
     const handleStringRelease = useCallback((string) => {
         setActiveString(null);
-        UnifiedAudioEngine.stopSound(NOTE_MAP[string], 'violin');
-    }, []);
+        UnifiedAudioEngine.stopSound(NOTE_MAP[string], instrument);
+    }, [instrument]);
 
     return (
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={true}>

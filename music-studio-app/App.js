@@ -9,8 +9,6 @@ import { ProjectProvider } from './src/contexts/ProjectContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { UserProgressProvider } from './src/contexts/UserProgressContext';
 import { MixerProvider } from './src/contexts/MixerContext';
-import LoginScreen from './src/screens/LoginScreen';
-import SignupScreen from './src/screens/SignupScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import LibraryScreen from './src/screens/LibraryScreen';
 import InstrumentsLibraryScreen from './src/screens/InstrumentsLibraryScreen';
@@ -195,18 +193,6 @@ function MainTabs() {
 }
 
 function AppContent() {
-  const { loading, error } = useAuth();
-
-  console.log('AppContent Render (Simplified)');
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#121212' }}>
-        <ActivityIndicator size="large" color="#6200ee" />
-      </View>
-    );
-  }
-
   return (
     <>
       <ErrorDisplay />

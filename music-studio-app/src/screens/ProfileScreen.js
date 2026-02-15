@@ -136,26 +136,7 @@ export default function ProfileScreen() {
         }
     };
 
-    const handleLogOut = async () => {
-        Alert.alert(
-            'Log Out',
-            'Are you sure you want to log out?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Log Out',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await signOut();
-                        } catch (error) {
-                            console.error('Logout error:', error);
-                        }
-                    }
-                }
-            ]
-        );
-    };
+
 
     return (
         <SafeAreaView style={styles.container}>
@@ -560,33 +541,7 @@ const styles = StyleSheet.create({
         color: '#aaa',
         fontWeight: '600',
     },
-    logOutButton: {
-        backgroundColor: '#cf6679',
-        borderRadius: 16,
-        padding: SPACING.md,
-        marginHorizontal: SPACING.lg,
-        marginTop: SPACING.xl,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        elevation: 6,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        ...Platform.select({
-            web: {
-                boxShadow: '0 4px 12px rgba(207, 102, 121, 0.4)',
-            }
-        })
-    },
-    logOutIcon: {
-        fontSize: 22,
-        marginRight: SPACING.sm,
-    },
-    logOutText: {
-        color: '#fff',
-        fontSize: 17,
-        fontWeight: 'bold',
-    },
+
     creditContainer: {
         alignItems: 'center',
         marginTop: SPACING.xl,
