@@ -297,19 +297,72 @@ export default function ProfileScreen() {
 
                     {/* Profile Card and Stats only, Logout removed */}
 
+                    {/* Legal & Data Management Section */}
+                    <View style={styles.sectionContainer}>
+                        <Text style={styles.sectionTitle}>App & Privacy</Text>
+                        
+                        <TouchableOpacity 
+                            style={styles.legalButton}
+                            onPress={() => Platform.OS === 'web' 
+                                ? window.open('https://King-890.github.io/Solocreaft-Studio-/docs/privacy_policy.html', '_blank')
+                                : Alert.alert('Privacy Policy', 'Please visit: https://King-890.github.io/Solocreaft-Studio-/docs/privacy_policy.html')
+                            }
+                        >
+                            <Text style={styles.legalButtonText}>🔒 Privacy Policy</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={styles.legalButton}
+                            onPress={() => Platform.OS === 'web' 
+                                ? window.open('https://King-890.github.io/Solocreaft-Studio-/docs/terms_of_service.html', '_blank')
+                                : Alert.alert('Terms of Service', 'Please visit: https://King-890.github.io/Solocreaft-Studio-/docs/terms_of_service.html')
+                            }
+                        >
+                            <Text style={styles.legalButtonText}>📄 Terms of Service</Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.dangerZone}>
+                            <Text style={styles.dangerTitle}>Danger Zone</Text>
+                            <TouchableOpacity 
+                                style={styles.clearDataButton}
+                                onPress={() => {
+                                    Alert.alert(
+                                        'Clear All Data',
+                                        'This will permanently delete ALL your local projects, recordings, and profile settings. This action cannot be undone.',
+                                        [
+                                            { text: 'Cancel', style: 'cancel' },
+                                            { 
+                                                text: 'Delete Everything', 
+                                                style: 'destructive',
+                                                onPress: async () => {
+                                                    const result = await useProject().clearAllData();
+                                                    if (result.success) {
+                                                        Alert.alert('Success', 'All local data has been wiped.');
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    );
+                                }}
+                            >
+                                <Text style={styles.clearDataText}>🗑️ Clear All Local Data</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
                     {/* Developer Credit */}
                     <View style={styles.creditContainer}>
                         <View style={styles.divider} />
                         <Text style={styles.creditText}>Developed by</Text>
                         <LinearGradient
-                            colors={['#BA55D3', '#FFD700']}
+                            colors={['#BA55D3', '#9370DB']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.studioBadge}
                         >
                             <Text style={styles.studioText}>UJ STUDIO</Text>
                         </LinearGradient>
-                        <Text style={styles.versionText}>v1.0.0</Text>
+                        <Text style={styles.versionText}>v1.0.2</Text>
                     </View>
 
                     <View style={{ height: 40 }} />
@@ -536,8 +589,9 @@ const styles = StyleSheet.create({
     },
     creditContainer: {
         alignItems: 'center',
-        marginTop: SPACING.xl * 2,
+        marginTop: SPACING.xl,
         paddingHorizontal: SPACING.lg,
+        paddingBottom: SPACING.xl,
     },
     divider: {
         width: '40%',
@@ -556,11 +610,6 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         borderRadius: 20,
         elevation: 4,
-        ...Platform.select({
-            web: {
-                boxShadow: '0 4px 12px rgba(186, 85, 211, 0.3)',
-            }
-        })
     },
     studioText: {
         fontSize: 16,
@@ -573,5 +622,60 @@ const styles = StyleSheet.create({
         color: '#666',
         marginTop: 12,
         fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    },
+    sectionContainer: {
+        backgroundColor: '#1E1E1E',
+        marginHorizontal: SPACING.lg,
+        marginTop: SPACING.xl,
+        padding: SPACING.lg,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#333',
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginBottom: 16,
+    },
+    legalButton: {
+        backgroundColor: '#2A2A2A',
+        padding: 16,
+        borderRadius: 14,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#3A3A3A',
+    },
+    legalButtonText: {
+        color: '#DDD',
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    dangerZone: {
+        marginTop: 20,
+        paddingTop: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#333',
+    },
+    dangerTitle: {
+        fontSize: 14,
+        color: '#cf6679',
+        fontWeight: 'bold',
+        marginBottom: 12,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    clearDataButton: {
+        backgroundColor: 'rgba(207, 102, 121, 0.1)',
+        padding: 16,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(207, 102, 121, 0.3)',
+        alignItems: 'center',
+    },
+    clearDataText: {
+        color: '#cf6679',
+        fontSize: 15,
+        fontWeight: 'bold',
     },
 });

@@ -377,6 +377,26 @@ export const ProjectProvider = ({ children }) => {
         clips,
         isPlaying,
         currentTime,
+    const clearAllData = async () => {
+        try {
+            await AsyncStorage.removeItem('@recordings');
+            await AsyncStorage.removeItem('@user_profile');
+            setRecordings([]);
+            setTracks([]);
+            setClips([]);
+            console.log('All local data cleared.');
+            return { success: true };
+        } catch (error) {
+            console.error('Failed to clear data:', error);
+            return { success: false, error };
+        }
+    };
+
+    const value = {
+        tracks,
+        clips,
+        isPlaying,
+        currentTime,
         tempo,
         togglePlayback,
         stopPlayback,
@@ -396,8 +416,9 @@ export const ProjectProvider = ({ children }) => {
         addRecording,
         deleteRecording,
         updateRecording,
-        zoomLevel: 1, // Default zoom
-        setZoomLevel: () => { }, // Placeholder, should be state
+        clearAllData,
+        zoomLevel: 1,
+        setZoomLevel: () => { },
         selectedClipId,
         setSelectedClipId,
     };
