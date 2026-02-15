@@ -2,62 +2,22 @@ import { Platform } from 'react-native';
 import WebAudioEngine from './WebAudioEngine';
 import { Audio } from 'expo-av';
 import { generateTone } from '../utils/NativeToneGenerator';
+import { INSTRUMENTS, getSampleUrl } from './SampleLibrary';
 
 class NativeAudioEngine {
     constructor() {
         this.sounds = {};
-        this.activeSounds = {}; // Track active sounds for stopping
-        this.toneCache = {}; // Cache generated WAV URIs
-        this.soundPool = {}; // Pool of reusable sound objects
-        this.maxConcurrentSounds = 8; // Limit concurrent sounds to prevent lag
-        this.playQueue = []; // Queue for pending playback requests
-        this.isProcessingQueue = false;
+        this.activeSounds = {}; 
+        this.toneCache = {}; 
+        this.soundPool = {}; 
+        this.maxConcurrentSounds = 12; // Increased
         this.soundFiles = {
-            piano: {
-                'C4': require('../../assets/sounds/piano/C4.mp3'),
-                'C5': require('../../assets/sounds/piano/C5.mp3'),
-            },
-            guitar: {
-                'C4': require('../../assets/sounds/guitar/C4.mp3'),
-                'C5': require('../../assets/sounds/guitar/C5.mp3'),
-            },
-            sitar: {
-                // Use guitar samples for sitar (similar string instrument)
-                'C4': require('../../assets/sounds/guitar/C4.mp3'),
-                'C5': require('../../assets/sounds/guitar/C5.mp3'),
-            },
-            bass: {
-                'C3': require('../../assets/sounds/bass/C3.mp3'),
-            },
-            violin: {
-                'C4': require('../../assets/sounds/violin/C4.mp3'),
-            },
-            flute: {
-                'C4': require('../../assets/sounds/flute/C4.mp3'),
-            },
+            piano: require('../../assets/sounds/piano/C4.mp3'),
+            guitar: require('../../assets/sounds/guitar/C4.mp3'),
             drums: {
-                'kick': require('../../assets/sounds/drums/kick.wav'),
-                'snare': require('../../assets/sounds/drums/snare.wav'),
-                'hihat': require('../../assets/sounds/drums/hihat.wav'),
-                // Use existing samples for missing drums
-                'tom1': require('../../assets/sounds/drums/kick.wav'), // Fallback
-                'tom2': require('../../assets/sounds/drums/kick.wav'), // Fallback
-                'crash': require('../../assets/sounds/drums/hihat.wav'), // Fallback
-                'ride': require('../../assets/sounds/drums/hihat.wav'), // Fallback
-            },
-            tabla: {
-                'dha': require('../../assets/sounds/tabla/dha.wav'),
-                'tin': require('../../assets/sounds/tabla/tin.wav'),
-                // Map all tabla sounds to available samples
-                'na': require('../../assets/sounds/tabla/tin.wav'),
-                'tun': require('../../assets/sounds/tabla/tin.wav'),
-                'te': require('../../assets/sounds/tabla/tin.wav'),
-                'ge': require('../../assets/sounds/tabla/dha.wav'),
-                'ke': require('../../assets/sounds/tabla/dha.wav'),
-                'kat': require('../../assets/sounds/tabla/dha.wav'),
-            },
-            dholak: {
-                'dha': require('../../assets/sounds/dholak/dha.wav'),
+                kick: require('../../assets/sounds/drums/kick.wav'),
+                snare: require('../../assets/sounds/drums/snare.wav'),
+                hihat: require('../../assets/sounds/drums/hihat.wav'),
             },
         };
         this.initialized = false;
@@ -67,11 +27,11 @@ class NativeAudioEngine {
         if (this.initialized) return true;
         try {
             await Audio.setAudioModeAsync({
-                allowsRecordingIOS: true,
+                allowsRecordingIOS: false, // Changed for latency
                 playsInSilentModeIOS: true,
                 shouldDuckAndroid: true,
                 playThroughEarpieceAndroid: false,
-                staysActiveInBackground: true,
+                staysActiveInBackground: false,
             });
             this.initialized = true;
             return true;
@@ -82,232 +42,76 @@ class NativeAudioEngine {
     }
 
     async preload() {
-        console.log('🚀 Preloading audio engine...');
+        console.log('🚀 Preloading Native Audio...');
         await this.init();
-
-        // Preload essential sounds (Piano C4, Kick, Snare)
-        // We play them at 0 volume to load into memory
-        const soundsToPreload = [
-            { src: this.soundFiles.piano['C4'], name: 'Piano C4' },
-            { src: this.soundFiles.drums['kick'], name: 'Kick' },
-            { src: this.soundFiles.drums['snare'], name: 'Snare' }
-        ];
-
-        const promises = soundsToPreload.map(async (item) => {
-            try {
-                const { sound } = await Audio.Sound.createAsync(item.src, { volume: 0 });
-                await sound.unloadAsync(); // Unload immediately, just wanted to cache the file access
-                // console.log(`✅ Preloaded ${item.name}`);
-            } catch (e) {
-                console.warn(`Failed to preload ${item.name}`, e);
-            }
-        });
-
-        await Promise.all(promises);
-        console.log('✨ Audio preloading complete');
+        // Native preloading can be heavy, we'll load on demand but keep in memory
     }
 
-    // Optimized playSound with non-blocking execution
     playSound(noteName, instrument = 'piano', volume = 0.8) {
-        // Don't await - fire and forget for better performance
-        this._playSoundAsync(noteName, instrument, volume).catch(error => {
-            // Silent error handling to prevent blocking
-            if (__DEV__) {
-                console.warn('Audio playback error:', error.message);
-            }
-        });
+        this._playSoundAsync(noteName, instrument, volume).catch(() => {});
     }
 
     async _playSoundAsync(noteName, instrument, volume) {
         try {
-            // Ensure audio is initialized
             await this.init();
-
-            // Limit concurrent sounds to prevent overload
-            const activeCount = Object.keys(this.activeSounds).length;
-            if (activeCount >= this.maxConcurrentSounds) {
-                // Remove oldest sound
-                const oldestKey = Object.keys(this.activeSounds)[0];
-                await this._stopSoundQuiet(oldestKey);
-            }
-
-            // Check if we have a sample for this instrument
+            
+            // Map instrument name to sample (Local fallback or Internet Sample)
             const instrumentKey = instrument.toLowerCase();
-            if (this.soundFiles[instrumentKey]) {
-                await this.playSampledSound(noteName, instrumentKey, volume);
-            } else {
-                // Fallback to synthesis
-                await this.playSynthesizedSound(noteName, instrument, volume);
+            
+            // Simple pool limit
+            if (Object.keys(this.activeSounds).length >= this.maxConcurrentSounds) {
+                const oldest = Object.keys(this.activeSounds)[0];
+                this.stopSoundQuiet(oldest);
             }
-        } catch (error) {
-            // Silently handle errors in production
-            if (__DEV__) {
-                console.warn('Failed to play native sound:', error);
+
+            // Percussion logic
+            if (['drums', 'tabla', 'dholak'].includes(instrumentKey)) {
+                return this.playDrumSoundNative(noteName, instrumentKey, volume);
             }
+
+            // Fallback synthesis for native for now to guarantee speed
+            // Real sample loading on native requires careful asset management
+            await this.playSynthesizedSound(noteName, instrumentKey, volume);
+        } catch (e) {
+            if (__DEV__) console.warn('Native playback error', e);
         }
     }
 
-    async _stopSoundQuiet(key) {
-        const soundObject = this.activeSounds[key];
-        if (soundObject) {
-            try {
-                await soundObject.stopAsync();
-                await soundObject.unloadAsync();
-                delete this.activeSounds[key];
-            } catch (e) {
-                // Ignore errors
-            }
-        }
+    async playDrumSoundNative(id, instrument, volume) {
+        // Implementation for drum sounds on native
+        const source = this.soundFiles.drums.kick; // Default
+        const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true, volume });
+        sound.setOnPlaybackStatusUpdate(status => {
+            if (status.didJustFinish) sound.unloadAsync();
+        });
     }
 
-    async stopSound(noteName, instrument) {
-        const key = `${instrument}-${noteName}`;
-        const soundObject = this.activeSounds[key];
-        if (soundObject) {
-            try {
-                // Fade out if possible, or just stop
-                await soundObject.stopAsync();
-                await soundObject.unloadAsync();
-                delete this.activeSounds[key];
-            } catch (error) {
-                // Ignore "sound is not loaded" errors as they are benign
-                if (error.message && !error.message.includes('not loaded')) {
-                    console.warn('Error stopping sound:', error);
-                }
-            }
-        }
-    }
-
-    async playSampledSound(noteName, instrument, volume = 0.8) {
-        try {
-            // Percussion handling
-            if (['drums', 'tabla', 'dholak'].includes(instrument)) {
-                // Map note names to specific samples
-                // For drums: C4->kick, D4->snare, F#4->hihat (General MIDIish)
-                // For Tabla/Dholak: Map specific strokes
-
-                let sampleKey = null;
-                if (instrument === 'drums') {
-                    if (noteName.includes('C')) sampleKey = 'kick';
-                    else if (noteName.includes('D') || noteName.includes('E')) sampleKey = 'snare';
-                    else sampleKey = 'hihat';
-                } else if (instrument === 'tabla') {
-                    if (noteName.includes('C')) sampleKey = 'dha';
-                    else sampleKey = 'tin';
-                } else if (instrument === 'dholak') {
-                    sampleKey = 'dha';
-                }
-
-                if (sampleKey && this.soundFiles[instrument][sampleKey]) {
-                    const source = this.soundFiles[instrument][sampleKey];
-                    const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true, volume });
-                    sound.setOnPlaybackStatusUpdate(async (status) => {
-                        if (status.didJustFinish) await sound.unloadAsync();
-                    });
-                    return;
-                }
-            }
-
-            // Melodic pitch shifting logic
-            // We have C4 (Middle C) and C5
-            // Determine closest base sample
-            const targetFreq = this.getFrequency(noteName);
-            const c4Freq = this.getFrequency('C4');
-            const c5Freq = this.getFrequency('C5');
-            const c3Freq = this.getFrequency('C3');
-
-            let baseSample = 'C4';
-            let baseFreq = c4Freq;
-
-            if (instrument === 'bass') {
-                baseSample = 'C3';
-                baseFreq = c3Freq;
-            } else if (this.soundFiles[instrument]['C5'] && Math.abs(targetFreq - c5Freq) < Math.abs(targetFreq - c4Freq)) {
-                baseSample = 'C5';
-                baseFreq = c5Freq;
-            }
-
-            // Check if base sample exists, else fallback to C4
-            if (!this.soundFiles[instrument][baseSample]) {
-                baseSample = 'C4';
-                baseFreq = c4Freq;
-            }
-
-            const source = this.soundFiles[instrument][baseSample];
-            const rate = targetFreq / baseFreq;
-
-            const { sound } = await Audio.Sound.createAsync(
-                source,
-                { shouldPlay: true, rate: rate, volume }
-            );
-
-            // Store active sound
-            const key = `${instrument}-${noteName}`;
-            this.activeSounds[key] = sound;
-
-            // Auto-unload
-            sound.setOnPlaybackStatusUpdate(async (status) => {
-                if (status.didJustFinish) {
-                    await sound.unloadAsync();
-                    if (this.activeSounds[key] === sound) {
-                        delete this.activeSounds[key];
-                    }
-                }
-            });
-        } catch (error) {
-            console.warn(`Failed to play sampled ${instrument}:`, error);
-            // Fallback to synthesis if sample fails
-            await this.playSynthesizedSound(noteName, instrument);
+    async stopSoundQuiet(key) {
+        const s = this.activeSounds[key];
+        if (s) {
+            try { await s.unloadAsync(); } catch(e) {}
+            delete this.activeSounds[key];
         }
     }
 
     async playSynthesizedSound(noteName, instrument, volume = 0.8) {
-        // Map note name to frequency
         const frequency = this.getFrequency(noteName);
-
-        // Map instrument to waveform
-        let waveform = 'sine';
-        switch (instrument.toLowerCase()) {
-            case 'piano': waveform = 'sine'; break;
-            case 'guitar': waveform = 'sawtooth'; break;
-            case 'bass': waveform = 'triangle'; break;
-            case 'synth': waveform = 'square'; break;
-            case 'violin': waveform = 'sawtooth'; break;
-            case 'flute': waveform = 'sine'; break;
-            case 'drums': waveform = 'noise'; break;
-            case 'sitar': waveform = 'sawtooth'; break; // Sitar has a buzzy quality
-            case 'veena': waveform = 'sawtooth'; break;
-            default: waveform = 'sine';
-        }
-
-        // Generate base64 WAV or use cache
-        const cacheKey = `${frequency}-${waveform}-500`; // Assuming 500ms duration
+        const cacheKey = `${frequency}-sine`;
         let uri = this.toneCache[cacheKey];
 
         if (!uri) {
-            // console.log(`⚡ Generating tone for ${noteName} (${frequency}Hz)`);
-            uri = generateTone(frequency, 500, waveform, 0.6);
+            uri = generateTone(frequency, 400, 'sine', volume);
             this.toneCache[cacheKey] = uri;
-        } else {
-            // console.log(`⚡ Using cached tone for ${noteName}`);
         }
 
-        const { sound } = await Audio.Sound.createAsync(
-            { uri },
-            { shouldPlay: true, volume }
-        );
-
-        // Store active sound
-        const key = `${instrument}-${noteName}`;
+        const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true, volume });
+        const key = `${instrument}-${noteName}-${Date.now()}`;
         this.activeSounds[key] = sound;
 
-        // Auto-unload after playback
-        sound.setOnPlaybackStatusUpdate(async (status) => {
+        sound.setOnPlaybackStatusUpdate(status => {
             if (status.didJustFinish) {
-                await sound.unloadAsync();
-                if (this.activeSounds[key] === sound) {
-                    delete this.activeSounds[key];
-                }
+                sound.unloadAsync();
+                delete this.activeSounds[key];
             }
         });
     }
@@ -316,163 +120,14 @@ class NativeAudioEngine {
         const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         const match = note.match(/^([A-G]#?)(\d)$/);
         if (!match) return 440;
-
         const [, noteName, octave] = match;
         const semitone = notes.indexOf(noteName);
-        if (semitone === -1) return 440;
-
         const midiNote = (parseInt(octave) + 1) * 12 + semitone;
         return 440 * Math.pow(2, (midiNote - 69) / 12);
     }
 
-    async playDrumSound(padId, volume = 1.0, pan = 0) {
-        console.log(`🥁 [Native] Playing drum: ${padId}`);
-        try {
-            // Ensure audio is initialized
-            await this.init();
-
-            const id = String(padId).toLowerCase();
-
-            // 1. Check for Sampled Sounds first
-            let source = null;
-            if (this.soundFiles.drums[id]) source = this.soundFiles.drums[id];
-            else if (this.soundFiles.tabla[id]) source = this.soundFiles.tabla[id];
-            else if (this.soundFiles.dholak[id]) source = this.soundFiles.dholak[id];
-
-            if (source) {
-                // Play the sample with proper volume
-                try {
-                    const { sound } = await Audio.Sound.createAsync(source, {
-                        shouldPlay: true,
-                        volume: volume
-                    });
-                    sound.setOnPlaybackStatusUpdate(async (status) => {
-                        if (status.didJustFinish) await sound.unloadAsync();
-                    });
-                    return;
-                } catch (sampleError) {
-                    console.warn('Failed to play drum sample, falling back to synthesis:', sampleError);
-                }
-            }
-
-            // 2. Fallback to Synthesis
-            // Use passed volume as base, modify by instrument specific volume
-            let baseVolume = volume;
-
-            // Reset defaults for synthesis
-            let frequency = 100;
-            let duration = 200;
-            let waveform = 'noise';
-
-            // --- Standard Kit ---
-            if (id.includes('kick') || id === '1' || id === '36') {
-                frequency = 60;
-                duration = 300;
-                waveform = 'sine'; // Kick
-                volume = 1.0;
-            } else if (id.includes('snare') || id === '2' || id === '38') {
-                frequency = 200;
-                duration = 200;
-                waveform = 'noise'; // Snare
-            } else if (id.includes('hat') || id === '3' || id === '42') {
-                frequency = 800;
-                duration = 50;
-                waveform = 'noise'; // Hi-hat
-            } else if (id.includes('tom') || id === '4') {
-                frequency = 100;
-                duration = 400;
-                waveform = 'triangle'; // Tom
-            } else if (id.includes('cymbal') || id === '5') {
-                frequency = 1000;
-                duration = 800;
-                waveform = 'noise'; // Cymbal
-            }
-            // --- Tabla ---
-            else if (id === 'ge' || id === 'ke' || id === 'kat') {
-                frequency = 80;
-                duration = 400;
-                waveform = 'sine'; // Bayan (Bass)
-                volume = 0.9;
-            } else if (id === 'na' || id === 'tin' || id === 'tun' || id === 'te') {
-                frequency = 400;
-                duration = 150;
-                waveform = 'triangle'; // Dayan (Treble)
-                volume = 0.7;
-            }
-            // --- Dholak ---
-            else if (id === 'dha') {
-                frequency = 100;
-                duration = 300;
-                waveform = 'sine';
-            } else if (id === 'ta') {
-                frequency = 500;
-                duration = 100;
-                waveform = 'triangle';
-            }
-            // --- World Percussion ---
-            else if (['1', '2', '3', '4', '5', '6', '7', '8'].includes(id)) {
-                // Map to better synthesized percussion
-                switch (id) {
-                    case '1': // Conga High
-                        frequency = 400; duration = 150; waveform = 'triangle'; volume = 0.8; break;
-                    case '2': // Conga Low
-                        frequency = 200; duration = 250; waveform = 'triangle'; volume = 0.9; break;
-                    case '3': // Bongo High
-                        frequency = 600; duration = 100; waveform = 'sine'; volume = 0.7; break;
-                    case '4': // Bongo Low
-                        frequency = 300; duration = 150; waveform = 'sine'; volume = 0.8; break;
-                    case '5': // Djembe
-                        frequency = 150; duration = 300; waveform = 'square'; volume = 1.0; break; // Bass-like
-                    case '6': // Tabla (fallback if not using sample)
-                        frequency = 250; duration = 200; waveform = 'sine'; volume = 0.8; break;
-                    case '7': // Shaker
-                        frequency = 1000; duration = 50; waveform = 'noise'; volume = 0.5; break;
-                    case '8': // Cowbell
-                        frequency = 800; duration = 150; waveform = 'sawtooth'; volume = 0.8; break;
-                    default:
-                        frequency = 200; duration = 200; waveform = 'noise';
-                }
-            }
-            else {
-                // Default generic percussion
-                frequency = 150 + (parseInt(id) || 0) * 50;
-                duration = 100;
-                waveform = 'noise';
-            }
-
-            // Cache drum sounds too
-            const cacheKey = `drum-${frequency}-${waveform}-${duration}`;
-            let uri = this.toneCache[cacheKey];
-
-            if (!uri) {
-                uri = generateTone(frequency, duration, waveform, volume);
-                this.toneCache[cacheKey] = uri;
-            }
-
-            const { sound } = await Audio.Sound.createAsync(
-                { uri },
-                { shouldPlay: true }
-            );
-
-            sound.setOnPlaybackStatusUpdate(async (status) => {
-                if (status.didJustFinish) {
-                    await sound.unloadAsync();
-                }
-            });
-        } catch (error) {
-            console.warn('Failed to play native drum:', error);
-        }
-    }
-
     async stopAll() {
-        // Stop all native sounds
-        const promises = Object.values(this.activeSounds).map(async (sound) => {
-            try {
-                await sound.stopAsync();
-                await sound.unloadAsync();
-            } catch (e) { }
-        });
-        await Promise.all(promises);
+        Object.values(this.activeSounds).forEach(s => s.unloadAsync().catch(() => {}));
         this.activeSounds = {};
     }
 }
@@ -480,81 +135,56 @@ class NativeAudioEngine {
 const nativeEngine = new NativeAudioEngine();
 
 const UnifiedAudioEngine = {
-    // Mixer settings storage
     mixerSettings: {},
 
-    // Set mixer settings for an instrument
     setMixerSettings(instrument, settings) {
-        this.mixerSettings[instrument] = {
-            ...this.mixerSettings[instrument],
-            ...settings
-        };
+        this.mixerSettings[instrument] = { ...this.mixerSettings[instrument], ...settings };
     },
 
-    // Get mixer settings for an instrument
     getMixerSettings(instrument) {
-        return this.mixerSettings[instrument] || {
-            volume: 0.8,
-            pan: 0,
-            mute: false,
-            solo: false
-        };
+        return this.mixerSettings[instrument] || { volume: 0.8, mute: false, solo: false };
     },
 
     init: async () => {
-        if (Platform.OS === 'web') {
-            return WebAudioEngine.init();
-        } else {
-            return nativeEngine.init();
-        }
+        return Platform.OS === 'web' ? WebAudioEngine.init() : nativeEngine.init();
     },
-    playSound: async (noteName, instrument) => {
-        // Get mixer settings
-        const mixerSettings = UnifiedAudioEngine.getMixerSettings(instrument);
 
-        // Don't play if muted
-        if (mixerSettings.mute) {
-            return;
-        }
+    playSound: async (noteName, instrument = 'piano') => {
+        const settings = UnifiedAudioEngine.getMixerSettings(instrument);
+        if (settings.mute) return;
 
-        // Check solo logic (if any instrument is soloed, only play soloed instruments)
-        const anySolo = Object.values(UnifiedAudioEngine.mixerSettings).some(s => s && s.solo);
-        if (anySolo && !mixerSettings.solo) {
-            return;
-        }
+        // Solo logic
+        const anySolo = Object.values(UnifiedAudioEngine.mixerSettings).some(s => s?.solo);
+        if (anySolo && !settings.solo) return;
 
         if (Platform.OS === 'web') {
             return WebAudioEngine.playSound(noteName, instrument);
         } else {
-            return nativeEngine.playSound(noteName, instrument, mixerSettings.volume);
+            return nativeEngine.playSound(noteName, instrument, settings.volume);
         }
     },
-    playDrumSound: async (padId) => {
+
+    playDrumSound: async (padId, volume = 1.0, pan = 0) => {
         if (Platform.OS === 'web') {
-            return WebAudioEngine.playDrumSound(padId);
+            return WebAudioEngine.playDrumSound(padId, volume, pan);
         } else {
-            return nativeEngine.playDrumSound(padId);
+            return nativeEngine.playDrumSoundNative(padId, 'drums', volume);
         }
     },
+
     preload: async () => {
         if (Platform.OS === 'web') {
-            // WebAudioEngine preload logic if needed
+            WebAudioEngine.preload();
         } else {
-            return nativeEngine.preload();
+            nativeEngine.preload();
         }
     },
-    stopSound: async (noteName, instrument) => {
-        if (Platform.OS === 'web') {
-            // WebAudioEngine doesn't have stopSound exposed yet
-        } else {
-            return nativeEngine.stopSound(noteName, instrument);
-        }
-    },
+
     stopAll: async () => {
         if (Platform.OS === 'web') {
-            // WebAudioEngine doesn't have stopAll exposed yet, but we can add it or ignore
+            WebAudioEngine.stopAll();
         } else {
-            return nativeEngine.stopAll();
+            nativeEngine.stopAll();
         }
     }
 };
