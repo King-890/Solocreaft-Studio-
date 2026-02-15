@@ -195,12 +195,11 @@ function MainTabs() {
 }
 
 function AppContent() {
-  const { session, loading, error } = useAuth();
+  const { loading, error } = useAuth();
 
-  console.log('AppContent Render:', { loading, session: !!session, error });
+  console.log('AppContent Render (Simplified)');
 
   if (loading) {
-    console.log('AppContent: Rendering Loading Indicator');
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#121212' }}>
         <ActivityIndicator size="large" color="#6200ee" />
@@ -208,61 +207,17 @@ function AppContent() {
     );
   }
 
-  console.log('AppContent: Rendering Navigation', { authenticated: !!session });
-
   return (
     <>
-      {/* Auth Error Banner - Non-blocking indicator */}
-      {error && (
-        <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: '#ff4444',
-          padding: 12,
-          zIndex: 9999,
-          borderBottomWidth: 2,
-          borderBottomColor: '#cc0000',
-        }}>
-          <Text style={{
-            color: '#ffffff',
-            fontSize: 13,
-            fontWeight: '600',
-            textAlign: 'center',
-          }}>
-            ⚠️ Auth Initialization Error: {error}
-          </Text>
-          <Text style={{
-            color: '#ffcccc',
-            fontSize: 11,
-            textAlign: 'center',
-            marginTop: 4,
-          }}>
-            You can still use the app, but authentication may not work properly.
-          </Text>
-        </View>
-      )}
-
-      {/* Error Display Overlay (Development Only) */}
       <ErrorDisplay />
 
-      <NavigationContainer key={session ? 'authenticated' : 'unauthenticated'}>
+      <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {session ? (
-            <>
-              <Stack.Screen name="Main" component={MainTabs} />
-              <Stack.Screen name="Studio" component={StudioScreen} />
-              <Stack.Screen name="InstrumentsLibrary" component={InstrumentsLibraryScreen} />
-              <Stack.Screen name="InstrumentRoom" component={InstrumentRoomScreen} />
-              <Stack.Screen name="BandRoom" component={BandRoomScreen} />
-            </>
-          ) : (
-            <>
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="Signup" component={SignupScreen} />
-            </>
-          )}
+          <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen name="Studio" component={StudioScreen} />
+          <Stack.Screen name="InstrumentsLibrary" component={InstrumentsLibraryScreen} />
+          <Stack.Screen name="InstrumentRoom" component={InstrumentRoomScreen} />
+          <Stack.Screen name="BandRoom" component={BandRoomScreen} />
 
           {/* Debug Screen - Available via navigation but not default */}
           <Stack.Screen

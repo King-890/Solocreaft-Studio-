@@ -295,11 +295,7 @@ export default function ProfileScreen() {
                         </View>
                     </View>
 
-                    {/* Log Out Button */}
-                    <TouchableOpacity style={styles.logOutButton} onPress={handleLogOut}>
-                        <Text style={styles.logOutIcon}>🚪</Text>
-                        <Text style={styles.logOutText}>Log Out</Text>
-                    </TouchableOpacity>
+                    {/* Profile Card and Stats only, Logout removed */}
 
                     {/* Developer Credit */}
                     <View style={styles.creditContainer}>

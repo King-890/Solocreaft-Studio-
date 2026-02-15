@@ -1,148 +1,169 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UJ Music Studio - Download</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
 
-<body>
+  <body>
     <div class="container">
-        <!-- Animated Background -->
-        <div class="bg-animation">
-            <div class="wave wave1"></div>
-            <div class="wave wave2"></div>
-            <div class="wave wave3"></div>
+      <!-- Animated Background -->
+      <div class="bg-animation">
+        <div class="wave wave1"></div>
+        <div class="wave wave2"></div>
+        <div class="wave wave3"></div>
+      </div>
+
+      <!-- Header -->
+      <header>
+        <div class="logo-container">
+          <div class="logo-pulse"></div>
+          <h1 class="logo">UJ</h1>
         </div>
+        <p class="tagline">Two souls, one rhythm, infinite harmony</p>
+      </header>
 
-        <!-- Header -->
-        <header>
-            <div class="logo-container">
-                <div class="logo-pulse"></div>
-                <h1 class="logo">UJ</h1>
+      <!-- Main Content -->
+      <main>
+        <section class="hero">
+          <h2>Music Studio App</h2>
+          <p class="description">
+            Experience the future of music creation with our professional studio
+            app. Beautiful animations, powerful features, and seamless
+            performance.
+          </p>
+        </section>
+
+        <!-- Download Buttons -->
+        <section class="downloads">
+          <div class="download-card">
+            <div class="platform-icon">📱</div>
+            <h3>Android</h3>
+            <p>Download APK for Android devices</p>
+            <a
+              href="https://github.com/King-890/Solocreaft-Studio-/releases/download/v1.0.0/solocraft-studio.apk"
+              class="download-btn android"
+              download
+            >
+              <span>Download APK</span>
+              <span class="version">v1.0.0</span>
+            </a>
+            <p class="file-info">Size: ~50MB</p>
+          </div>
+
+          <div class="download-card">
+            <div class="platform-icon">🍎</div>
+            <h3>iOS</h3>
+            <p>Coming soon to App Store</p>
+            <button class="download-btn ios disabled" disabled>
+              <span>Coming Soon</span>
+            </button>
+            <p class="file-info">Available Q1 2025</p>
+          </div>
+
+          <div class="download-card">
+            <div class="platform-icon">🌐</div>
+            <h3>Web</h3>
+            <p>Try it in your browser</p>
+            <a
+              href="https://your-app-url.com"
+              class="download-btn web"
+              target="_blank"
+            >
+              <span>Launch Web App</span>
+            </a>
+            <p class="file-info">No installation needed</p>
+          </div>
+        </section>
+
+        <!-- Features -->
+        <section class="features">
+          <h2>Features</h2>
+          <div class="feature-grid">
+            <div class="feature">
+              <div class="feature-icon">🎵</div>
+              <h4>Beautiful UI</h4>
+              <p>Stunning animations and professional design</p>
             </div>
-            <p class="tagline">Two souls, one rhythm, infinite harmony</p>
-        </header>
+            <div class="feature">
+              <div class="feature-icon">🎸</div>
+              <h4>Instrument Library</h4>
+              <p>Access a wide range of virtual instruments</p>
+            </div>
+            <div class="feature">
+              <div class="feature-icon">🎹</div>
+              <h4>Audio Engine</h4>
+              <p>Professional-grade audio processing</p>
+            </div>
+            <div class="feature">
+              <div class="feature-icon">📱</div>
+              <h4>Cross-Platform</h4>
+              <p>Works on iOS, Android, and Web</p>
+            </div>
+          </div>
+        </section>
 
-        <!-- Main Content -->
-        <main>
-            <section class="hero">
-                <h2>Music Studio App</h2>
-                <p class="description">
-                    Experience the future of music creation with our professional studio app.
-                    Beautiful animations, powerful features, and seamless performance.
+        <!-- Installation Guide -->
+        <section class="guide">
+          <h2>Installation Guide</h2>
+          <div class="steps">
+            <div class="step">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <h4>Download APK</h4>
+                <p>Click the download button above to get the APK file</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <h4>Enable Unknown Sources</h4>
+                <p>
+                  Go to Settings > Security > Enable "Install from Unknown
+                  Sources"
                 </p>
-            </section>
-
-            <!-- Download Buttons -->
-            <section class="downloads">
-                <div class="download-card">
-                    <div class="platform-icon">📱</div>
-                    <h3>Android</h3>
-                    <p>Download APK for Android devices</p>
-                    <a href="https://github.com/King-890/Solocreaft-Studio-/releases/download/v1.0.0/solocraft-studio.apk"
-                        class="download-btn android" download>
-                        <span>Download APK</span>
-                        <span class="version">v1.0.0</span>
-                    </a>
-                    <p class="file-info">Size: ~50MB</p>
-                </div>
-
-                <div class="download-card">
-                    <div class="platform-icon">🍎</div>
-                    <h3>iOS</h3>
-                    <p>Coming soon to App Store</p>
-                    <button class="download-btn ios disabled" disabled>
-                        <span>Coming Soon</span>
-                    </button>
-                    <p class="file-info">Available Q1 2025</p>
-                </div>
-
-                <div class="download-card">
-                    <div class="platform-icon">🌐</div>
-                    <h3>Web</h3>
-                    <p>Try it in your browser</p>
-                    <a href="https://your-app-url.com" class="download-btn web" target="_blank">
-                        <span>Launch Web App</span>
-                    </a>
-                    <p class="file-info">No installation needed</p>
-                </div>
-            </section>
-
-            <!-- Features -->
-            <section class="features">
-                <h2>Features</h2>
-                <div class="feature-grid">
-                    <div class="feature">
-                        <div class="feature-icon">🎵</div>
-                        <h4>Beautiful UI</h4>
-                        <p>Stunning animations and professional design</p>
-                    </div>
-                    <div class="feature">
-                        <div class="feature-icon">🎸</div>
-                        <h4>Instrument Library</h4>
-                        <p>Access a wide range of virtual instruments</p>
-                    </div>
-                    <div class="feature">
-                        <div class="feature-icon">🎹</div>
-                        <h4>Audio Engine</h4>
-                        <p>Professional-grade audio processing</p>
-                    </div>
-                    <div class="feature">
-                        <div class="feature-icon">📱</div>
-                        <h4>Cross-Platform</h4>
-                        <p>Works on iOS, Android, and Web</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Installation Guide -->
-            <section class="guide">
-                <h2>Installation Guide</h2>
-                <div class="steps">
-                    <div class="step">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <h4>Download APK</h4>
-                            <p>Click the download button above to get the APK file</p>
-                        </div>
-                    </div>
-                    <div class="step">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <h4>Enable Unknown Sources</h4>
-                            <p>Go to Settings > Security > Enable "Install from Unknown Sources"</p>
-                        </div>
-                    </div>
-                    <div class="step">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <h4>Install</h4>
-                            <p>Open the downloaded APK file and follow the prompts</p>
-                        </div>
-                    </div>
-                    <div class="step">
-                        <div class="step-number">4</div>
-                        <div class="step-content">
-                            <h4>Enjoy!</h4>
-                            <p>Launch the app and start creating music</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <!-- Footer -->
-        <footer>
-            <p>&copy; 2024 UJ Studios. All rights reserved.</p>
-            <p class="support">Customer Support: <a href="mailto:support@ujstudios.com">support@ujstudios.com</a></p>
-            <div class="social-links">
-                <a href="https://github.com/King-890/Solocreaft-Studio-" target="_blank">GitHub</a>
+              </div>
             </div>
-        </footer>
-    </div>
-</body>
+            <div class="step">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <h4>Install</h4>
+                <p>Open the downloaded APK file and follow the prompts</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-number">4</div>
+              <div class="step-content">
+                <h4>Enjoy!</h4>
+                <p>Launch the app and start creating music</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
 
+      <!-- Footer -->
+      <footer>
+        <p>&copy; 2024 UJ Studios. All rights reserved.</p>
+        <p class="support">
+          <a
+            href="privacy_policy.html"
+            style="color: #ba55d3; margin-right: 15px"
+            >Privacy Policy</a
+          >
+          Customer Support:
+          <a href="mailto:support@ujstudios.com">support@ujstudios.com</a>
+        </p>
+        <div class="social-links">
+          <a
+            href="https://github.com/King-890/Solocreaft-Studio-"
+            target="_blank"
+            >GitHub</a
+          >
+        </div>
+      </footer>
+    </div>
+  </body>
 </html>
