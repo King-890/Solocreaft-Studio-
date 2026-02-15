@@ -339,61 +339,14 @@ export const ProjectProvider = ({ children }) => {
             createdAt: new Date().toISOString(),
         };
 
-        // Save to Supabase if user is logged in
-        if (user) {
-            try {
-                const { data, error } = await supabase
-                    .from('recordings')
-                    .insert({
-                        id: newRecording.id,
-                        user_id: user.id,
-                        name: newRecording.name,
-                        uri: newRecording.uri,
-                        duration: newRecording.duration,
-                        source: newRecording.source,
-                        instrument_type: newRecording.instrumentType,
-                        created_at: newRecording.createdAt
-                    })
-                    .select()
-                    .single();
-
-                if (error) {
-                    console.error('Error saving recording to Supabase:', error);
-                } else {
-                    console.log('Recording saved to Supabase:', data);
-                }
-            } catch (error) {
-                console.error('Failed to save recording to database:', error);
-            }
-        }
-
+        // GUEST MODE: Save only to local state and AsyncStorage
         setRecordings([...recordings, newRecording]);
-        console.log('Recording added to library:', newRecording);
+        console.log('Recording added to local library:', newRecording);
         return newRecording;
     };
 
     const deleteRecording = async (recordingId) => {
-        // Find the recording to get its URI
         const recording = recordings.find(r => r.id === recordingId);
-
-        // Delete from Supabase if user is logged in
-        if (user) {
-            try {
-                const { error } = await supabase
-                    .from('recordings')
-                    .delete()
-                    .eq('id', recordingId)
-                    .eq('user_id', user.id);
-
-                if (error) {
-                    console.error('Error deleting recording from Supabase:', error);
-                } else {
-                    console.log('Recording deleted from Supabase');
-                }
-            } catch (error) {
-                console.error('Failed to delete recording from database:', error);
-            }
-        }
 
         // Delete from IndexedDB if on web and has idb:// URI
         if (recording && recording.uri.startsWith('idb://')) {
@@ -406,38 +359,17 @@ export const ProjectProvider = ({ children }) => {
             }
         }
 
-        // Delete from local state
+        // Delete from local state (AsyncStorage sync is handled by useEffect)
         setRecordings(recordings.filter(r => r.id !== recordingId));
         console.log('Recording deleted from local state');
     };
 
     const updateRecording = async (recordingId, updates) => {
-        // Update local state
+        // Update local state (AsyncStorage sync is handled by useEffect)
         setRecordings(recordings.map(r =>
             r.id === recordingId ? { ...r, ...updates } : r
         ));
-
-        // Update in Supabase if user is logged in
-        if (user) {
-            try {
-                const { error } = await supabase
-                    .from('recordings')
-                    .update({
-                        name: updates.name,
-                        // Add other fields as needed
-                    })
-                    .eq('id', recordingId)
-                    .eq('user_id', user.id);
-
-                if (error) {
-                    console.error('Error updating recording in Supabase:', error);
-                } else {
-                    console.log('Recording updated in Supabase');
-                }
-            } catch (error) {
-                console.error('Failed to update recording in database:', error);
-            }
-        }
+        console.log('Recording updated in local state');
     };
 
     const value = {
