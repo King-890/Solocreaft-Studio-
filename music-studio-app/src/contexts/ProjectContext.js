@@ -372,11 +372,7 @@ export const ProjectProvider = ({ children }) => {
         console.log('Recording updated in local state');
     };
 
-    const value = {
-        tracks,
-        clips,
-        isPlaying,
-        currentTime,
+
     const clearAllData = async () => {
         try {
             await AsyncStorage.removeItem('@recordings');
