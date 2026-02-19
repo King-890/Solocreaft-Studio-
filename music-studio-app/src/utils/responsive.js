@@ -1,8 +1,3 @@
-import { Dimensions, Platform, PixelRatio } from 'react-native';
-import {
-    widthPercentageToDP as wp,
-    heightPercentageToDP as hp,
-} from 'react-native-responsive-screen';
 
 import { Dimensions, Platform, PixelRatio, useWindowDimensions } from 'react-native';
 import {

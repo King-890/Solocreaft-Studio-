@@ -16,6 +16,12 @@ class AudioPlaybackService {
         this.masterDistortionNode = null;
         this.masterDelayNode = null;
         this.masterDelayFeedback = null;
+
+        // EQ Nodes (Low, Mid, High)
+        this.masterEqLow = null;
+        this.masterEqMid = null;
+        this.masterEqHigh = null;
+
     }
 
     async init() {
@@ -50,6 +56,24 @@ class AudioPlaybackService {
             this.masterAnalyser.connect(this.masterLimiter);
             
             // --- EFFECTS RACK ---
+
+            // 0. EQ Chain (3-Band)
+            this.masterEqLow = this.audioContext.createBiquadFilter();
+            this.masterEqLow.type = 'lowshelf';
+            this.masterEqLow.frequency.value = 320;
+
+            this.masterEqMid = this.audioContext.createBiquadFilter();
+            this.masterEqMid.type = 'peaking';
+            this.masterEqMid.frequency.value = 1000;
+            this.masterEqMid.Q.value = 0.5;
+
+            this.masterEqHigh = this.audioContext.createBiquadFilter();
+            this.masterEqHigh.type = 'highshelf';
+            this.masterEqHigh.frequency.value = 3200;
+
+            // Connect EQ Chain: Low -> Mid -> High
+            this.masterEqLow.connect(this.masterEqMid);
+            this.masterEqMid.connect(this.masterEqHigh);
             
             // 1. Distortion (WaveShaper)
             this.masterDistortionNode = this.audioContext.createWaveShaper();
@@ -70,8 +94,9 @@ class AudioPlaybackService {
             this.masterDelayGain.gain.value = 0; // Start off (mix)
             this.masterDelayNode.connect(this.masterDelayGain);
 
-            // Connect Chain: Limiter -> [Distortion] -> Gain -> Destination
-            this.masterLimiter.connect(this.masterDistortionNode);
+            // Connect Chain: Limiter -> [EQ] -> [Distortion] -> Gain -> Destination
+            this.masterLimiter.connect(this.masterEqLow);
+            this.masterEqHigh.connect(this.masterDistortionNode);
             
             this.masterGainNode = this.audioContext.createGain();
             this.masterGainNode.gain.value = 2.5; // Increased baseline boost
@@ -147,6 +172,19 @@ class AudioPlaybackService {
     setReverb(mix) {
         if (!this.masterReverbGain) return;
         this.masterReverbGain.gain.setTargetAtTime(mix, this.audioContext.currentTime, 0.05);
+    }
+
+    setCompressor(threshold, ratio) {
+        if (!this.masterLimiter) return;
+        this.masterLimiter.threshold.setTargetAtTime(threshold, this.audioContext.currentTime, 0.05);
+        this.masterLimiter.ratio.setTargetAtTime(ratio, this.audioContext.currentTime, 0.05);
+    }
+
+    setEQ(low, mid, high) {
+        if (!this.masterEqLow) return;
+        this.masterEqLow.gain.setTargetAtTime(low, this.audioContext.currentTime, 0.05);
+        this.masterEqMid.gain.setTargetAtTime(mid, this.audioContext.currentTime, 0.05);
+        this.masterEqHigh.gain.setTargetAtTime(high, this.audioContext.currentTime, 0.05);
     }
 
     async loadAudioFromUri(uri, clipId) {

@@ -5,14 +5,9 @@ let AudioContextClass;
 if (Platform.OS === 'web') {
     AudioContextClass = window.AudioContext || window.webkitAudioContext;
 } else {
-    // For native, we use react-native-audio-api
-    try {
-        const { AudioContext } = require('react-native-audio-api');
-        AudioContextClass = AudioContext;
-    } catch (e) {
-        console.warn('⚠️ react-native-audio-api not found or failed to load:', e.message);
-        AudioContextClass = null;
-    }
+    // Native audio is handled by expo-audio in UnifiedAudioEngine.js
+    // We don't need a Web Audio API polyfill here anymore.
+    AudioContextClass = null;
 }
 
 class UnifiedAudioContext {

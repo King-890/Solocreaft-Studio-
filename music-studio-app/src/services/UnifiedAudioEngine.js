@@ -189,7 +189,7 @@ class NativeAudioEngine {
         return 440 * Math.pow(2, (midiNote - 69) / 12);
     }
 
-    async stopAll() {
+    stopAll() {
         const now = this.ctx ? this.ctx.currentTime : 0;
         this.playingNodes.forEach((nodes) => {
             nodes.forEach(({ osc, gain }) => {
@@ -205,11 +205,25 @@ class NativeAudioEngine {
         if (this.playerPool) {
             this.playerPool.forEach(player => {
                 try {
-                    player.pause();
+                    if (player.playing) player.pause();
                     player.seekTo(0);
                 } catch (e) {}
             });
         }
+    }
+
+    async unloadAll() {
+        this.stopAll();
+        // Clear all native players to free up memory
+        if (this.playerPool) {
+            this.playerPool.forEach(player => {
+                try {
+                    player.unloadAsync();
+                } catch (e) {}
+            });
+            this.playerPool.clear();
+        }
+        console.log('🧹 Native Audio Engine: Resources Unloaded');
     }
 
     setMixerSettings(instrumentId, settings) {
@@ -327,6 +341,12 @@ const UnifiedAudioEngine = {
 
         // 3. Stop Background Ambience
         AudioManager.stopAll();
+    },
+
+    unloadAll: async () => {
+        if (Platform.OS !== 'web') {
+            await nativeEngine.unloadAll();
+        }
     },
 
     setSustain: (active) => {

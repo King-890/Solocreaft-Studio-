@@ -49,6 +49,11 @@ const EffectsRack = ({ visible }) => {
     const [delayTime, setDelayTime] = useState(0.4);
     const [delayFeedback, setDelayFeedback] = useState(0.4);
     const [reverbMix, setReverbMix] = useState(0.15);
+    const [compressorThreshold, setCompressorThreshold] = useState(-24);
+    const [compressorRatio, setCompressorRatio] = useState(4);
+    const [eqLow, setEqLow] = useState(0);
+    const [eqMid, setEqMid] = useState(0);
+    const [eqHigh, setEqHigh] = useState(0);
 
     const handleDistortionChange = (val) => {
         setDistortion(val);
@@ -73,6 +78,19 @@ const EffectsRack = ({ visible }) => {
     const handleReverbChange = (val) => {
         setReverbMix(val);
         AudioPlaybackService.setReverb(val);
+    };
+
+    const handleCompressorChange = (threshold, ratio) => {
+        setCompressorThreshold(threshold);
+        setCompressorRatio(ratio);
+        AudioPlaybackService.setCompressor(threshold, ratio);
+    };
+
+    const handleEqChange = (low, mid, high) => {
+        setEqLow(low);
+        setEqMid(mid);
+        setEqHigh(high);
+        AudioPlaybackService.setEQ(low, mid, high);
     };
 
     if (!visible) return null;
@@ -121,11 +139,59 @@ const EffectsRack = ({ visible }) => {
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>REVERB</Text>
                 <SimpleSlider 
-                    label="Wet"
+                    label="Mix"
                     value={reverbMix} 
                     min={0} 
                     max={1} 
                     onChange={handleReverbChange} 
+                />
+            </View>
+
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>COMPRESSOR</Text>
+                <SimpleSlider 
+                    label="Threshold"
+                    value={compressorThreshold} 
+                    min={-60} 
+                    max={0} 
+                    onChange={(val) => handleCompressorChange(val, compressorRatio)} 
+                    unit="dB"
+                />
+                <SimpleSlider 
+                    label="Ratio"
+                    value={compressorRatio} 
+                    min={1} 
+                    max={20} 
+                    onChange={(val) => handleCompressorChange(compressorThreshold, val)} 
+                    unit=":1"
+                />
+            </View>
+
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>EQUALIZER</Text>
+                <SimpleSlider 
+                    label="Low"
+                    value={eqLow} 
+                    min={-12} 
+                    max={12} 
+                    onChange={(val) => handleEqChange(val, eqMid, eqHigh)} 
+                    unit="dB"
+                />
+                <SimpleSlider 
+                    label="Mid"
+                    value={eqMid} 
+                    min={-12} 
+                    max={12} 
+                    onChange={(val) => handleEqChange(eqLow, val, eqHigh)} 
+                    unit="dB"
+                />
+                <SimpleSlider 
+                    label="High"
+                    value={eqHigh} 
+                    min={-12} 
+                    max={12} 
+                    onChange={(val) => handleEqChange(eqLow, eqMid, val)} 
+                    unit="dB"
                 />
             </View>
         </View>
