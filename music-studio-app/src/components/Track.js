@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useProject } from '../contexts/ProjectContext';
 import AudioClip from './AudioClip';
@@ -18,11 +18,11 @@ const TRACK_COLORS = {
     'default': '#9B9B9B',
 };
 
-export default function Track({ track, zoomLevel, pixelsPerSecond, timelineWidth, headerWidth, scrollRef, onScroll }) {
-    const { updateTrackMute, updateTrackSolo, updateTrackVolume, clips, tempo, getProjectDuration } = useProject();
+const Track = memo(({ track, clips, zoomLevel, pixelsPerSecond, timelineWidth, headerWidth, scrollRef, onScroll }) => {
+    const { updateTrackMute, updateTrackSolo, updateTrackVolume, tempo, getProjectDuration } = useProject();
 
-    // Get clips for this track
-    const trackClips = clips ? clips.filter(c => c.trackId === track.id) : [];
+    // Get clips for this track (Now passed as prop for better performance)
+    const trackClips = clips || [];
 
     // Get track color
     const trackColor = TRACK_COLORS[track.name] || TRACK_COLORS.default;
@@ -133,7 +133,9 @@ export default function Track({ track, zoomLevel, pixelsPerSecond, timelineWidth
             </ScrollView>
         </View>
     );
-}
+});
+
+export default Track;
 
 const styles = StyleSheet.create({
     container: {

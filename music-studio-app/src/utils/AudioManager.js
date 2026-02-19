@@ -1,10 +1,6 @@
-/**
- * Audio Manager
- * Handles all ambient audio playback for the app using Web Audio API
- */
-
 import { Platform } from 'react-native';
 import { AUDIO_CONFIG } from '../constants/UIConfig';
+import UnifiedAudioContext from '../services/UnifiedAudioContext';
 
 class AudioManager {
     constructor() {
@@ -23,10 +19,9 @@ class AudioManager {
         if (this.initialized) return;
 
         try {
-            // Initialize Web Audio API for web platform
-            if (Platform.OS === 'web' && typeof window !== 'undefined') {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                this.audioContext = new AudioContext();
+            // Initialize Web Audio API for web platform using UnifiedAudioContext
+            if (Platform.OS === 'web') {
+                this.audioContext = UnifiedAudioContext.get();
             }
 
             this.initialized = true;
@@ -39,134 +34,175 @@ class AudioManager {
     createRiverSound() {
         if (!this.audioContext) return;
 
-        const bufferSize = this.audioContext.sampleRate * 4;
+        const bufferSize = this.audioContext.sampleRate * 1; // REDUCED
         const buffer = this.audioContext.createBuffer(2, bufferSize, this.audioContext.sampleRate);
 
-        // Create stereo river sound for more depth
-        for (let channel = 0; channel < 2; channel++) {
-            const data = buffer.getChannelData(channel);
+        // Generate simple white noise - CHUNKED and LIGHTWEIGHT
+        const generateRiverChunked = () => {
+            const chunkSize = 2500; // REDUCED: Ultra-granular for 60FPS
+            let currentSample = 0;
 
-            // Generate very gentle pink noise for river
-            let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-            for (let i = 0; i < bufferSize; i++) {
-                const white = (Math.random() * 2 - 1) * 0.3;
-                b0 = 0.99886 * b0 + white * 0.0555179;
-                b1 = 0.99332 * b1 + white * 0.0750759;
-                b2 = 0.96900 * b2 + white * 0.1538520;
-                b3 = 0.86650 * b3 + white * 0.3104856;
-                b4 = 0.55000 * b4 + white * 0.5329522;
-                b5 = -0.7616 * b5 - white * 0.0168980;
-                data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.05;
-                b6 = white * 0.115926;
-            }
-        }
+            const processNextChunk = () => {
+                const end = Math.min(currentSample + chunkSize, bufferSize);
+                
+                for (let channel = 0; channel < 2; channel++) {
+                    const data = buffer.getChannelData(channel);
+                    for (let i = currentSample; i < end; i++) {
+                        // Pure white noise is very fast to generate
+                        data[i] = (Math.random() * 2 - 1) * 0.5;
+                    }
+                }
 
-        const source = this.audioContext.createBufferSource();
-        source.buffer = buffer;
-        source.loop = true;
+                currentSample = end;
+                if (currentSample < bufferSize) {
+                    // Yield immediately to the scheduler
+                    if (typeof requestAnimationFrame !== 'undefined') {
+                        requestAnimationFrame(() => setTimeout(processNextChunk, 0));
+                    } else {
+                        setTimeout(processNextChunk, 0);
+                    }
+                } else {
+                    finalizeRiver();
+                }
+            };
 
-        // Multi-stage filtering for gentle river sound
-        const lowpass1 = this.audioContext.createBiquadFilter();
-        lowpass1.type = 'lowpass';
-        lowpass1.frequency.value = 600;
-        lowpass1.Q.value = 0.5;
+            const finalizeRiver = () => {
+                const source = this.audioContext.createBufferSource();
+                source.buffer = buffer;
+                source.loop = true;
 
-        const lowpass2 = this.audioContext.createBiquadFilter();
-        lowpass2.type = 'lowpass';
-        lowpass2.frequency.value = 300;
-        lowpass2.Q.value = 1;
+                // Move pink noise shaping to native filters (DOUBLY EFFICIENT)
+                const pinkFilter = this.audioContext.createBiquadFilter();
+                pinkFilter.type = 'lowpass';
+                pinkFilter.frequency.value = 400; // Simulated pink noise roll-off
+                pinkFilter.Q.value = 0.7;
 
-        const highpass = this.audioContext.createBiquadFilter();
-        highpass.type = 'highpass';
-        highpass.frequency.value = 80;
-        highpass.Q.value = 0.5;
+                const lowpass1 = this.audioContext.createBiquadFilter();
+                lowpass1.type = 'lowpass';
+                lowpass1.frequency.value = 600;
+                lowpass1.Q.value = 0.5;
 
-        const gainNode = this.audioContext.createGain();
-        gainNode.gain.value = AUDIO_CONFIG.river.volume * 0.6;
+                const lowpass2 = this.audioContext.createBiquadFilter();
+                lowpass2.type = 'lowpass';
+                lowpass2.frequency.value = 300;
+                lowpass2.Q.value = 1;
 
-        // Add very slow modulation for natural flow variation
-        const lfo = this.audioContext.createOscillator();
-        lfo.frequency.value = 0.05;
-        const lfoGain = this.audioContext.createGain();
-        lfoGain.gain.value = 0.02;
-        lfo.connect(lfoGain);
-        lfoGain.connect(gainNode.gain);
-        lfo.start(0);
+                const highpass = this.audioContext.createBiquadFilter();
+                highpass.type = 'highpass';
+                highpass.frequency.value = 80;
+                highpass.Q.value = 0.5;
 
-        source.connect(highpass);
-        highpass.connect(lowpass1);
-        lowpass1.connect(lowpass2);
-        lowpass2.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
+                const gainNode = this.audioContext.createGain();
+                gainNode.gain.value = AUDIO_CONFIG.river.volume * 0.6;
 
-        source.start(0);
-        this.oscillators.push(source);
-        this.oscillators.push(lfo);
-        this.gainNodes.push(gainNode);
+                const lfo = this.audioContext.createOscillator();
+                lfo.frequency.value = 0.05;
+                const lfoGain = this.audioContext.createGain();
+                lfoGain.gain.value = 0.02;
+                lfo.connect(lfoGain);
+                lfoGain.connect(gainNode.gain);
+                lfo.start(0);
+
+                source.connect(pinkFilter);
+                pinkFilter.connect(highpass);
+                highpass.connect(lowpass1);
+                lowpass1.connect(lowpass2);
+                lowpass2.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                source.start(0);
+                this.oscillators.push(source);
+                this.oscillators.push(lfo);
+                this.gainNodes.push(gainNode);
+                console.log('✓ Gentle river flowing');
+            };
+
+            processNextChunk();
+        };
+
+        setTimeout(generateRiverChunked, 50);
     }
 
     // Create ambient wind sound - SLOW BREEZE
     createWindSound() {
         if (!this.audioContext) return;
 
-        const bufferSize = this.audioContext.sampleRate * 4;
+        const bufferSize = this.audioContext.sampleRate * 1; // REDUCED
         const buffer = this.audioContext.createBuffer(2, bufferSize, this.audioContext.sampleRate);
 
-        // Generate very gentle wind noise
-        for (let channel = 0; channel < 2; channel++) {
-            const data = buffer.getChannelData(channel);
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = (Math.random() * 2 - 1) * 0.15;
-            }
-        }
+        // Generate lightweight noise - CHUNKED
+        const generateWindChunked = () => {
+            const chunkSize = 2500; // REDUCED
+            let currentSample = 0;
 
-        const source = this.audioContext.createBufferSource();
-        source.buffer = buffer;
-        source.loop = true;
+            const processNextChunk = () => {
+                const end = Math.min(currentSample + chunkSize, bufferSize);
+                for (let channel = 0; channel < 2; channel++) {
+                    const data = buffer.getChannelData(channel);
+                    for (let i = currentSample; i < end; i++) {
+                        data[i] = (Math.random() * 2 - 1) * 0.3;
+                    }
+                }
 
-        // Gentle bandpass filter for wind
-        const bandpass = this.audioContext.createBiquadFilter();
-        bandpass.type = 'bandpass';
-        bandpass.frequency.value = 250;
-        bandpass.Q.value = 0.3;
+                currentSample = end;
+                if (currentSample < bufferSize) {
+                    setTimeout(processNextChunk, 0);
+                } else {
+                    finalizeWind();
+                }
+            };
 
-        // Additional lowpass for smoothness
-        const lowpass = this.audioContext.createBiquadFilter();
-        lowpass.type = 'lowpass';
-        lowpass.frequency.value = 500;
-        lowpass.Q.value = 0.5;
+            const finalizeWind = () => {
+                const source = this.audioContext.createBufferSource();
+                source.buffer = buffer;
+                source.loop = true;
 
-        const gainNode = this.audioContext.createGain();
-        gainNode.gain.value = AUDIO_CONFIG.wind.volume * 0.5;
+                const bandpass = this.audioContext.createBiquadFilter();
+                bandpass.type = 'bandpass';
+                bandpass.frequency.value = 250;
+                bandpass.Q.value = 0.3;
 
-        // VERY slow LFO for gentle wind variation (slow breeze)
-        const lfo = this.audioContext.createOscillator();
-        lfo.frequency.value = 0.03;
-        const lfoGain = this.audioContext.createGain();
-        lfoGain.gain.value = 0.03;
-        lfo.connect(lfoGain);
-        lfoGain.connect(gainNode.gain);
-        lfo.start(0);
+                const lowpass = this.audioContext.createBiquadFilter();
+                lowpass.type = 'lowpass';
+                lowpass.frequency.value = 500;
+                lowpass.Q.value = 0.5;
 
-        // Add second LFO for filter modulation (creates gentle "whoosh")
-        const filterLfo = this.audioContext.createOscillator();
-        filterLfo.frequency.value = 0.02;
-        const filterLfoGain = this.audioContext.createGain();
-        filterLfoGain.gain.value = 30;
-        filterLfo.connect(filterLfoGain);
-        filterLfoGain.connect(bandpass.frequency);
-        filterLfo.start(0);
+                const gainNode = this.audioContext.createGain();
+                gainNode.gain.value = AUDIO_CONFIG.wind.volume * 0.5;
 
-        source.connect(bandpass);
-        bandpass.connect(lowpass);
-        lowpass.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
+                const lfo = this.audioContext.createOscillator();
+                lfo.frequency.value = 0.03;
+                const lfoGain = this.audioContext.createGain();
+                lfoGain.gain.value = 0.03;
+                lfo.connect(lfoGain);
+                lfoGain.connect(gainNode.gain);
+                lfo.start(0);
 
-        source.start(0);
-        this.oscillators.push(source);
-        this.oscillators.push(lfo);
-        this.oscillators.push(filterLfo);
-        this.gainNodes.push(gainNode);
+                const filterLfo = this.audioContext.createOscillator();
+                filterLfo.frequency.value = 0.02;
+                const filterLfoGain = this.audioContext.createGain();
+                filterLfoGain.gain.value = 30;
+                filterLfo.connect(filterLfoGain);
+                filterLfoGain.connect(bandpass.frequency);
+                filterLfo.start(0);
+
+                source.connect(bandpass);
+                bandpass.connect(lowpass);
+                lowpass.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                source.start(0);
+                this.oscillators.push(source);
+                this.oscillators.push(lfo);
+                this.oscillators.push(filterLfo);
+                this.gainNodes.push(gainNode);
+                console.log('✓ Slow breeze blowing');
+            };
+
+            processNextChunk();
+        };
+
+        setTimeout(generateWindChunked, 150);
     }
 
     // Create ambient instrument sound - PEACEFUL & MEDITATIVE
@@ -234,35 +270,56 @@ class AudioManager {
 
         playNote();
         this.gainNodes.push(gainNode);
+        console.log('✓ Peaceful instrument');
     }
 
     async playHomeScreenAmbience() {
+        // Guard for background ambience setting
+        const UnifiedAudioEngine = require('../services/UnifiedAudioEngine').default;
+        if (UnifiedAudioEngine && UnifiedAudioEngine.ambienceMute) {
+            return false;
+        }
+
         await this.initialize();
 
         if (Platform.OS === 'web' && this.audioContext) {
-            // Resume audio context (required by browsers)
+            // Check if context is suspended (autoplay policy)
             if (this.audioContext.state === 'suspended') {
-                await this.audioContext.resume();
+                console.log('🔇 AudioContext is suspended. Waiting for user interaction...');
+                return false; // Indicate that it didn't start yet
             }
 
             console.log('🎵 Starting peaceful ambient soundscape...');
+            // Defer ambience start to prevent blocking navigation/startup
+            setTimeout(() => this._startAmbience(), 500);
+            return true;
+        }
+        return false;
+    }
 
-            if (AUDIO_CONFIG.river.enabled) {
-                this.createRiverSound();
-                console.log('✓ Gentle river flowing');
-            }
+    async resumeContext() {
+        if (Platform.OS === 'web' && this.audioContext && this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+            console.log('🔊 AudioContext resumed! Starting soundscape...');
+            // Defer ambience start further to ensure UI responsiveness
+            setTimeout(() => this._startAmbience(), 500);
+            return true;
+        }
+        return false;
+    }
 
-            if (AUDIO_CONFIG.wind.enabled) {
-                this.createWindSound();
-                console.log('✓ Slow breeze blowing');
-            }
+    _startAmbience() {
+        // STAGGER initializations to avoid frame drops
+        if (AUDIO_CONFIG.river.enabled) {
+            setTimeout(() => this.createRiverSound(), 100);
+        }
 
-            if (AUDIO_CONFIG.instrument.enabled) {
-                this.createInstrumentSound();
-                console.log('✓ Peaceful instrument');
-            }
-        } else {
-            console.log('Audio synthesis available on web platform only');
+        if (AUDIO_CONFIG.wind.enabled) {
+            setTimeout(() => this.createWindSound(), 2000); // Wait 2s for first sound to finish chunking
+        }
+
+        if (AUDIO_CONFIG.instrument.enabled) {
+            setTimeout(() => this.createInstrumentSound(), 4000); // Wait 4s 
         }
     }
 
@@ -287,11 +344,9 @@ class AudioManager {
             }
         }
 
-        if (this.audioContext) {
-            await this.audioContext.close();
-            this.audioContext = null;
-            this.initialized = false;
-        }
+        // DO NOT close the shared audio context. 
+        // Just reset the initialized flag so it can be re-prepped if needed.
+        this.initialized = false;
     }
 
     async setVolume(key, volume) {

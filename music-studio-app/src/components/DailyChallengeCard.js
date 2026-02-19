@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { createShadow } from '../utils/shadows';
 
 const CHALLENGE_TYPES = {
     'time-based': {
@@ -170,11 +171,7 @@ const styles = StyleSheet.create({
     card: {
         borderRadius: 16,
         overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
+        ...createShadow({ color: '#000', offsetY: 4, opacity: 0.3, radius: 8, elevation: 8 }),
     },
     gradient: {
         padding: 20,

@@ -35,7 +35,7 @@ export default function TimelineGrid({ tempo, zoomLevel, duration }) {
     }
 
     return (
-        <View style={styles.container} pointerEvents="none">
+        <View style={[styles.container, { pointerEvents: 'none' }]}>
             {gridLines}
         </View>
     );

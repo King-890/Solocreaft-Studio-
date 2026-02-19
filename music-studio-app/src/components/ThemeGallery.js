@@ -16,6 +16,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { useTheme } from '../contexts/ThemeContext';
 import UISounds from '../utils/UISounds';
 import { useResponsive, getResponsiveColumns } from '../utils/responsive';
+import { createShadow } from '../utils/shadows';
 
 function ThemeCard({ theme, isActive, isUserTheme, onSelect, onDelete, cardWidth }) {
     return (
@@ -350,13 +351,7 @@ const styles = StyleSheet.create({
     },
     activeThemeCard: {
         borderColor: '#03dac6',
-        // boxShadow is not supported in RN directly like this, use elevation or shadow props
-        // But for web it works. For native we can use elevation.
-        elevation: 5,
-        shadowColor: '#03dac6',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
-        shadowRadius: 10,
+        ...createShadow({ color: '#03dac6', offsetY: 0, opacity: 0.5, radius: 10, elevation: 5 }),
     },
     themePreview: {
         width: '100%',

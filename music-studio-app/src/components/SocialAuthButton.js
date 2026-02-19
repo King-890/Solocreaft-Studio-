@@ -9,6 +9,7 @@ import {
     Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { createShadow } from '../utils/shadows';
 
 export default function SocialAuthButton({
     provider,
@@ -62,21 +63,21 @@ export default function SocialAuthButton({
                     colors: ['#4285F4', '#34A853'],
                     icon: 'G',
                     text: 'Google',
-                    shadowColor: '#4285F4',
+                    accentColor: '#4285F4',
                 };
             case 'facebook':
                 return {
                     colors: ['#1877F2', '#0C63D4'],
                     icon: 'f',
                     text: 'Facebook',
-                    shadowColor: '#1877F2',
+                    accentColor: '#1877F2',
                 };
             default:
                 return {
                     colors: ['#666', '#444'],
                     icon: '?',
                     text: 'Continue',
-                    shadowColor: '#666',
+                    accentColor: '#666',
                 };
         }
     };
@@ -111,17 +112,7 @@ export default function SocialAuthButton({
                     end={{ x: 1, y: 1 }}
                     style={[
                         styles.gradient,
-                        Platform.select({
-                            web: {
-                                boxShadow: `0 4px 12px ${config.shadowColor}66`,
-                            },
-                            default: {
-                                shadowColor: config.shadowColor,
-                                shadowOffset: { width: 0, height: 4 },
-                                shadowOpacity: 0.3,
-                                shadowRadius: 8,
-                            },
-                        }),
+                        createShadow({ color: config.accentColor, offsetY: 4, opacity: 0.3, radius: 8, elevation: 4 }),
                     ]}
                 >
                     {/* Glow effect */}
@@ -130,7 +121,7 @@ export default function SocialAuthButton({
                             styles.glowOverlay,
                             {
                                 opacity: glowOpacity,
-                                backgroundColor: config.shadowColor,
+                                backgroundColor: config.accentColor,
                             },
                         ]}
                     />
@@ -163,7 +154,6 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         height: 56,
         justifyContent: 'center',
-        elevation: 4,
     },
     glowOverlay: {
         ...StyleSheet.absoluteFillObject,

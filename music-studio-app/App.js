@@ -8,24 +8,56 @@ import { SettingsProvider } from './src/contexts/SettingsContext';
 import { ProjectProvider } from './src/contexts/ProjectContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { UserProgressProvider } from './src/contexts/UserProgressContext';
-import { MixerProvider } from './src/contexts/MixerContext';
 import HomeScreen from './src/screens/HomeScreen';
 import LibraryScreen from './src/screens/LibraryScreen';
 import InstrumentsLibraryScreen from './src/screens/InstrumentsLibraryScreen';
 import InstrumentRoomScreen from './src/screens/InstrumentRoomScreen';
 import BandRoomScreen from './src/screens/BandRoomScreen';
-import MixerScreen from './src/screens/MixerScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import StudioScreen from './src/screens/StudioScreen';
 import DebugScreen from './src/screens/DebugScreen';
-import { View, Text, ActivityIndicator, LogBox } from 'react-native';
+import { View, Text, ActivityIndicator, LogBox, Platform } from 'react-native';
 import { errorMonitor, setupGlobalErrorHandler } from './src/services/ErrorMonitor';
-import { useState as useReactState, useEffect as useReactEffect } from 'react';
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
   'props.pointerEvents is deprecated',
+  'shadow*" style props are deprecated',
 ]);
+
+// Web & Production console suppression
+if (Platform.OS === 'web' || !__DEV__) {
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    if (args[0] && typeof args[0] === 'string' && (
+      args[0].includes('props.pointerEvents is deprecated') ||
+      args[0].includes('shadow*" style props are deprecated') ||
+      args[0].includes('Node.contains: argument is not a Node') ||
+      args[0].includes('VirtualizedLists should never be nested') ||
+      args[0].includes('Remote debugger')
+    )) {
+      return;
+    }
+    if (!__DEV__) return; // Suppress all warnings in production
+    originalWarn.apply(console, args);
+  };
+
+  const originalError = console.error;
+  console.error = (...args) => {
+    if (args[0] && typeof args[0] === 'string' && (
+      args[0].includes('props.pointerEvents is deprecated') ||
+      args[0].includes('shadow*" style props are deprecated')
+    )) {
+      return;
+    }
+    // Track errors in production but suppress from console if not in dev
+    if (!__DEV__) {
+        // Here we could add a production logging service call
+        return;
+    }
+    originalError.apply(console, args);
+  };
+}
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -89,9 +121,9 @@ class ErrorBoundary extends React.Component {
 
 // Error Display Component (shows errors in development)
 function ErrorDisplay() {
-  const [errors, setErrors] = useReactState([]);
+  const [errors, setErrors] = useState([]);
 
-  useReactEffect(() => {
+  useEffect(() => {
     const unsubscribe = errorMonitor.subscribe((error) => {
       setErrors(prev => [error, ...prev.slice(0, 4)]); // Keep last 5 errors
     });
@@ -175,13 +207,6 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="Mixer"
-        component={MixerScreen}
-        options={{
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20 }}>🎚️</Text>
-        }}
-      />
-      <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
@@ -192,30 +217,52 @@ function MainTabs() {
   );
 }
 
+import LoginScreen from './src/screens/LoginScreen';
+import SignupScreen from './src/screens/SignupScreen';
+
 function AppContent() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#121212' }}>
+        <ActivityIndicator size="large" color="#6200ee" />
+      </View>
+    );
+  }
+
   return (
     <>
       <ErrorDisplay />
 
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Main" component={MainTabs} />
-          <Stack.Screen name="Studio" component={StudioScreen} />
-          <Stack.Screen name="InstrumentsLibrary" component={InstrumentsLibraryScreen} />
-          <Stack.Screen name="InstrumentRoom" component={InstrumentRoomScreen} />
-          <Stack.Screen name="BandRoom" component={BandRoomScreen} />
-
-          {/* Debug Screen - Available via navigation but not default */}
-          <Stack.Screen
-            name="Debug"
-            component={DebugScreen}
-            options={{
-              title: 'Debug Screen',
-              headerShown: true,
-              headerStyle: { backgroundColor: '#1a1a1a' },
-              headerTintColor: '#fff'
-            }}
-          />
+          {user ? (
+            // Protected Routes
+            <>
+              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="Studio" component={StudioScreen} />
+              <Stack.Screen name="InstrumentsLibrary" component={InstrumentsLibraryScreen} />
+              <Stack.Screen name="InstrumentRoom" component={InstrumentRoomScreen} />
+              <Stack.Screen name="BandRoom" component={BandRoomScreen} />
+              <Stack.Screen
+                name="Debug"
+                component={DebugScreen}
+                options={{
+                  title: 'Debug Screen',
+                  headerShown: true,
+                  headerStyle: { backgroundColor: '#1a1a1a' },
+                  headerTintColor: '#fff'
+                }}
+              />
+            </>
+          ) : (
+            // Auth Routes
+            <>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Signup" component={SignupScreen} />
+            </>
+          )}
         </Stack.Navigator>
       </NavigationContainer>
     </>
@@ -226,25 +273,26 @@ function AppContent() {
 
 export default function App() {
   // Set up global error handler on app startup
-  useReactEffect(() => {
+  useEffect(() => {
     console.log('🚀 Music Studio App Starting...');
     setupGlobalErrorHandler();
 
     // Preload audio engine - Non-blocking
-    const initAudio = async () => {
-      // Wait for next frame to ensure UI renders first
-      setTimeout(async () => {
+    const initAudio = () => {
+      // Defer preloading until after the initial render and a small delay
+      const timer = setTimeout(async () => {
         try {
           const UnifiedAudioEngine = require('./src/services/UnifiedAudioEngine').default;
+          // Run preload in chunks if needed (currently okay as is)
           await UnifiedAudioEngine.preload();
         } catch (e) {
           console.warn('Audio preload failed:', e);
         }
-      }, 100);
+      }, 3000); // 3 seconds delay for stability
+      return timer;
     };
-    initAudio();
-
-    console.log('✅ Global error handler installed');
+    const initTimer = initAudio();
+    return () => clearTimeout(initTimer);
   }, []);
 
   return (
@@ -252,13 +300,11 @@ export default function App() {
       <AuthProvider>
         <SettingsProvider>
           <ThemeProvider>
-            <MixerProvider>
-              <UserProgressProvider>
-                <ProjectProvider>
-                  <AppContent />
-                </ProjectProvider>
-              </UserProgressProvider>
-            </MixerProvider>
+            <UserProgressProvider>
+              <ProjectProvider>
+                <AppContent />
+              </ProjectProvider>
+            </UserProgressProvider>
           </ThemeProvider>
         </SettingsProvider>
       </AuthProvider>

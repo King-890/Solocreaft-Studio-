@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { createTextShadow } from '../utils/shadows';
 
 export default function SoloCraftLogo({ size = 120, showText = true, animated = true }) {
     const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -139,18 +140,14 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         color: '#BA55D3', // Purple
         marginRight: -15, // Overlap
-        textShadowColor: 'rgba(0, 0, 0, 0.5)',
-        textShadowOffset: { width: 2, height: 2 },
-        textShadowRadius: 5,
+        ...createTextShadow({ color: 'rgba(0, 0, 0, 0.5)', offsetX: 2, offsetY: 2, radius: 5 }),
         fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif',
     },
     letterC: {
         fontWeight: '900',
         color: '#FFD700', // Gold
         marginLeft: -5,
-        textShadowColor: 'rgba(0, 0, 0, 0.5)',
-        textShadowOffset: { width: 2, height: 2 },
-        textShadowRadius: 5,
+        ...createTextShadow({ color: 'rgba(0, 0, 0, 0.5)', offsetX: 2, offsetY: 2, radius: 5 }),
         fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif',
     },
     textContainer: {

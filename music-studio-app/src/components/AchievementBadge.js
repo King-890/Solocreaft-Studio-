@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { createShadow } from '../utils/shadows';
+import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
 
-const { width } = Dimensions.get('window');
+const width = SCREEN_WIDTH;
 
 // Achievement definitions
 export const ACHIEVEMENTS = {
@@ -254,11 +256,7 @@ const styles = StyleSheet.create({
         left: 20,
         right: 20,
         zIndex: 10000,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
-        shadowRadius: 16,
-        elevation: 16,
+        ...createShadow({ color: '#000', offsetY: 8, opacity: 0.4, radius: 16, elevation: 16 }),
     },
     gradient: {
         borderRadius: 16,

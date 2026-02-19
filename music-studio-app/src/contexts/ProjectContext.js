@@ -1,120 +1,47 @@
-import React, { createContext, useState, useContext, useRef } from 'react';
+import React, { createContext, useState, useContext, useRef, useMemo } from 'react';
+import { Platform, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AudioPlaybackService from '../services/AudioPlaybackService';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
-import { supabase } from '../services/supabase';
+import { INSTRUMENT_TRACKS, INSTRUMENT_TRACK_MAP } from '../constants/AudioConstants';
 import { useAuth } from './AuthContext';
 
 const ProjectContext = createContext({});
 
 export const ProjectProvider = ({ children }) => {
     const { user } = useAuth();
-    const [tracks, setTracks] = useState([
-        {
-            id: '1',
-            name: 'Lead Vocals',
-            type: 'audio',
-            volume: 0.85,
-            pan: 0,
-            gain: 0.8,
-            eq: { high: 2, mid: 0, low: -1 },
-            auxSends: [0.3, 0.1],
-            compressor: { threshold: -18, ratio: 3, enabled: true },
-            muted: false,
-            solo: false
-        },
-        {
-            id: '2',
-            name: 'Piano',
-            type: 'midi',
-            volume: 0.7,
-            pan: 0,
-            gain: 0.75,
-            eq: { high: 1, mid: 0, low: 0 },
-            auxSends: [0.4, 0],
-            compressor: { threshold: -20, ratio: 4, enabled: false },
-            muted: false,
-            solo: false
-        },
-        {
-            id: '3',
-            name: 'Drums',
-            type: 'midi',
-            volume: 0.9,
-            pan: 0,
-            gain: 0.95,
-            eq: { high: 3, mid: 0, low: 2 },
-            auxSends: [0.2, 0.15],
-            compressor: { threshold: -15, ratio: 6, enabled: true },
-            muted: false,
-            solo: false
-        },
-        {
-            id: '4',
-            name: 'Bass Guitar',
-            type: 'audio',
+    const normalizeTrack = (track) => {
+        const defaults = {
             volume: 0.8,
             pan: 0,
-            gain: 0.85,
-            eq: { high: -2, mid: 1, low: 4 },
-            auxSends: [0.1, 0],
-            compressor: { threshold: -12, ratio: 8, enabled: true },
-            muted: false,
-            solo: false
-        },
-        {
-            id: '5',
-            name: 'Electric Guitar',
-            type: 'audio',
-            volume: 0.75,
-            pan: -0.3,
-            gain: 0.7,
-            eq: { high: 2, mid: 3, low: 0 },
-            auxSends: [0.25, 0.3],
-            compressor: { threshold: -20, ratio: 4, enabled: false },
-            muted: false,
-            solo: false
-        },
-        {
-            id: '6',
-            name: 'Synth Pad',
-            type: 'midi',
-            volume: 0.6,
-            pan: 0.2,
-            gain: 0.65,
-            eq: { high: 0, mid: -1, low: 1 },
-            auxSends: [0.5, 0.2],
-            compressor: { threshold: -25, ratio: 3, enabled: false },
-            muted: false,
-            solo: false
-        },
-        {
-            id: '7',
-            name: 'Strings',
-            type: 'midi',
-            volume: 0.65,
-            pan: 0,
-            gain: 0.7,
-            eq: { high: 1, mid: 0, low: 0 },
-            auxSends: [0.45, 0.1],
-            compressor: { threshold: -22, ratio: 3, enabled: false },
-            muted: false,
-            solo: false
-        },
-        {
-            id: '8',
-            name: 'Backing Vocals',
-            type: 'audio',
-            volume: 0.7,
-            pan: -0.4,
             gain: 0.75,
-            eq: { high: 3, mid: 1, low: -2 },
-            auxSends: [0.35, 0.15],
-            compressor: { threshold: -20, ratio: 4, enabled: true },
+            effects: {
+                reverb: { enabled: false, mix: 0.3 },
+                delay: { enabled: false, time: 0.4, feedback: 0.5 }
+            },
+            eq: { low: 0, mid: 0, high: 0 },
+            auxSends: [0, 0],
+            compressor: { enabled: false, threshold: -20, ratio: 4, attack: 0.003, release: 0.25 },
             muted: false,
-            solo: false
-        },
-    ]);
+            solo: false,
+        };
+
+        return {
+            ...defaults,
+            ...track,
+            effects: {
+                ...defaults.effects,
+                ...(track.effects || {}),
+                reverb: { ...defaults.effects.reverb, ...(track.effects?.reverb || {}) },
+                delay: { ...defaults.effects.delay, ...(track.effects?.delay || {}) }
+            },
+            eq: { ...defaults.eq, ...(track.eq || {}) },
+            compressor: { ...defaults.compressor, ...(track.compressor || {}) },
+            auxSends: Array.isArray(track.auxSends) ? track.auxSends : defaults.auxSends
+        };
+    };
+
+    const [tracks, setTracks] = useState(() => INSTRUMENT_TRACKS.map(normalizeTrack));
 
     const [clips, setClips] = useState([]);
     const [recordings, setRecordings] = useState([]);
@@ -123,29 +50,34 @@ export const ProjectProvider = ({ children }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [tempo, setTempo] = useState(120);
+    const [currentProjectName, setCurrentProjectName] = useState('Untitled Project');
     const [selectedClipId, setSelectedClipId] = useState(null);
+    const [masterVolume, setMasterVolume] = useState(0.8);
+    
+    // PERFORMANCE: High-frequency time updates via Animated.Value to avoid React re-renders
+    const timeAnimatedValue = useRef(new Animated.Value(0)).current;
 
     const playheadInterval = useRef(null);
+    const saveTimeout = useRef(null);
 
     // Load recordings on mount
     React.useEffect(() => {
         loadRecordings();
     }, []);
 
-    // Save recordings when they change
+    // Save recordings when they change (Debounced to save main thread)
     React.useEffect(() => {
-        // Only save if we have finished loading the initial data
         if (areRecordingsLoaded) {
-            saveRecordings();
+            if (saveTimeout.current) clearTimeout(saveTimeout.current);
+            saveTimeout.current = setTimeout(() => {
+                saveRecordings();
+            }, 1000);
         }
     }, [recordings, areRecordingsLoaded]);
 
-    // Sync initial track settings to AudioPlaybackService
+    // Initial cleanup/sync (Staggered initialization removed for performance)
     React.useEffect(() => {
-        tracks.forEach(track => {
-            AudioPlaybackService.setTrackVolume(track.id, track.muted ? 0 : track.volume);
-            AudioPlaybackService.setTrackPan(track.id, track.pan);
-        });
+        // No longer needed after mixer refactor
     }, []); // Run once on mount
 
     const togglePlayback = () => {
@@ -176,10 +108,12 @@ export const ProjectProvider = ({ children }) => {
                     AudioPlaybackService.stopAll();
                     setIsPlaying(false);
                     setCurrentTime(projectDuration);
+                    timeAnimatedValue.setValue(projectDuration);
                 } else {
                     setCurrentTime(newTime);
+                    timeAnimatedValue.setValue(newTime);
                 }
-            }, 16); // ~60fps
+            }, 32); // 32ms (~30fps) is enough for visual updates and saves CPU
         }
     };
 
@@ -216,66 +150,75 @@ export const ProjectProvider = ({ children }) => {
     };
 
     const addTrack = (type = 'audio') => {
-        const newTrack = {
+        const newTrack = normalizeTrack({
             id: Date.now().toString(),
             name: `Track ${tracks.length + 1}`,
             type,
-            volume: 0.8,
-            pan: 0,
-            gain: 0.75,
-            eq: { high: 0, mid: 0, low: 0 },
-            auxSends: [0, 0],
-            compressor: { threshold: -20, ratio: 4, enabled: false },
-            muted: false,
-            solo: false,
-        };
+        });
         setTracks([...tracks, newTrack]);
     };
 
     const updateTrackVolume = (trackId, volume) => {
         const track = tracks.find(t => t.id === trackId);
         setTracks(tracks.map(t => t.id === trackId ? { ...t, volume } : t));
-        AudioPlaybackService.setTrackVolume(trackId, volume);
 
-        // Sync to UnifiedAudioEngine mixer
-        if (track) {
-            const instrumentMap = {
-                'Lead Vocals': 'vocal',
-                'Piano': 'piano',
-                'Drums': 'drums',
-                'Bass Guitar': 'bass',
-                'Electric Guitar': 'guitar',
-                'Synth Pad': 'synth',
-                'Strings': 'violin',
-                'Backing Vocals': 'vocal'
-            };
-            const instrumentId = instrumentMap[track.name];
-            if (instrumentId) {
+        // Sync to UnifiedAudioEngine mixer for all instruments mapped to this track
+        Object.entries(INSTRUMENT_TRACK_MAP).forEach(([instrumentId, trackId_map]) => {
+            if (trackId_map === trackId) {
                 UnifiedAudioEngine.setMixerSettings(instrumentId, { volume });
             }
-        }
+        });
     };
 
     const updateTrackPan = (trackId, pan) => {
         setTracks(tracks.map(t => t.id === trackId ? { ...t, pan } : t));
-        AudioPlaybackService.setTrackPan(trackId, pan);
+
+        // Sync to UnifiedAudioEngine mixer
+        Object.entries(INSTRUMENT_TRACK_MAP).forEach(([instrumentId, trackId_map]) => {
+            if (trackId_map === trackId) {
+                UnifiedAudioEngine.setMixerSettings(instrumentId, { pan });
+            }
+        });
     };
 
     const updateTrackGain = (trackId, gain) => {
         setTracks(tracks.map(t => t.id === trackId ? { ...t, gain } : t));
-        AudioPlaybackService.setTrackGain(trackId, gain);
     };
 
     const updateTrackEQ = (trackId, eq) => {
         setTracks(tracks.map(t => t.id === trackId ? { ...t, eq: { ...t.eq, ...eq } } : t));
-        AudioPlaybackService.setTrackEQ(trackId, eq);
+    };
+
+    const updateTrackEffect = (trackId, effectType, settings) => {
+        setTracks(tracks.map(t => {
+            if (t.id === trackId) {
+                const newEffects = { ...t.effects, [effectType]: { ...t.effects[effectType], ...settings } };
+                
+                // Trigger audio engine updates based on effect type
+                if (effectType === 'reverb') {
+                    // Reverb sync handled via UnifiedAudioEngine if needed
+                } else if (effectType === 'delay') {
+                    // Delay sync handled via UnifiedAudioEngine if needed
+                }
+                
+                return { ...t, effects: newEffects };
+            }
+            return t;
+        }));
     };
 
     const updateTrackMute = (trackId, muted) => {
         const track = tracks.find(t => t.id === trackId);
         setTracks(tracks.map(t => t.id === trackId ? { ...t, muted } : t));
         if (track) {
-            AudioPlaybackService.setTrackMute(trackId, muted, track.volume);
+            // AudioPlaybackService.setTrackMute(trackId, muted, track.volume); // Removed
+            
+            // Sync to UnifiedAudioEngine mixer
+            Object.entries(INSTRUMENT_TRACK_MAP).forEach(([instrumentId, trackId_map]) => {
+                if (trackId_map === trackId) {
+                    UnifiedAudioEngine.setMixerSettings(instrumentId, { mute: muted });
+                }
+            });
         }
     };
 
@@ -288,7 +231,6 @@ export const ProjectProvider = ({ children }) => {
             if (t.id === trackId) {
                 const newAuxSends = [...t.auxSends];
                 newAuxSends[sendIndex] = level;
-                AudioPlaybackService.setTrackAuxSend(trackId, sendIndex, level);
                 return { ...t, auxSends: newAuxSends };
             }
             return t;
@@ -376,9 +318,10 @@ export const ProjectProvider = ({ children }) => {
     const clearAllData = async () => {
         try {
             await AsyncStorage.removeItem('@recordings');
+            await AsyncStorage.removeItem('@projects');
             await AsyncStorage.removeItem('@user_profile');
             setRecordings([]);
-            setTracks([]);
+            setTracks(INSTRUMENT_TRACKS.map(normalizeTrack));
             setClips([]);
             console.log('All local data cleared.');
             return { success: true };
@@ -388,12 +331,47 @@ export const ProjectProvider = ({ children }) => {
         }
     };
 
-    const value = {
+    const saveCurrentProject = async (name) => {
+        const projectName = name || currentProjectName;
+        const projectData = {
+            id: Date.now().toString(),
+            name: projectName,
+            tempo,
+            tracks,
+            clips,
+            recordings,
+            updatedAt: new Date().toISOString()
+        };
+
+        try {
+            // Save to project list in AsyncStorage
+            const existingProjectsStr = await AsyncStorage.getItem('@projects');
+            const existingProjects = existingProjectsStr ? JSON.parse(existingProjectsStr) : [];
+            
+            // Upsert by name
+            const updatedProjects = [...existingProjects.filter(p => p.name !== projectName), projectData];
+            await AsyncStorage.setItem('@projects', JSON.stringify(updatedProjects));
+            
+            setCurrentProjectName(projectName);
+            console.log('Project saved:', projectName);
+
+            // If user is authenticated, we could sync to Supabase JSONB here
+            // (Decision 5 implementation would go here)
+
+            return projectData;
+        } catch (error) {
+            console.error('Failed to save project:', error);
+            throw error;
+        }
+    };
+
+    const memoizedValue = useMemo(() => ({
         tracks,
         clips,
         isPlaying,
         currentTime,
         tempo,
+        setTempo,
         togglePlayback,
         stopPlayback,
         addTrack,
@@ -401,6 +379,7 @@ export const ProjectProvider = ({ children }) => {
         updateTrackPan,
         updateTrackGain,
         updateTrackEQ,
+        updateTrackEffect,
         updateTrackMute,
         updateTrackSolo,
         updateTrackAuxSend,
@@ -413,14 +392,24 @@ export const ProjectProvider = ({ children }) => {
         deleteRecording,
         updateRecording,
         clearAllData,
+        saveCurrentProject,
+        currentProjectName,
         zoomLevel: 1,
         setZoomLevel: () => { },
         selectedClipId,
         setSelectedClipId,
-    };
+        masterVolume,
+        updateMasterVolume: (val) => {
+            setMasterVolume(val);
+            UnifiedAudioEngine.setMasterVolume(val);
+        },
+        timeAnimatedValue,
+    }), [
+        tracks, clips, isPlaying, currentTime, tempo, recordings, selectedClipId, masterVolume, currentProjectName
+    ]);
 
     return (
-        <ProjectContext.Provider value={value}>
+        <ProjectContext.Provider value={memoizedValue}>
             {children}
         </ProjectContext.Provider>
     );

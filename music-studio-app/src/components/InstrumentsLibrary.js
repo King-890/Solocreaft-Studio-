@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AnimatedCard from './AnimatedCard';
+import WebAudioEngine from '../services/WebAudioEngine';
 
 const INSTRUMENTS = [
     { id: 'piano', name: 'Piano', icon: '🎹', color: '#6200ee' },
@@ -20,6 +21,17 @@ const INSTRUMENTS = [
 export default function InstrumentsLibrary() {
     const { width } = useWindowDimensions();
     const navigation = useNavigation();
+
+    useEffect(() => {
+        // PRELOAD CORE ORCHESTRA (Background)
+        if (Platform.OS === 'web') {
+            const preloadDelay = setTimeout(() => {
+                console.log('🎻 Deep preloading core orchestra samples...');
+                WebAudioEngine.preload();
+            }, 1000);
+            return () => clearTimeout(preloadDelay);
+        }
+    }, []);
 
     const handleInstrumentPress = (instrumentId) => {
         navigation.navigate('Studio', { initialInstrument: instrumentId });

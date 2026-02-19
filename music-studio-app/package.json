@@ -5,6 +5,7 @@
   "scripts": {
     "start": "npx expo-doctor && expo start --tunnel",
     "tunnel": "expo start --tunnel",
+    "clear": "expo start --clear",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
@@ -33,6 +34,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-audio-api": "^0.1.0",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-reanimated": "~4.1.1",
     "react-native-responsive-screen": "^1.4.2",
@@ -41,6 +43,7 @@
     "react-native-svg": "15.12.1",
     "react-native-url-polyfill": "^3.0.0",
     "react-native-web": "^0.21.0",
+    "react-native-worklets": "0.5.1",
     "react-native-worklets-core": "^1.6.2"
   },
   "private": true,

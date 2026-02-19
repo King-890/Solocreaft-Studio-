@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserProgress } from '../contexts/UserProgressContext';
+import { createShadow } from '../utils/shadows';
+import { sc, normalize, SCREEN_HEIGHT } from '../utils/responsive';
 
 /**
  * PerformanceRecorder Component
@@ -28,13 +30,19 @@ export default function PerformanceRecorder({
     const countInScale = useRef(new Animated.Value(0)).current;
     const recordPulse = useRef(new Animated.Value(1)).current;
     const buttonScale = useRef(new Animated.Value(1)).current;
+    const countInRef = useRef(null);
 
     // Recording timer
     const timerRef = useRef(null);
 
-    // Count-in animation
+    // Count-in animation and focus management
     useEffect(() => {
         if (showCountIn) {
+            // On web, move focus to the count-in overlay to avoid aria-hidden focus conflict
+            if (Platform.OS === 'web' && countInRef.current) {
+                countInRef.current.focus();
+            }
+
             Animated.sequence([
                 Animated.spring(countInScale, {
                     toValue: 1,
@@ -152,7 +160,11 @@ export default function PerformanceRecorder({
         <View style={styles.container}>
             {/* Count-in Overlay */}
             {showCountIn && (
-                <View style={styles.countInOverlay}>
+                <View 
+                    ref={countInRef}
+                    style={styles.countInOverlay}
+                    {...(Platform.OS === 'web' ? { 'aria-modal': true, role: 'dialog', tabIndex: -1, focusable: true } : { importantForAccessibility: 'yes' })}
+                >
                     <Animated.View
                         style={[
                             styles.countInCircle,
@@ -170,13 +182,17 @@ export default function PerformanceRecorder({
             )}
 
             {/* Record Button */}
-            <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
+            <Animated.View 
+                style={{ transform: [{ scale: buttonScale }] }}
+                {...(Platform.OS === 'web' && showCountIn ? { 'aria-hidden': true, tabIndex: -1, inert: '' } : {})}
+            >
                 <TouchableOpacity
                     onPress={handleRecordPress}
                     onPressIn={handlePressIn}
                     onPressOut={handlePressOut}
                     activeOpacity={0.9}
                     style={styles.recordButtonContainer}
+                    disabled={showCountIn}
                 >
                     <LinearGradient
                         colors={isRecording ? ['#E74C3C', '#C0392B'] : ['#3498DB', '#2980B9']}
@@ -222,8 +238,8 @@ export default function PerformanceRecorder({
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        top: 80, // Below header
-        right: 20,
+        top: sc(15), 
+        right: sc(20),
         alignItems: 'flex-end',
         zIndex: 100,
     },
@@ -251,17 +267,13 @@ const styles = StyleSheet.create({
         fontFamily: 'Orbitron-Medium',
     },
     recordButtonContainer: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
+        ...createShadow({ color: '#000', offsetY: 4, opacity: 0.3, radius: 8, elevation: 8 }),
     },
     recordButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
+        paddingHorizontal: sc(16),
+        paddingVertical: sc(8),
         borderRadius: 30,
-        minWidth: 160,
+        minWidth: sc(140),
     },
     recordPulse: {
         position: 'absolute',
@@ -293,13 +305,13 @@ const styles = StyleSheet.create({
     },
     recordButtonText: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: normalize(12),
         fontWeight: 'bold',
         fontFamily: 'Montserrat-Bold',
     },
     recordDuration: {
         color: 'rgba(255, 255, 255, 0.9)',
-        fontSize: 11,
+        fontSize: normalize(10),
         fontFamily: 'Orbitron-Medium',
         marginTop: 2,
     },

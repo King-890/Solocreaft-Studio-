@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Button, ScrollView, TouchableOpacity } from 'react-native';
 import { errorMonitor } from '../services/ErrorMonitor';
-import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function DebugScreen({ navigation }) {
     const [errors, setErrors] = useState([]);
-    const [supabaseStatus, setSupabaseStatus] = useState('Testing...');
+    const [storageStatus, setStorageStatus] = useState('Checking...');
     const [authStatus, setAuthStatus] = useState({});
     const auth = useAuth();
 
@@ -19,8 +18,8 @@ export default function DebugScreen({ navigation }) {
         // Load existing errors
         setErrors(errorMonitor.getRecentErrors(10));
 
-        // Test Supabase connection
-        testSupabase();
+        // Test Local Storage
+        testStorage();
 
         // Get auth status
         setAuthStatus({
@@ -33,16 +32,17 @@ export default function DebugScreen({ navigation }) {
         return unsubscribe;
     }, [auth]);
 
-    const testSupabase = async () => {
+    const testStorage = async () => {
         try {
-            const { data, error } = await supabase.auth.getSession();
-            if (error) {
-                setSupabaseStatus(`❌ Error: ${error.message}`);
+            await AsyncStorage.setItem('debug_test', 'working');
+            const val = await AsyncStorage.getItem('debug_test');
+            if (val === 'working') {
+                setStorageStatus('✅ Local Storage working perfectly');
             } else {
-                setSupabaseStatus(`✅ Connected (Session: ${data.session ? 'Yes' : 'No'})`);
+                setStorageStatus('❌ Local Storage read failed');
             }
         } catch (err) {
-            setSupabaseStatus(`❌ Exception: ${err.message}`);
+            setStorageStatus(`❌ Storage Exception: ${err.message}`);
         }
     };
 
@@ -65,12 +65,12 @@ export default function DebugScreen({ navigation }) {
                 <Text style={styles.subtitle}>If you see this, React Native is working!</Text>
             </View>
 
-            {/* Supabase Status */}
+            {/* Storage Status */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Supabase Connection</Text>
-                <Text style={styles.statusText}>{supabaseStatus}</Text>
-                <TouchableOpacity style={styles.button} onPress={testSupabase}>
-                    <Text style={styles.buttonText}>Retest Connection</Text>
+                <Text style={styles.sectionTitle}>Local Storage Status</Text>
+                <Text style={styles.statusText}>{storageStatus}</Text>
+                <TouchableOpacity style={styles.button} onPress={testStorage}>
+                    <Text style={styles.buttonText}>Retest Storage</Text>
                 </TouchableOpacity>
             </View>
 

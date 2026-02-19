@@ -6,6 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { loadGLTF } from '../utils/loadModel';
 import { attachSpatialAudio } from './SpatialAudio';
 import { Platform, View, Text, StyleSheet } from 'react-native';
+import { createTextShadow } from '../utils/shadows';
 
 export default function ThreeScene({ instrumentModels }) {
     const glViewRef = useRef();
@@ -101,9 +102,7 @@ const webStyles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#FF4500',
         marginBottom: 20,
-        textShadowColor: '#FF4500',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 20,
+        ...createTextShadow({ color: '#FF4500', radius: 20 }),
     },
     message: {
         fontSize: 18,

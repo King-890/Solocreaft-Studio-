@@ -1,33 +1,152 @@
-// Audio playback service handling both Web Audio API (Web) and Expo AV (Native)
 import { Platform } from 'react-native';
-import { Audio } from 'expo-av';
+import * as Audio from 'expo-audio';
+import UnifiedAudioContext from './UnifiedAudioContext';
 
 class AudioPlaybackService {
     constructor() {
         this.audioContext = null;
         this.audioBuffers = new Map(); // Store loaded audio buffers (Web)
         this.activeSources = []; // Track active audio sources (Web)
-        this.trackGainNodes = new Map(); // Track ID -> GainNode (Web)
-        this.nativeSounds = new Map(); // Clip ID -> Sound Object (Native)
-        this.nativeSoundTrackIds = new Map(); // Clip ID -> Track ID (Native)
+        this.nativePlayers = new Map(); // Clip ID -> AudioPlayer Object (Native)
+        this.nativePlayerTrackIds = new Map(); // Clip ID -> Track ID (Native)
+        this.masterGainNode = null; // Master Volume Node
+        this.masterVolume = 1.0; 
+        
+        // Effects Nodes
+        this.masterDistortionNode = null;
+        this.masterDelayNode = null;
+        this.masterDelayFeedback = null;
     }
 
-    init() {
-        if (Platform.OS === 'web' && !this.audioContext) {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    async init() {
+        if (!this.audioContext) {
+            this.audioContext = UnifiedAudioContext.get();
+            if (!this.audioContext) return;
+
+            console.log('🔗 AudioPlaybackService Initialized with UnifiedAudioContext');
+            
+            this.masterAnalyser = this.audioContext.createAnalyser();
+            this.masterAnalyser.fftSize = 2048;
+
+            // GLOBAL STUDIO REVERB BUS
+            this.masterReverbNode = this.audioContext.createConvolver();
+            const impulse = await this.createReverbImpulse(2.5, 3.0); // Studio Hall size
+            this.masterReverbNode.buffer = impulse;
+            
+            this.masterReverbGain = this.audioContext.createGain();
+            this.masterReverbGain.gain.value = 0.15; // Subtle but noticeable 15% wet
+            
+            this.masterReverbNode.connect(this.masterReverbGain);
+            this.masterReverbGain.connect(this.masterAnalyser);
+
+            // MASTER LIMITER/PROTECTION CHAIN
+            this.masterLimiter = this.audioContext.createDynamicsCompressor();
+            this.masterLimiter.threshold.setValueAtTime(-1, this.audioContext.currentTime);
+            this.masterLimiter.knee.setValueAtTime(0, this.audioContext.currentTime);
+            this.masterLimiter.ratio.setValueAtTime(20, this.audioContext.currentTime);
+            this.masterLimiter.attack.setValueAtTime(0.003, this.audioContext.currentTime);
+            this.masterLimiter.release.setValueAtTime(0.1, this.audioContext.currentTime);
+
+            this.masterAnalyser.connect(this.masterLimiter);
+            
+            // --- EFFECTS RACK ---
+            
+            // 1. Distortion (WaveShaper)
+            this.masterDistortionNode = this.audioContext.createWaveShaper();
+            this.masterDistortionNode.curve = this.makeDistortionCurve(0);
+            this.masterDistortionNode.oversample = '4x';
+            
+            // 2. Delay
+            this.masterDelayNode = this.audioContext.createDelay(2.0);
+            this.masterDelayNode.delayTime.value = 0.4;
+            this.masterDelayFeedback = this.audioContext.createGain();
+            this.masterDelayFeedback.gain.value = 0.4;
+            
+            // Delay Loop
+            this.masterDelayNode.connect(this.masterDelayFeedback);
+            this.masterDelayFeedback.connect(this.masterDelayNode);
+            
+            this.masterDelayGain = this.audioContext.createGain();
+            this.masterDelayGain.gain.value = 0; // Start off (mix)
+            this.masterDelayNode.connect(this.masterDelayGain);
+
+            // Connect Chain: Limiter -> [Distortion] -> Gain -> Destination
+            this.masterLimiter.connect(this.masterDistortionNode);
+            
+            this.masterGainNode = this.audioContext.createGain();
+            this.masterGainNode.gain.value = 2.5; // Increased baseline boost
+            
+            this.masterDistortionNode.connect(this.masterGainNode);
+            this.masterDelayGain.connect(this.masterGainNode);
+            
+            this.masterGainNode.connect(this.audioContext.destination);
+            
+            // Apply current master volume
+            this.setMasterVolume(this.masterVolume);
         }
     }
 
-    // Get or create a GainNode for a specific track (Web)
-    getTrackGainNode(trackId) {
-        if (!this.audioContext) return null;
-
-        if (!this.trackGainNodes.has(trackId)) {
-            const gainNode = this.audioContext.createGain();
-            gainNode.connect(this.audioContext.destination);
-            this.trackGainNodes.set(trackId, gainNode);
+    // --- Signal Chain Management (Web) ---
+    // Simplified Signal Chain (Web) ---
+    getTrackSignalChain() {
+        if (!this.audioContext) {
+            this.init();
+            if (!this.audioContext) return null;
         }
-        return this.trackGainNodes.get(trackId);
+
+        // Return a direct connection to master analyser
+        return {
+            input: this.masterAnalyser || this.audioContext.destination
+        };
+    }
+
+    // Helper to create a simple Reverb impulse
+    async createReverbImpulse(duration = 2, decay = 2) {
+        const sampleRate = this.audioContext.sampleRate;
+        const length = sampleRate * duration;
+        const impulse = this.audioContext.createBuffer(2, length, sampleRate);
+        for (let i = 0; i < 2; i++) {
+            const channel = impulse.getChannelData(i);
+            for (let j = 0; j < length; j++) {
+                channel[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / length, decay);
+            }
+        }
+        return impulse;
+    }
+
+    // Get or create a GainNode for a specific track (Legacy/Compatibility)
+    getTrackGainNode() {
+        return this.masterGainNode;
+    }
+
+    // Distortion Curve Helper
+    makeDistortionCurve(amount) {
+        const k = typeof amount === 'number' ? amount * 100 : 0;
+        const n_samples = 44100;
+        const curve = new Float32Array(n_samples);
+        const deg = Math.PI / 180;
+        for (let i = 0 ; i < n_samples; ++i ) {
+            const x = i * 2 / n_samples - 1;
+            curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
+        }
+        return curve;
+    }
+
+    setDistortion(amount) {
+        if (!this.masterDistortionNode) return;
+        this.masterDistortionNode.curve = this.makeDistortionCurve(amount);
+    }
+
+    setDelay(mix, time = 0.4, feedback = 0.4) {
+        if (!this.masterDelayNode) return;
+        this.masterDelayGain.gain.setTargetAtTime(mix, this.audioContext.currentTime, 0.05);
+        this.masterDelayNode.delayTime.setTargetAtTime(time, this.audioContext.currentTime, 0.05);
+        this.masterDelayFeedback.gain.setTargetAtTime(feedback, this.audioContext.currentTime, 0.05);
+    }
+
+    setReverb(mix) {
+        if (!this.masterReverbGain) return;
+        this.masterReverbGain.gain.setTargetAtTime(mix, this.audioContext.currentTime, 0.05);
     }
 
     async loadAudioFromUri(uri, clipId) {
@@ -73,9 +192,13 @@ class AudioPlaybackService {
                 const source = this.audioContext.createBufferSource();
                 source.buffer = audioBuffer;
 
-                // Connect to the specific track's GainNode instead of destination
-                const trackGainNode = this.getTrackGainNode(clip.trackId);
-                source.connect(trackGainNode);
+                // Connect to the specific track's Signal Chain Input
+                const chain = this.getTrackSignalChain(clip.trackId);
+                if (chain) {
+                    source.connect(chain.input);
+                } else {
+                    source.connect(this.audioContext.destination);
+                }
 
                 const clipStartTime = clip.startTime / 1000;
                 const currentPlaybackTime = startOffset / 1000;
@@ -109,48 +232,60 @@ class AudioPlaybackService {
     // --- Native Implementation ---
     async playClipNative(clip, startOffset) {
         try {
-            if (this.nativeSounds.has(clip.id)) {
-                const oldSound = this.nativeSounds.get(clip.id);
-                await oldSound.unloadAsync();
-                this.nativeSounds.delete(clip.id);
-                this.nativeSoundTrackIds.delete(clip.id);
+            if (this.nativePlayers.has(clip.id)) {
+                this.nativePlayers.get(clip.id).pause();
+                this.nativePlayers.delete(clip.id);
+                this.nativePlayerTrackIds.delete(clip.id);
             }
 
-            const { sound } = await Audio.Sound.createAsync(
-                { uri: clip.audioUri },
-                { shouldPlay: false }
-            );
-
-            this.nativeSounds.set(clip.id, sound);
-            this.nativeSoundTrackIds.set(clip.id, clip.trackId);
+            // In expo-audio, we use createAudioPlayer
+            const player = Audio.createAudioPlayer(clip.audioUri);
+            player.volume = this.masterVolume; // Apply master volume to clip
+            
+            this.nativePlayers.set(clip.id, player);
+            this.nativePlayerTrackIds.set(clip.id, clip.trackId);
 
             const clipStartTime = clip.startTime;
             const currentPlaybackTime = startOffset;
 
             if (currentPlaybackTime >= clipStartTime) {
                 const offsetIntoClip = currentPlaybackTime - clipStartTime;
-                await sound.playFromPositionAsync(offsetIntoClip);
+                player.seekTo(offsetIntoClip);
+                player.play();
             } else {
                 const delay = clipStartTime - currentPlaybackTime;
-                setTimeout(async () => {
+                setTimeout(() => {
                     try {
-                        await sound.playAsync();
+                        player.play();
                     } catch (e) {
                         console.warn('Delayed playback failed', e);
                     }
                 }, delay);
             }
 
-            sound.setOnPlaybackStatusUpdate(async (status) => {
+            // Cleanup when clip ends
+            player.addListener('playbackStatusUpdate', (status) => {
                 if (status.didJustFinish) {
-                    await sound.unloadAsync();
-                    this.nativeSounds.delete(clip.id);
-                    this.nativeSoundTrackIds.delete(clip.id);
+                    this.nativePlayers.delete(clip.id);
+                    this.nativePlayerTrackIds.delete(clip.id);
                 }
             });
 
         } catch (error) {
             console.error('Error playing clip (Native):', error);
+        }
+    }
+
+    setMasterVolume(volume) {
+        this.masterVolume = volume;
+        if (Platform.OS === 'web' && this.masterGainNode && this.audioContext) {
+            // Apply a 2.5x boost on top of the master slider (Professional Loudness)
+            this.masterGainNode.gain.setTargetAtTime(volume * 2.5, this.audioContext.currentTime, 0.05);
+        } else if (Platform.OS !== 'web') {
+            // Update all active native players
+            this.nativePlayers.forEach(player => {
+                try { player.volume = volume; } catch (e) {}
+            });
         }
     }
 
@@ -161,14 +296,13 @@ class AudioPlaybackService {
             });
             this.activeSources = [];
         } else {
-            this.nativeSounds.forEach(async (sound) => {
+            this.nativePlayers.forEach((player, clipId) => {
                 try {
-                    await sound.stopAsync();
-                    await sound.unloadAsync();
+                    player.pause();
                 } catch (e) { }
             });
-            this.nativeSounds.clear();
-            this.nativeSoundTrackIds.clear();
+            this.nativePlayers.clear();
+            this.nativePlayerTrackIds.clear();
         }
     }
 
@@ -178,63 +312,30 @@ class AudioPlaybackService {
         await Promise.all(promises);
     }
 
-    // --- Real-time Mixer Controls ---
-
-    setTrackVolume(trackId, volume) {
-        if (Platform.OS === 'web') {
-            const gainNode = this.getTrackGainNode(trackId);
-            if (gainNode) {
-                // Smooth transition to avoid clicks
-                gainNode.gain.setTargetAtTime(volume, this.audioContext.currentTime, 0.02);
-            }
-        } else {
-            // Native: Iterate all active sounds for this track
-            this.nativeSounds.forEach(async (sound, clipId) => {
-                if (this.nativeSoundTrackIds.get(clipId) === trackId) {
-                    try {
-                        await sound.setVolumeAsync(volume);
-                    } catch (e) {
-                        console.warn('Failed to set volume for clip', clipId);
-                    }
-                }
-            });
+    // --- Visualization Data Access ---
+    getFrequencyData() {
+        if (Platform.OS !== 'web' || !this.masterAnalyser) return new Uint8Array(0);
+        
+        // PERFORMANCE: Reuse buffer to avoid GC pressure in the 60fps loop
+        if (!this.frequencyDataBuffer || this.frequencyDataBuffer.length !== this.masterAnalyser.frequencyBinCount) {
+            this.frequencyDataBuffer = new Uint8Array(this.masterAnalyser.frequencyBinCount);
         }
+        
+        this.masterAnalyser.getByteFrequencyData(this.frequencyDataBuffer);
+        return this.frequencyDataBuffer;
     }
 
-    setTrackMute(trackId, muted, previousVolume) {
-        const targetVolume = muted ? 0 : previousVolume;
-        this.setTrackVolume(trackId, targetVolume);
-    }
+    getPeakLevel() {
+        if (Platform.OS !== 'web' || !this.masterAnalyser) return 0;
+        const dataArray = new Uint8Array(this.masterAnalyser.fftSize);
+        this.masterAnalyser.getByteTimeDomainData(dataArray);
 
-    setTrackPan(trackId, pan) {
-        if (Platform.OS === 'web') {
-            // Web Audio API Pan
-            // Note: This requires a StereoPannerNode to be set up in the audio graph
-            // For now, we'll log it as a placeholder or implement if PannerNode exists
-            console.log(`Setting track ${trackId} pan to ${pan}`);
-        } else {
-            // console.log('Pan not supported on native expo-av yet');
+        let max = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            const val = Math.abs(dataArray[i] - 128) / 128;
+            if (val > max) max = val;
         }
-    }
-
-    setTrackGain(trackId, gain) {
-        // Gain is essentially volume, but applied before the fader. 
-        // For simplicity, we might multiply it with volume in the future.
-        console.log(`Setting track ${trackId} gain to ${gain}`);
-    }
-
-    setTrackEQ(trackId, eq) {
-        console.log(`Setting track ${trackId} EQ:`, eq);
-        // Web: BiquadFilterNode
-    }
-
-    setTrackAuxSend(trackId, sendIndex, level) {
-        console.log(`Setting track ${trackId} Aux ${sendIndex} to ${level}`);
-    }
-
-    setTrackCompressor(trackId, settings) {
-        console.log(`Setting track ${trackId} Compressor:`, settings);
-        // Web: DynamicsCompressorNode
+        return max;
     }
 
     async playTestTone() {
@@ -272,3 +373,4 @@ class AudioPlaybackService {
 }
 
 export default new AudioPlaybackService();
+

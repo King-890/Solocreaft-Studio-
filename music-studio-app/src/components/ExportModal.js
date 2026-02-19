@@ -1,26 +1,36 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ActivityIndicator, Platform, Alert } from 'react-native';
+import { useProject } from '../contexts/ProjectContext';
 import ExportService from '../services/ExportService';
 
 export default function ExportModal({ visible, onClose, projectName = 'My Project' }) {
+    const { clips, tracks, recordings, tempo } = useProject();
     const [exporting, setExporting] = useState(false);
     const [format, setFormat] = useState('wav');
+
+    // Calculate metadata
+    const activeTracks = tracks.filter(t => !t.muted).length;
+    const duration = clips.length > 0 
+        ? Math.max(...clips.map(c => c.startTime + c.duration)).toFixed(1)
+        : "0.0";
+    const sampleRate = "44,100 Hz";
 
     const handleExport = async () => {
         setExporting(true);
         try {
-            if (format === 'wav') {
-                await ExportService.exportAsWAV(projectName);
+            if (Platform.OS === 'web') {
+                await ExportService.exportAsWAV(clips, tracks, tempo);
             } else {
-                await ExportService.exportAsMP3(projectName);
+                await ExportService.exportNative(recordings);
             }
-            setTimeout(() => {
-                setExporting(false);
-                onClose();
-            }, 1000);
+            
+            setExporting(false);
+            onClose();
+            Alert.alert('Success', 'Export completed successfully!');
         } catch (error) {
             console.error('Export failed:', error);
             setExporting(false);
+            Alert.alert('Export Error', error.message || 'Failed to export project');
         }
     };
 
@@ -55,6 +65,21 @@ export default function ExportModal({ visible, onClose, projectName = 'My Projec
                             </Text>
                             <Text style={styles.formatSubtext}>Compressed</Text>
                         </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.metadataSection}>
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Duration</Text>
+                            <Text style={styles.infoValue}>{duration}s</Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Tracks</Text>
+                            <Text style={styles.infoValue}>{activeTracks} active</Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Sample Rate</Text>
+                            <Text style={styles.infoValue}>{sampleRate}</Text>
+                        </View>
                     </View>
 
                     {exporting ? (
@@ -137,6 +162,27 @@ const styles = StyleSheet.create({
     exportingText: {
         color: '#888',
         marginTop: 12,
+    },
+    metadataSection: {
+        marginBottom: 24,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.06)',
+    },
+    infoRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.06)',
+    },
+    infoLabel: {
+        color: '#94a3b8',
+        fontSize: 13,
+    },
+    infoValue: {
+        color: '#fff',
+        fontSize: 13,
+        fontWeight: '700',
     },
     actions: {
         flexDirection: 'row',

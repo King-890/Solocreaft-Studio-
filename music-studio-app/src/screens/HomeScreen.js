@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions, StatusBar, Animated } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNavigation } from '@react-navigation/native';
@@ -11,6 +11,7 @@ import ImmersiveBackground from '../components/ImmersiveBackground';
 import UIConfig from '../constants/UIConfig';
 import AudioManager from '../utils/AudioManager';
 import AnimatedCard from '../components/AnimatedCard';
+import { createTextShadow } from '../utils/shadows';
 
 const { width, height } = Dimensions.get('window');
 const { COLORS, FONTS, SHADOWS, LAYOUT, ANIMATIONS } = UIConfig;
@@ -26,8 +27,8 @@ export default function HomeScreen() {
     useEffect(() => {
         if (audioEnabled) {
             const startAudio = async () => {
-                await AudioManager.playHomeScreenAmbience();
-                setAudioStarted(true);
+                const started = await AudioManager.playHomeScreenAmbience();
+                setAudioStarted(started);
             };
             startAudio();
         } else {
@@ -41,9 +42,15 @@ export default function HomeScreen() {
     }, [audioEnabled]);
 
     const handleScreenPress = async () => {
+        // [MOBILE UNLOCK] Attempt to activate BOTH ambient and instrument engines
+        const UnifiedAudioEngine = require('../services/UnifiedAudioEngine').default;
+        UnifiedAudioEngine.activateAudio().catch(() => {});
+
         if (!audioStarted && audioEnabled) {
-            await AudioManager.playHomeScreenAmbience();
-            setAudioStarted(true);
+            const resumed = await AudioManager.resumeContext();
+            if (resumed) {
+                setAudioStarted(true);
+            }
         }
     };
 
@@ -84,6 +91,11 @@ export default function HomeScreen() {
                 )}
 
                 <View style={styles.uiContainer}>
+                    {audioEnabled && !audioStarted && (
+                        <Animated.View style={styles.audioHint}>
+                            <Text style={styles.audioHintText}>Tap anywhere to start soundtrack 🎵</Text>
+                        </Animated.View>
+                    )}
                     <TouchableOpacity
                         style={styles.profileOrb}
                         onPress={() => setShowProfile(true)}
@@ -237,5 +249,20 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         fontSize: 14,
         marginTop: 4,
+    },
+    audioHint: {
+        position: 'absolute',
+        top: 20,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        zIndex: 10,
+    },
+    audioHintText: {
+        color: COLORS.textGold,
+        fontSize: 12,
+        fontWeight: '600',
+        letterSpacing: 0.5,
+        ...createTextShadow({ color: 'rgba(0,0,0,0.5)', offsetX: 1, offsetY: 1, radius: 4 }),
     },
 });

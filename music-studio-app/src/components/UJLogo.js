@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, StyleSheet, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { createTextShadow } from '../utils/shadows';
 
 /**
  * UJ Logo Component
@@ -299,12 +300,7 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         color: '#000',
         opacity: 0.3,
-        // Web compatibility
-        ...Platform.select({
-            web: {
-                textShadow: '0 0 0 rgba(0,0,0,0.3)', // Reset native shadow
-            }
-        })
+        ...createTextShadow({ color: 'rgba(0,0,0,0.3)', offsetX: 0, offsetY: 0, radius: 0 }),
     },
     mainText: {
         fontWeight: '900',

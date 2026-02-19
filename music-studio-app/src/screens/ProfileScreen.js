@@ -5,13 +5,16 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import { useProject } from '../contexts/ProjectContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { COLORS, SPACING } from '../constants/UIConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { moveRecordingToPermanentStorage } from '../utils/fileSystem';
+import { createShadow, createTextShadow } from '../utils/shadows';
 
 export default function ProfileScreen() {
     const { user, signOut } = useAuth();
     const { projects = [], tracks = [], clips = [] } = useProject() || {};
+    const { ambienceEnabled, toggleAmbience, stopAllAudio } = useSettings();
 
     // Calculate stats
     const projectCount = projects.length || 0;
@@ -276,7 +279,42 @@ export default function ProfileScreen() {
                         </View>
                     </View>
 
-                    {/* Profile Card and Stats only, Logout removed */}
+                    {/* Audio Control Section */}
+                    <View style={styles.sectionContainer}>
+                        <Text style={styles.sectionTitle}>Audio Control</Text>
+                        
+                        <View style={styles.settingRow}>
+                            <View style={styles.settingInfo}>
+                                <Text style={styles.settingLabel}>Background Ambience</Text>
+                                <Text style={styles.settingSublabel}>Enable or disable studio background music</Text>
+                            </View>
+                            <TouchableOpacity 
+                                style={[styles.toggleBase, ambienceEnabled ? styles.toggleOn : styles.toggleOff]}
+                                onPress={() => toggleAmbience(!ambienceEnabled)}
+                            >
+                                <View style={[styles.toggleHandle, ambienceEnabled ? styles.handleOn : styles.handleOff]} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity 
+                            style={styles.stopButton}
+                            onPress={() => {
+                                stopAllAudio();
+                                if (Platform.OS !== 'web') {
+                                    Alert.alert('Studio Muted', 'All active audio playback has been terminated.');
+                                }
+                            }}
+                        >
+                            <LinearGradient
+                                colors={['#FF4B2B', '#FF416C']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.stopButtonGradient}
+                            >
+                                <Text style={styles.stopButtonText}>🛑 STOP ALL MUSIC</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
 
                     {/* Legal & Data Management Section */}
                     <View style={styles.sectionContainer}>
@@ -300,6 +338,16 @@ export default function ProfileScreen() {
                             }
                         >
                             <Text style={styles.legalButtonText}>📄 Terms of Service</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={styles.legalButton}
+                            onPress={() => Platform.OS === 'web' 
+                                ? window.open('https://King-890.github.io/Solocreaft-Studio-/docs/delete_account.html', '_blank')
+                                : Alert.alert('Request Data Deletion', 'Please visit: https://King-890.github.io/Solocreaft-Studio-/docs/delete_account.html')
+                            }
+                        >
+                            <Text style={styles.legalButtonText}>🗑️ Data Deletion Request</Text>
                         </TouchableOpacity>
 
                         <View style={styles.dangerZone}>
@@ -331,10 +379,10 @@ export default function ProfileScreen() {
                         </View>
                     </View>
 
-                    {/* Developer Credit */}
+                    {/* Developer Credit & App Version */}
                     <View style={styles.creditContainer}>
                         <View style={styles.divider} />
-                        <Text style={styles.creditText}>Developed by</Text>
+                        <Text style={styles.creditText}>SoloCraft Studio</Text>
                         <LinearGradient
                             colors={['#BA55D3', '#9370DB']}
                             start={{ x: 0, y: 0 }}
@@ -343,7 +391,11 @@ export default function ProfileScreen() {
                         >
                             <Text style={styles.studioText}>UJ STUDIO</Text>
                         </LinearGradient>
-                        <Text style={styles.versionText}>v1.0.2</Text>
+                        <View style={styles.versionContainer}>
+                            <Text style={styles.versionLabel}>Version</Text>
+                            <Text style={styles.versionValue}>1.0.3 (Build 4)</Text>
+                        </View>
+                        <Text style={styles.rightsText}>© 2026 UJ Studios. All Rights Reserved.</Text>
                     </View>
 
                     <View style={{ height: 40 }} />
@@ -424,9 +476,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#fff',
         marginBottom: 6,
-        textShadowColor: 'rgba(0, 0, 0, 0.3)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 4,
+        ...createTextShadow({ color: 'rgba(0, 0, 0, 0.3)', offsetY: 2, radius: 4 }),
     },
     profileEmail: {
         fontSize: 16,
@@ -555,28 +605,52 @@ const styles = StyleSheet.create({
         marginBottom: SPACING.md,
     },
     creditText: {
-        fontSize: 12,
-        color: '#888',
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#fff',
         marginBottom: 8,
-        letterSpacing: 1,
+        letterSpacing: 1.5,
+        textTransform: 'uppercase',
     },
     studioBadge: {
-        paddingHorizontal: 24,
-        paddingVertical: 10,
-        borderRadius: 20,
-        elevation: 4,
+        paddingHorizontal: 28,
+        paddingVertical: 12,
+        borderRadius: 24,
+        elevation: 6,
+        marginBottom: 16,
     },
     studioText: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
         color: '#fff',
-        letterSpacing: 2,
+        letterSpacing: 3,
     },
-    versionText: {
+    versionContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+        marginTop: 8,
+    },
+    versionLabel: {
         fontSize: 11,
-        color: '#666',
-        marginTop: 12,
+        color: '#888',
+        marginRight: 6,
+        fontWeight: '600',
+    },
+    versionValue: {
+        fontSize: 12,
+        color: '#BA55D3',
+        fontWeight: 'bold',
         fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    },
+    rightsText: {
+        fontSize: 10,
+        color: '#555',
+        marginTop: 16,
+        letterSpacing: 0.5,
     },
     sectionContainer: {
         backgroundColor: '#1E1E1E',
@@ -632,5 +706,78 @@ const styles = StyleSheet.create({
         color: '#cf6679',
         fontSize: 15,
         fontWeight: 'bold',
+    },
+    settingRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        backgroundColor: '#2A2A2A',
+        padding: 16,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: '#3A3A3A',
+    },
+    settingInfo: {
+        flex: 1,
+    },
+    settingLabel: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    settingSublabel: {
+        color: '#888',
+        fontSize: 12,
+    },
+    toggleBase: {
+        width: 50,
+        height: 28,
+        borderRadius: 14,
+        padding: 3,
+        justifyContent: 'center',
+    },
+    toggleOn: {
+        backgroundColor: '#6200ee',
+    },
+    toggleOff: {
+        backgroundColor: '#444',
+    },
+    toggleHandle: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: '#fff',
+        elevation: 3,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+            }
+        })
+    },
+    handleOn: {
+        transform: [{ translateX: 22 }],
+    },
+    handleOff: {
+        transform: [{ translateX: 0 }],
+    },
+    stopButton: {
+        width: '100%',
+        marginTop: 10,
+        borderRadius: 14,
+        overflow: 'hidden',
+        elevation: 8,
+    },
+    stopButtonGradient: {
+        paddingVertical: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    stopButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '900',
+        letterSpacing: 1.5,
     },
 });

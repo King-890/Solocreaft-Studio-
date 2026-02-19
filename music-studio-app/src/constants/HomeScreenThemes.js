@@ -1,3 +1,5 @@
+import { createShadow } from '../utils/shadows';
+
 /**
  * Home Screen Theme Definitions
  * 
@@ -20,21 +22,8 @@ export const HOME_THEMES = {
         cardGradient: ['#1a1a1a', '#2a2a2a'],
 
         // Shadows
-        shadow: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
-        },
-
-        shadowSmall: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            elevation: 4,
-        },
+        shadow: createShadow({ color: '#000', offsetY: 4, opacity: 0.3, radius: 8, elevation: 8 }),
+        shadowSmall: createShadow({ color: '#000', offsetY: 2, opacity: 0.2, radius: 4, elevation: 4 }),
     },
 
     creativeLight: {
@@ -52,21 +41,8 @@ export const HOME_THEMES = {
         cardGradient: ['#ffffff', '#f8f9fa'],
 
         // Shadows
-        shadow: {
-            shadowColor: '#2d3436',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 12,
-            elevation: 4,
-        },
-
-        shadowSmall: {
-            shadowColor: '#2d3436',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 6,
-            elevation: 2,
-        },
+        shadow: createShadow({ color: '#2d3436', offsetY: 2, opacity: 0.1, radius: 12, elevation: 4 }),
+        shadowSmall: createShadow({ color: '#2d3436', offsetY: 1, opacity: 0.05, radius: 6, elevation: 2 }),
     },
 
     musicProducer: {
@@ -84,22 +60,10 @@ export const HOME_THEMES = {
         cardGradient: ['#1a0878', '#2a1a88'],
 
         // Shadows
-        shadow: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 10,
-            elevation: 10,
-        },
+        shadow: createShadow({ color: '#000', offsetY: 4, opacity: 0.4, radius: 10, elevation: 10 }),
 
         // Glows
-        glow: {
-            shadowColor: '#FFD700',
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.4,
-            shadowRadius: 10,
-            elevation: 10,
-        },
+        glow: createShadow({ color: '#FFD700', offsetY: 0, opacity: 0.4, radius: 10, elevation: 10 }),
     },
 };
 

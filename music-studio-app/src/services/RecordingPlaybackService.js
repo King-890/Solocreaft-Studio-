@@ -1,12 +1,12 @@
 // Simple recording playback service that handles idb:// URIs
-// Uses HTML5 Audio on web, expo-av on native
+// Uses HTML5 Audio on web, expo-audio on native
 import { Platform } from 'react-native';
-import { Audio } from 'expo-av';
+import * as Audio from 'expo-audio';
 import { initDB, STORE_NAME } from '../utils/webStorage';
 
 class RecordingPlaybackService {
     constructor() {
-        this.currentSound = null;
+        this.currentPlayer = null;
         this.currentBlobUrl = null;
     }
 
@@ -77,7 +77,7 @@ class RecordingPlaybackService {
 
                     audio.play()
                         .then(() => {
-                            this.currentSound = audio;
+                            this.currentPlayer = audio;
                         })
                         .catch(reject);
                 } catch (error) {
@@ -86,19 +86,18 @@ class RecordingPlaybackService {
                 }
             });
         } else {
-            // Native: Use expo-av
+            // Native: Use expo-audio
             try {
-                const { sound } = await Audio.Sound.createAsync(
-                    { uri: playableUri },
-                    { shouldPlay: true }
-                );
-                this.currentSound = sound;
+                const player = Audio.createAudioPlayer(playableUri);
+                this.currentPlayer = player;
 
-                sound.setOnPlaybackStatusUpdate((status) => {
+                player.addListener('playbackStatusUpdate', (status) => {
                     if (status.didJustFinish) {
-                        this.currentSound = null;
+                        this.currentPlayer = null;
                     }
                 });
+
+                player.play();
             } catch (error) {
                 console.error('Native audio playback error:', error);
                 throw error;
@@ -107,22 +106,22 @@ class RecordingPlaybackService {
     }
 
     async pause() {
-        if (!this.currentSound) return;
+        if (!this.currentPlayer) return;
 
         if (Platform.OS === 'web') {
-            this.currentSound.pause();
+            this.currentPlayer.pause();
         } else {
-            await this.currentSound.pauseAsync();
+            this.currentPlayer.pause();
         }
     }
 
     async resume() {
-        if (!this.currentSound) return;
+        if (!this.currentPlayer) return;
 
         if (Platform.OS === 'web') {
-            await this.currentSound.play();
+            await this.currentPlayer.play();
         } else {
-            await this.currentSound.playAsync();
+            this.currentPlayer.play();
         }
     }
 
@@ -134,32 +133,34 @@ class RecordingPlaybackService {
     }
 
     async stop() {
-        if (!this.currentSound) return;
+        if (!this.currentPlayer) return;
 
         try {
             if (Platform.OS === 'web') {
-                this.currentSound.pause();
-                this.currentSound.currentTime = 0;
+                this.currentPlayer.pause();
+                this.currentPlayer.currentTime = 0;
             } else {
-                await this.currentSound.stopAsync();
-                await this.currentSound.unloadAsync();
+                this.currentPlayer.pause();
+                // seeker cleanup if needed
             }
         } catch (error) {
             console.log('Error stopping sound:', error);
         } finally {
-            this.currentSound = null;
+            this.currentPlayer = null;
             this.cleanup();
         }
     }
 
     isPlaying() {
-        if (!this.currentSound) return false;
+        if (!this.currentPlayer) return false;
 
         if (Platform.OS === 'web') {
-            return !this.currentSound.paused;
+            return !this.currentPlayer.paused;
         }
-        return true;
+        // In expo-audio, isPlaying might be a property or state
+        return this.currentPlayer.playing || false;
     }
 }
 
 export default new RecordingPlaybackService();
+

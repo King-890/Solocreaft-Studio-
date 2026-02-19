@@ -45,7 +45,7 @@ const EnhancedAnimatedInput = ({
 
     return (
         <View style={[styles.container, style]}>
-            <Animated.Text style={labelStyle} pointerEvents="none">
+            <Animated.Text style={[labelStyle, { pointerEvents: 'none' }]}>
                 {label}
             </Animated.Text>
             <TextInput

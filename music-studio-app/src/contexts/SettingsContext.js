@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../services/supabase';
 import { saveFileToLocal, getFileFromLocal } from '../utils/webStorage';
+import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 
 const SettingsContext = createContext();
 
@@ -15,7 +15,7 @@ export const useSettings = () => {
 };
 
 export const SettingsProvider = ({ children }) => {
-    const [audioEnabled, setAudioEnabled] = useState(true);
+    const [ambienceEnabled, setAmbienceEnabled] = useState(true);
     const [animationsEnabled, setAnimationsEnabled] = useState(true);
     const [currentTheme, setCurrentTheme] = useState('default');
     const [customVideoUri, setCustomVideoUri] = useState(null);
@@ -42,7 +42,11 @@ export const SettingsProvider = ({ children }) => {
                 }
             }
 
-            if (audio !== null) setAudioEnabled(JSON.parse(audio));
+            if (audio !== null) {
+                const isEnabled = JSON.parse(audio);
+                setAmbienceEnabled(isEnabled);
+                UnifiedAudioEngine.setMasterMute(!isEnabled);
+            }
             if (animations !== null) setAnimationsEnabled(JSON.parse(animations));
             if (theme !== null) setCurrentTheme(theme);
             if (videoUri !== null) setCustomVideoUri(videoUri);
@@ -52,13 +56,18 @@ export const SettingsProvider = ({ children }) => {
         }
     };
 
-    const toggleAudio = async (value) => {
-        setAudioEnabled(value);
+    const toggleAmbience = async (value) => {
+        setAmbienceEnabled(value);
+        UnifiedAudioEngine.setMasterMute(!value);
         try {
             await AsyncStorage.setItem('audioEnabled', JSON.stringify(value));
         } catch (error) {
             console.log('Error saving audio setting:', error);
         }
+    };
+
+    const stopAllAudio = () => {
+        UnifiedAudioEngine.stopAll();
     };
 
     const toggleAnimations = async (value) => {
@@ -121,12 +130,13 @@ export const SettingsProvider = ({ children }) => {
     return (
         <SettingsContext.Provider
             value={{
-                audioEnabled,
+                ambienceEnabled,
                 animationsEnabled,
                 currentTheme,
-                toggleAudio,
+                toggleAmbience,
                 toggleAnimations,
                 setTheme,
+                stopAllAudio,
                 customVideoUri,
                 saveCustomVideo,
                 instrumentSettings,

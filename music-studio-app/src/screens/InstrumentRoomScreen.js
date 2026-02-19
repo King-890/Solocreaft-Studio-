@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, PanResponder } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { Audio } from 'expo-av';
+import * as Audio from 'expo-audio';
 import { useProject } from '../contexts/ProjectContext';
+import { createShadow, createTextShadow } from '../utils/shadows';
+import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import ImmersiveBackground from '../components/ImmersiveBackground';
 import PerformanceRecorder from '../components/PerformanceRecorder';
 import Piano from '../components/Piano';
 import DrumMachine from '../components/DrumMachine';
@@ -19,6 +22,16 @@ import Saxophone from '../components/Saxophone';
 import WorldPercussion from '../components/WorldPercussion';
 import Tabla from '../components/Tabla';
 import Dholak from '../components/Dholak';
+import Sitar from '../components/Sitar';
+import Harp from '../components/Harp';
+import Accordion from '../components/Accordion';
+import Marimba from '../components/Marimba';
+import Kalimba from '../components/Kalimba';
+import BrassEnsemble from '../components/BrassEnsemble';
+import ChoirHall from '../components/ChoirHall';
+import Banjo from '../components/Banjo';
+import EthnicStrings from '../components/EthnicStrings';
+import OrchestralStrings from '../components/OrchestralStrings';
 
 // Instrument-specific themes
 const INSTRUMENT_THEMES = {
@@ -88,12 +101,12 @@ const INSTRUMENT_THEMES = {
         name: 'Tabla Studio',
         icon: '🪘',
     },
-    // sitar: {
-    //     colors: ['#3a2a1a', '#4a3520', '#5a4025'],
-    //     accent: '#FFB74D',
-    //     name: 'Sitar Studio',
-    //     icon: '🪕',
-    // },
+    sitar: {
+        colors: ['#3a2a1a', '#4a3520', '#5a4025'],
+        accent: '#FFB74D',
+        name: 'Sitar Studio',
+        icon: '🪕',
+    },
     veena: {
         colors: ['#2a1a2a', '#3a2535', '#4a3040'],
         accent: '#CE93D8',
@@ -166,18 +179,76 @@ const INSTRUMENT_THEMES = {
         name: 'Kalimba Studio',
         icon: '🖐️',
     },
+    french_horn: {
+        colors: ['#2a2a1a', '#3a3a20', '#4a4a2a'],
+        accent: '#FFD700',
+        name: 'French Horn Hall',
+        icon: '📯',
+    },
+    cello: {
+        colors: ['#2a1a1a', '#3a2020', '#4a2a2a'],
+        accent: '#CD7F32',
+        name: 'Cello Suite',
+        icon: '🎻',
+    },
+    contrabass: {
+        colors: ['#1a1a1a', '#2a2a2a', '#3a3a3a'],
+        accent: '#8B4513',
+        name: 'Contrabass Studio',
+        icon: '🎸',
+    },
+    orchestral_strings: {
+        colors: ['#2a1a1a', '#3a2020', '#4a2a2a'],
+        accent: '#D4AF37',
+        name: 'Orchestral Strings',
+        icon: '🎻',
+    },
 };
 
 export default function InstrumentRoomScreen() {
     const navigation = useNavigation();
     const route = useRoute();
     const { instrumentType = 'piano' } = route.params || {};
-    const { addRecording } = useProject();
+    const { addRecording, isPlaying, togglePlayback, stopPlayback, masterVolume, updateMasterVolume } = useProject();
+    const [volSliderWidth, setVolSliderWidth] = useState(0);
 
     const [isRecording, setIsRecording] = useState(false);
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const pulseAnim = useRef(new Animated.Value(0.6)).current;
 
     const theme = INSTRUMENT_THEMES[instrumentType] || INSTRUMENT_THEMES.piano;
+
+    // Track ID mapping for visualizers
+    const trackMap = { 
+        piano: '2', 
+        drums: '3', 
+        guitar: '5', 
+        bass: '4', 
+        synth: '6', 
+        violin: '7', 
+        world: '3', 
+        tabla: '3', 
+        dholak: '3', 
+        sitar: '9', 
+        saxophone: '10', 
+        trumpet: '11', 
+        flute: '8' 
+    };
+    const trackId = trackMap[instrumentType] || '2';
+
+    const handleVolTouch = (evt) => {
+        if (volSliderWidth === 0) return;
+        const locationX = evt.nativeEvent.locationX;
+        const percentage = Math.max(0, Math.min(1, locationX / volSliderWidth));
+        updateMasterVolume(percentage);
+    };
+
+    const volPanResponder = PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: (evt) => handleVolTouch(evt),
+        onPanResponderMove: (evt) => handleVolTouch(evt),
+    });
 
     // Lock to landscape orientation on mount
     useEffect(() => {
@@ -209,16 +280,37 @@ export default function InstrumentRoomScreen() {
         };
     }, []);
 
-    // Fade in on mount
+    // Fade in on mount and start pulse
     useEffect(() => {
         Animated.timing(fadeAnim, {
             toValue: 1,
             duration: 600,
             useNativeDriver: Platform.OS !== 'web',
         }).start();
+
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 1000,
+                    useNativeDriver: Platform.OS !== 'web',
+                }),
+                Animated.timing(pulseAnim, {
+                    toValue: 0.6,
+                    duration: 1000,
+                    useNativeDriver: Platform.OS !== 'web',
+                }),
+            ])
+        ).start();
     }, []);
 
-    const [recording, setRecording] = useState(null);
+    // In SDK 54, we use the useAudioRecorder hook
+    const recorder = Audio.useAudioRecorder({
+        extension: '.m4a',
+        sampleRate: 44100,
+        numberOfChannels: 2,
+        bitRate: 128000,
+    });
 
     const handleStartRecording = async () => {
         try {
@@ -231,10 +323,8 @@ export default function InstrumentRoomScreen() {
                 });
 
                 console.log('Starting recording..');
-                const { recording } = await Audio.Recording.createAsync(
-                    Audio.RecordingOptionsPresets.HIGH_QUALITY
-                );
-                setRecording(recording);
+                await recorder.prepare();
+                recorder.record();
                 setIsRecording(true);
                 console.log('Recording started');
             } else {
@@ -247,19 +337,18 @@ export default function InstrumentRoomScreen() {
 
     const handleStopRecording = async () => {
         setIsRecording(false);
-        if (!recording) return;
+        if (!recorder.isRecording) return;
 
         console.log('Stopping recording..');
-        setRecording(undefined);
-        await recording.stopAndUnloadAsync();
-        const uri = recording.getURI();
+        await recorder.stop();
+        const uri = recorder.uri;
         console.log('Recording stopped and stored at', uri);
 
         // Save to project context
         if (uri) {
-            // Calculate duration (approximate)
-            const status = await recording.getStatusAsync();
-            const duration = status.durationMillis;
+            // Calculate duration (approximate from recorder status or metadata)
+            // For now, let's use a default or estimate if metadata not easily reachable
+            const duration = 5000; // Placeholder or read from recorder if available
 
             await addRecording(uri, duration, null, 'instrument', instrumentType);
             console.log('Performance saved to library');
@@ -285,12 +374,20 @@ export default function InstrumentRoomScreen() {
             case 'synthesizer':  // Handle both synth and synthesizer IDs
                 return <SynthPad />;
             case 'violin':
+                return <Violin instrument="violin" />;
             case 'veena':
-                return <Violin />;
+                return <Sitar instrument="veena" />;
+            case 'sitar':
+                return <Sitar />;
+            case 'harp':
+                return <Harp />;
+            case 'shamisen':
+            case 'koto':
+                return <EthnicStrings instrument={instrumentType} />;
             case 'flute':
                 return <Flute />;
             case 'trumpet':
-                return <Trumpet />;
+                return <BrassEnsemble instrument="trumpet" />;
             case 'saxophone':
                 return <Saxophone />;
             case 'world':
@@ -299,26 +396,27 @@ export default function InstrumentRoomScreen() {
                 return <Tabla />;
             case 'dholak':
                 return <Dholak />;
-            case 'harp':
-            case 'shamisen':
-            case 'koto':
-                return <Violin instrument={instrumentType} />; // Reuse string interface
             case 'banjo':
-                return <AcousticGuitar instrument="banjo" />;
+                return <Banjo />;
             case 'accordion':
-                return <Piano />; // Reuse keyboard interface
+                return <Accordion />;
             case 'marimba':
-                return <Piano instrument="marimba" />;
+                return <Marimba />;
             case 'choir':
-                return <Piano instrument="choir" />;
+                return <ChoirHall />;
             case 'clarinet':
-                return <Piano instrument="clarinet" />; // Reuse piano for simple note selection
+                return <Flute instrument="clarinet" />; // Woodwinds use flute logic
             case 'oboe':
-                return <Piano instrument="oboe" />;
+                return <Flute instrument="oboe" />;
             case 'tuba':
-                return <Piano instrument="tuba" />;
+            case 'french_horn':
+                return <BrassEnsemble instrument={instrumentType} />;
             case 'kalimba':
-                return <Piano instrument="kalimba" />;
+                return <Kalimba />;
+            case 'cello':
+            case 'contrabass':
+            case 'strings':
+                return <OrchestralStrings instrument={instrumentType} />;
             default:
                 return <Piano />;
         }
@@ -326,20 +424,11 @@ export default function InstrumentRoomScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Themed Background */}
-            <LinearGradient
-                colors={theme.colors}
+            {/* Immersive Background with Real-time Visualizer */}
+            <ImmersiveBackground 
+                trackId={trackId} 
+                showVisualizer={true} 
                 style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            />
-
-            {/* Vignette Overlay */}
-            <LinearGradient
-                colors={['rgba(0,0,0,0.4)', 'transparent', 'rgba(0,0,0,0.6)']}
-                locations={[0, 0.3, 1]}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
             />
 
             <SafeAreaView style={styles.safeArea} edges={['right', 'left']}>
@@ -349,15 +438,42 @@ export default function InstrumentRoomScreen() {
                         style={styles.backButton}
                         onPress={() => navigation.goBack()}
                     >
-                        <Text style={styles.backButtonText}>← Back</Text>
+                        <View style={styles.backButtonContent}>
+                            <Text style={styles.backIcon}>←</Text>
+                            <Text style={styles.backText}>STUDIO HUB</Text>
+                        </View>
                     </TouchableOpacity>
 
                     <View style={styles.headerCenter}>
-                        <Text style={styles.headerIcon}>{theme.icon}</Text>
-                        <Text style={styles.headerTitle}>{theme.name}</Text>
+                        <View style={[styles.glassPill, { borderColor: theme.accent + '44' }]}>
+                            <Text style={styles.headerIcon}>{theme.icon}</Text>
+                            <Text style={styles.headerTitle}>{theme.name.toUpperCase()}</Text>
+                            <Animated.View style={[
+                                styles.statusIndicator, 
+                                { backgroundColor: theme.accent, opacity: pulseAnim }
+                            ]} />
+                        </View>
                     </View>
 
-                    <View style={styles.headerRight} />
+                    <View style={styles.headerRight}>
+                        <TouchableOpacity 
+                            style={[styles.playButton, isPlaying && styles.isPlayingButton]}
+                            onPress={togglePlayback}
+                        >
+                            <Text style={styles.playIcon}>{isPlaying ? '⏸' : '▶'}</Text>
+                        </TouchableOpacity>
+                        <View style={styles.volContainer}>
+                            <Text style={styles.volIcon}>🔊</Text>
+                            <View 
+                                style={styles.volTrack}
+                                onLayout={(e) => setVolSliderWidth(e.nativeEvent.layout.width)}
+                                {...volPanResponder.panHandlers}
+                            >
+                                <View style={[styles.volFill, { width: `${masterVolume * 100}%` }]} />
+                            </View>
+                        </View>
+                        <Animated.Text style={[styles.studioStatus, { opacity: pulseAnim }]}>LIVE SESSION</Animated.Text>
+                    </View>
                 </Animated.View>
 
                 {/* Instrument Interface */}
@@ -389,40 +505,119 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        paddingHorizontal: sc(20),
+        paddingVertical: sc(8),
+        backgroundColor: 'rgba(0,0,0,0.3)',
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
     },
     backButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        minWidth: sc(100),
     },
-    backButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    headerCenter: {
+    backButtonContent: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
     },
+    backIcon: {
+        color: '#64748b',
+        fontSize: normalize(16),
+        fontWeight: 'bold',
+    },
+    backText: {
+        color: '#64748b',
+        fontSize: normalize(8),
+        fontWeight: '900',
+        letterSpacing: 1,
+        fontFamily: 'Montserrat-Bold',
+    },
+    headerCenter: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    glassPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        paddingHorizontal: sc(12),
+        paddingVertical: sc(6),
+        borderRadius: 20,
+        borderWidth: 1,
+        gap: 10,
+        ...createShadow({ color: '#000', radius: 10, opacity: 0.2 }),
+    },
     headerIcon: {
-        fontSize: 24,
+        fontSize: normalize(16),
     },
     headerTitle: {
         color: '#fff',
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: normalize(11),
+        fontWeight: '900',
+        letterSpacing: 1.5,
         fontFamily: 'Montserrat-Bold',
+        ...createTextShadow({ color: 'rgba(0,0,0,0.5)', radius: 3 }),
+    },
+    statusIndicator: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        marginLeft: 2,
     },
     headerRight: {
-        width: 60, // Balance the back button
+        minWidth: sc(180),
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: 15,
+    },
+    volContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        width: sc(60),
+    },
+    volIcon: {
+        fontSize: normalize(10),
+        color: '#64748b',
+    },
+    volTrack: {
+        flex: 1,
+        height: 3,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 2,
+    },
+    volFill: {
+        height: '100%',
+        backgroundColor: '#03dac6',
+        borderRadius: 2,
+    },
+    playButton: {
+        width: sc(36),
+        height: sc(36),
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    isPlayingButton: {
+        backgroundColor: '#03dac6',
+        borderColor: '#03dac6',
+    },
+    playIcon: {
+        color: '#fff',
+        fontSize: normalize(14),
+    },
+    studioStatus: {
+        color: '#475569',
+        fontSize: normalize(8),
+        fontWeight: '900',
+        letterSpacing: 2,
     },
     instrumentContainer: {
         flex: 1,
-        justifyContent: 'center',
-        padding: 20,
+        padding: sc(8),
+        paddingBottom: sc(15),
     },
 });

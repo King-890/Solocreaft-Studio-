@@ -3,8 +3,12 @@ import { View, StyleSheet, Image, Animated, Dimensions, Platform } from 'react-n
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useTheme } from '../contexts/ThemeContext';
+import Visualizer from './Visualizer';
 
-const { width, height } = Dimensions.get('window');
+import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+
+const width = SCREEN_WIDTH;
+const height = SCREEN_WIDTH / (812/375); // Approximate height from width or use Dimensions
 
 // Sub-component to handle video player events safely
 const VideoBackground = ({ player, onError }) => {
@@ -37,10 +41,23 @@ const VideoBackground = ({ player, onError }) => {
  * 2. Applies a cinematic gradient overlay for text readability
  * 3. Fades in smoothly to avoid jarring transitions
  */
-export default function ImmersiveBackground({ children, style }) {
+export default function ImmersiveBackground({ children, style, trackId, showVisualizer = false }) {
     const { currentTheme } = useTheme();
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const [videoError, setVideoError] = useState(false);
+
+    // Initialize video player at top level (safely)
+    const videoSource = (currentTheme.type === 'video' && !videoError) 
+        ? (currentTheme.source || { uri: currentTheme.uri }) 
+        : null;
+        
+    const player = useVideoPlayer(videoSource, player => {
+        if (player) {
+            player.loop = true;
+            player.play();
+            player.muted = true;
+        }
+    });
 
     useEffect(() => {
         // Reset error state when theme changes
@@ -93,22 +110,9 @@ export default function ImmersiveBackground({ children, style }) {
                     <LinearGradient
                         colors={['#1a1a1a', '#000000']}
                         style={StyleSheet.absoluteFill}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
                     />
                 );
             }
-
-            const videoSource = currentTheme.source
-                ? currentTheme.source
-                : { uri: currentTheme.uri };
-
-            // Initialize video player
-            const player = useVideoPlayer(videoSource, player => {
-                player.loop = true;
-                player.play();
-                player.muted = true;
-            });
 
             return (
                 <VideoBackground
@@ -118,13 +122,16 @@ export default function ImmersiveBackground({ children, style }) {
             );
         }
 
-        return null; // Fallback
+        return null;
     };
 
     return (
         <View style={[styles.container, style]}>
             {/* Animated Background Layer */}
-            <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
+            <Animated.View
+                style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}
+                {...(Platform.OS === 'web' ? { 'aria-hidden': true, role: 'presentation' } : { importantForAccessibility: 'no-hide-descendants' })}
+            >
                 {renderMedia()}
             </Animated.View>
 
@@ -134,14 +141,29 @@ export default function ImmersiveBackground({ children, style }) {
             <LinearGradient
                 colors={['rgba(0,0,0,0.6)', 'transparent', 'rgba(0,0,0,0.8)']}
                 locations={[0, 0.4, 1]}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none" // Allow touches to pass through
+                style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+                {...(Platform.OS === 'web' ? { 'aria-hidden': true, role: 'presentation' } : { importantForAccessibility: 'no-hide-descendants' })}
             />
 
             {/* Content Layer */}
             <View style={styles.content}>
                 {children}
             </View>
+
+            {/* Real-time Visualizer Layer */}
+            {showVisualizer && (
+                <View 
+                    style={styles.visualizerOverlay}
+                    {...(Platform.OS === 'web' ? { 'aria-hidden': true, tabIndex: -1 } : { importantForAccessibility: 'no-hide-descendants' })}
+                >
+                    <Visualizer 
+                        trackId={trackId} 
+                        type="waveform" 
+                        color="rgba(255, 255, 255, 0.15)" 
+                        height={200} 
+                    />
+                </View>
+            )}
         </View>
     );
 }
@@ -159,5 +181,14 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         zIndex: 10, // Ensure content is above background
+    },
+    visualizerOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 200,
+        opacity: 0.8,
+        pointerEvents: 'none',
     },
 });

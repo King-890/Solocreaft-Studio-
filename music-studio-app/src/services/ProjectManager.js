@@ -1,4 +1,5 @@
-import { supabase } from './supabase';
+// ProjectManager handles project-related operations locally for guest mode
+
 
 export const ProjectManager = {
     async createProject(name, userId) {

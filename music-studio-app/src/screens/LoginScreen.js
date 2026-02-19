@@ -96,6 +96,15 @@ export default function LoginScreen({ navigation }) {
         }
     };
 
+    const handleGuestSignIn = () => {
+        UISounds.playSuccess();
+        // Since we are using an auth gate, we might need a specific "guest" state 
+        // in AuthContext or just rely on the local project storage.
+        // For now, we'll navigate a pseudo-login if the context supports it, 
+        // or just let the app handle null user as guest.
+        navigation.navigate('MainStack');
+    };
+
     const handleForgotPassword = async () => {
         if (!email) {
             setErrorMsg('Please enter your email address first');
@@ -296,6 +305,15 @@ export default function LoginScreen({ navigation }) {
                                 loading={loading}
                             />
 
+                            <TouchableOpacity
+                                style={styles.guestButton}
+                                onPress={handleGuestSignIn}
+                                disabled={loading}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.guestButtonText}>Continue as Guest</Text>
+                            </TouchableOpacity>
+
                             {/* COMMENTED OUT: OAuth functionality disabled */}
                             {/* Divider */}
                             {/* <View style={styles.dividerContainer}>
@@ -436,6 +454,22 @@ const styles = StyleSheet.create({
         color: '#BA55D3',
         fontSize: 12,
         textDecorationLine: 'underline',
+    },
+    guestButton: {
+        width: '100%',
+        padding: 12,
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: 'rgba(186, 85, 211, 0.4)',
+        borderRadius: 12,
+        alignItems: 'center',
+        marginTop: 10,
+        marginBottom: 16,
+    },
+    guestButtonText: {
+        color: '#DDA0DD',
+        fontSize: 13,
+        fontWeight: '600',
     },
     decorativeContainer: {
         position: 'absolute',

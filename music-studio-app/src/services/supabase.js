@@ -34,40 +34,24 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   }
 }
 
-// Create Supabase client with defensive error handling
-let supabase;
-try {
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      storage: Platform.OS === 'web' ? undefined : AsyncStorage,
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: Platform.OS === 'web',
-    },
-  });
-  console.log('✅ Supabase client initialized successfully');
-} catch (error) {
-  console.error('CRITICAL: Failed to create Supabase client:', error);
-  if (errorMonitor) {
-    errorMonitor.report(error, { type: 'CLIENT_INIT_ERROR', source: 'supabase.js' });
-  }
-  // Create a fallback no-op client to prevent crashes
-  supabase = {
-    auth: {
-      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-      signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }),
-      signUp: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }),
-      signOut: () => Promise.resolve({ error: null }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
-    },
-    storage: {
-      from: () => ({
-        upload: () => Promise.resolve({ data: null, error: { message: 'Supabase not initialized' } }),
-        getPublicUrl: () => ({ data: { publicUrl: '' } }),
-      }),
-    },
-  };
-}
+// Create Supabase client with defensive error handling - DISABLED for local-only mode
+let supabase = {
+  auth: {
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Supabase disabled' } }),
+    signUp: () => Promise.resolve({ data: null, error: { message: 'Supabase disabled' } }),
+    signOut: () => Promise.resolve({ error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
+  },
+  storage: {
+    from: () => ({
+      upload: () => Promise.resolve({ data: null, error: { message: 'Supabase disabled' } }),
+      getPublicUrl: () => ({ data: { publicUrl: '' } }),
+    }),
+  },
+};
+console.log('✅ Supabase client disabled (Local-only mode)');
+
 
 export { supabase };
 

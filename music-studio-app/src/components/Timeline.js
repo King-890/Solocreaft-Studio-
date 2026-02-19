@@ -1,10 +1,37 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, ScrollView, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, ScrollView, Text, StyleSheet, TouchableOpacity, Alert, Platform, Animated } from 'react-native';
 import { useProject } from '../contexts/ProjectContext';
 import Track from './Track';
 
 const PIXELS_PER_SECOND = 50;
 const TRACK_HEADER_WIDTH = 150;
+
+// Performance-optimized Playhead component
+const Playhead = memo(({ pixelsPerSecond, headerWidth }) => {
+    const { timeAnimatedValue } = useProject();
+    
+    const playheadTranslateX = timeAnimatedValue.interpolate({
+        inputRange: [0, 1000],
+        outputRange: [0, pixelsPerSecond],
+        extrapolate: 'extend'
+    });
+    
+    return (
+        <Animated.View
+            style={[
+                styles.playhead,
+                {
+                    left: headerWidth,
+                    transform: [{ translateX: playheadTranslateX }],
+                    pointerEvents: 'none',
+                }
+            ]}
+        >
+            <View style={styles.playheadHead} />
+            <View style={styles.playheadLine} />
+        </Animated.View>
+    );
+});
 
 export default function Timeline() {
     const {
@@ -25,7 +52,10 @@ export default function Timeline() {
 
     const rulerScrollRef = useRef(null);
     const trackScrollRefs = useRef([]);
-    const [scrollX, setScrollX] = useState(0);
+    const isScrolling = useRef(false);
+    
+    // PERFORMANCE: Use Animated.Value for scroll to avoid re-rendering entire timeline
+    const scrollX = useRef(new Animated.Value(0)).current;
 
     const projectDuration = getProjectDuration();
     const pixelsPerSecond = PIXELS_PER_SECOND * zoomLevel;
@@ -54,8 +84,14 @@ export default function Timeline() {
 
     // Synchronize all track scrolls with ruler scroll
     const handleScroll = (event) => {
+        // PERFORMANCE: Prevent recursive scroll events
+        if (isScrolling.current) return;
+        isScrolling.current = true;
+
         const newScrollX = event.nativeEvent.contentOffset.x;
-        setScrollX(newScrollX);
+        
+        // Update animated value for playhead
+        scrollX.setValue(newScrollX);
 
         // Sync ruler
         if (rulerScrollRef.current) {
@@ -68,9 +104,18 @@ export default function Timeline() {
                 ref.scrollTo({ x: newScrollX, animated: false });
             }
         });
-    };
 
-    const playheadPosition = (currentTime / 1000) * pixelsPerSecond;
+        // Reset guard after short delay or next frame
+        if (Platform.OS === 'web') {
+            window.requestAnimationFrame(() => {
+                isScrolling.current = false;
+            });
+        } else {
+            setTimeout(() => {
+                isScrolling.current = false;
+            }, 10);
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -165,6 +210,7 @@ export default function Timeline() {
                             <Track
                                 key={track.id}
                                 track={track}
+                                clips={clips ? clips.filter(c => c.trackId === track.id) : []}
                                 zoomLevel={zoomLevel}
                                 pixelsPerSecond={pixelsPerSecond}
                                 timelineWidth={timelineWidth}
@@ -177,19 +223,10 @@ export default function Timeline() {
                 </ScrollView>
 
                 {/* Playhead Overlay */}
-                <View
-                    style={[
-                        styles.playhead,
-                        {
-                            left: TRACK_HEADER_WIDTH + playheadPosition - scrollX,
-                            opacity: playheadPosition >= 0 ? 1 : 0,
-                        }
-                    ]}
-                    pointerEvents="none"
-                >
-                    <View style={styles.playheadHead} />
-                    <View style={styles.playheadLine} />
-                </View>
+                <Playhead 
+                    pixelsPerSecond={pixelsPerSecond}
+                    headerWidth={TRACK_HEADER_WIDTH}
+                />
 
                 {/* Empty state for clips */}
                 {clips && clips.length === 0 && tracks && tracks.length > 0 && (
@@ -306,7 +343,6 @@ const styles = StyleSheet.create({
         top: 30,
         bottom: 0,
         zIndex: 1000,
-        pointerEvents: 'none',
     },
     playheadHead: {
         width: 12,
@@ -334,7 +370,6 @@ const styles = StyleSheet.create({
         right: 0,
         alignItems: 'center',
         justifyContent: 'center',
-        pointerEvents: 'none',
     },
     emptyText: {
         color: '#666',

@@ -1,36 +1,53 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
-import { Audio } from 'expo-av';
+import * as Audio from 'expo-audio';
 import { requestAudioPermissions } from '../utils/audioHelpers';
 import { useAuth } from '../contexts/AuthContext';
 import { useProject } from '../contexts/ProjectContext';
 import { saveFileToLocal } from '../utils/webStorage';
+import MetronomeService from '../services/MetronomeService';
 
 export default function AudioRecorder({ onRecordingSaved, tracks }) {
     const [duration, setDuration] = useState(0);
     const [uploading, setUploading] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
-    const recordingRef = useRef(null);
+    const [isCountingIn, setIsCountingIn] = useState(false);
+    const [countInRemaining, setCountInRemaining] = useState(0);
+    
+    // In SDK 54, we use the useAudioRecorder hook
+    const recorder = Audio.useAudioRecorder({
+        extension: '.m4a',
+        sampleRate: 44100,
+        numberOfChannels: 2,
+        bitRate: 128000,
+    });
+
     const durationIntervalRef = useRef(null);
 
     const { user } = useAuth();
     const { addClip, addRecording } = useProject();
 
+    // Sync recorder status to local state for UI
+    useEffect(() => {
+        setIsRecording(recorder.isRecording);
+        setIsPaused(recorder.isPaused);
+    }, [recorder.isRecording, recorder.isPaused]);
+
     // Cleanup on unmount
     useEffect(() => {
         return () => {
-            if (recordingRef.current) {
-                recordingRef.current.stopAndUnloadAsync();
+            if (recorder.isRecording) {
+                recorder.stop();
             }
             if (durationIntervalRef.current) {
                 clearInterval(durationIntervalRef.current);
             }
         };
-    }, []);
+    }, [recorder]);
 
     const startRecording = async () => {
-        if (isRecording) return;
+        if (recorder.isRecording) return;
 
         try {
             const hasPermission = await requestAudioPermissions();
@@ -38,8 +55,6 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
                 alert('Microphone permission is required to record audio.');
                 return;
             }
-
-            console.log('Starting recording...');
 
             await Audio.setAudioModeAsync({
                 allowsRecordingIOS: true,
@@ -49,31 +64,64 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
                 staysActiveInBackground: true,
             });
 
-            const { recording } = await Audio.Recording.createAsync(
-                Audio.RecordingOptionsPresets.HIGH_QUALITY
-            );
+            console.log('Starting count-in...');
+            setIsCountingIn(true);
+            setCountInRemaining(4);
 
-            recordingRef.current = recording;
-            setIsRecording(true);
+            const tempo = 120; // Default tempo
+            MetronomeService.start(tempo, (beat) => {
+                setCountInRemaining(prev => Math.max(0, 4 - beat));
+            }, true, async () => {
+                // Count-in complete, start recording
+                setIsCountingIn(false);
+                await recorder.prepare();
+                recorder.record();
+                
+                setDuration(0);
+
+                // Start timer
+                durationIntervalRef.current = setInterval(() => {
+                    setDuration(prev => prev + 1000);
+                }, 1000);
+
+                console.log('Recording started after count-in');
+            });
+
+        } catch (error) {
+            console.error('Failed to start recording flow:', error);
+            alert(`Failed: ${error.message}`);
+            setIsCountingIn(false);
+        }
+    };
+
+    const startRecordingDirect = async () => {
+        try {
+            const hasPermission = await requestAudioPermissions();
+            if (!hasPermission) return;
+
+            await Audio.setAudioModeAsync({
+                allowsRecordingIOS: true,
+                playsInSilentModeIOS: true,
+                shouldDuckAndroid: true,
+                playThroughEarpieceAndroid: false,
+                staysActiveInBackground: true,
+            });
+
+            await recorder.prepare();
+            recorder.record();
             setDuration(0);
-
-            // Start timer
             durationIntervalRef.current = setInterval(() => {
                 setDuration(prev => prev + 1000);
             }, 1000);
-
-            console.log('Recording started');
         } catch (error) {
-            console.error('Failed to start recording:', error);
-            alert(`Failed to start recording: ${error.message}`);
+            console.error('Direct recording failed:', error);
         }
     };
 
     const pauseRecording = async () => {
-        if (!isRecording || !recordingRef.current || isPaused) return;
+        if (!recorder.isRecording || recorder.isPaused) return;
         try {
-            await recordingRef.current.pauseAsync();
-            setIsPaused(true);
+            recorder.pause();
             clearInterval(durationIntervalRef.current);
         } catch (error) {
             console.error('Failed to pause recording:', error);
@@ -81,10 +129,9 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
     };
 
     const resumeRecording = async () => {
-        if (!isRecording || !recordingRef.current || !isPaused) return;
+        if (!recorder.isRecording || !recorder.isPaused) return;
         try {
-            await recordingRef.current.startAsync();
-            setIsPaused(false);
+            recorder.record();
             durationIntervalRef.current = setInterval(() => {
                 setDuration(prev => prev + 1000);
             }, 1000);
@@ -94,19 +141,15 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
     };
 
     const stopRecording = async () => {
-        if (!isRecording || !recordingRef.current) return;
+        if (!recorder.isRecording) return;
 
         try {
             setUploading(true);
             clearInterval(durationIntervalRef.current);
 
             console.log('Stopping recording...');
-            await recordingRef.current.stopAndUnloadAsync();
-            const uri = recordingRef.current.getURI();
-
-            setIsRecording(false);
-            setIsPaused(false);
-            recordingRef.current = null;
+            await recorder.stop();
+            const uri = recorder.uri;
 
             if (!uri) {
                 throw new Error('No URI returned from recording');
@@ -150,7 +193,6 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
                 clearInterval(durationIntervalRef.current);
             }
             setUploading(false);
-            setIsRecording(false);
         }
     };
 
@@ -175,12 +217,23 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
                 {uploading ? (
                     <ActivityIndicator size="large" color="#03dac6" />
                 ) : !isRecording ? (
-                    <TouchableOpacity
-                        style={styles.recordButton}
-                        onPress={startRecording}
-                    >
-                        <View style={styles.recordIcon} />
-                    </TouchableOpacity>
+                    <View style={styles.recordOptions}>
+                        <TouchableOpacity
+                            style={styles.recordButton}
+                            onPress={startRecordingDirect}
+                        >
+                            <View style={styles.recordIcon} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.countInButton}
+                            onPress={startRecording}
+                            disabled={isCountingIn}
+                        >
+                            <Text style={styles.countInText}>
+                                {isCountingIn ? `Get Ready: ${countInRemaining}` : 'Record with Count-in'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 ) : (
                     <View style={styles.recordingControls}>
                         {isPaused ? (
@@ -258,14 +311,28 @@ const styles = StyleSheet.create({
         borderColor: '#e0e0e0',
         elevation: 8,
     },
-    recordingButton: {
-        borderColor: '#ff4444',
-    },
     recordIcon: {
         width: 24,
         height: 24,
         borderRadius: 12,
         backgroundColor: '#ff4444',
+    },
+    recordOptions: {
+        alignItems: 'center',
+    },
+    countInButton: {
+        marginTop: 15,
+        backgroundColor: 'rgba(3, 218, 198, 0.1)',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#03dac6',
+    },
+    countInText: {
+        color: '#03dac6',
+        fontSize: 14,
+        fontWeight: 'bold',
     },
     recordingControls: {
         flexDirection: 'row',
@@ -311,3 +378,4 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
     },
 });
+
