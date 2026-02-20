@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import * as Audio from 'expo-audio';
+// import * as Audio from 'expo-audio'; // Deprecated for this session, using expo-av
 import UnifiedAudioContext from './UnifiedAudioContext';
 
 class AudioPlaybackService {
@@ -9,19 +9,13 @@ class AudioPlaybackService {
         this.activeSources = []; // Track active audio sources (Web)
         this.nativePlayers = new Map(); // Clip ID -> AudioPlayer Object (Native)
         this.nativePlayerTrackIds = new Map(); // Clip ID -> Track ID (Native)
-        this.masterGainNode = null; // Master Volume Node
-        this.masterVolume = 1.0; 
-        
-        // Effects Nodes
-        this.masterDistortionNode = null;
-        this.masterDelayNode = null;
-        this.masterDelayFeedback = null;
+        // Effects Nodes (Consolidated into Unified Master Bus)
+        this.masterBus = null;
+        this.masterVolume = 1.0;
+        this.masterAvgLevel = 0;
 
-        // EQ Nodes (Low, Mid, High)
-        this.masterEqLow = null;
-        this.masterEqMid = null;
-        this.masterEqHigh = null;
-
+        // Internal State
+        this._playbackTimeouts = [];
     }
 
     async init() {
@@ -29,93 +23,17 @@ class AudioPlaybackService {
             this.audioContext = UnifiedAudioContext.get();
             if (!this.audioContext) return;
 
-            console.log('🔗 AudioPlaybackService Initialized with UnifiedAudioContext');
-            
-            this.masterAnalyser = this.audioContext.createAnalyser();
-            this.masterAnalyser.fftSize = 2048;
-
-            // GLOBAL STUDIO REVERB BUS
-            this.masterReverbNode = this.audioContext.createConvolver();
-            const impulse = await this.createReverbImpulse(2.5, 3.0); // Studio Hall size
-            this.masterReverbNode.buffer = impulse;
-            
-            this.masterReverbGain = this.audioContext.createGain();
-            this.masterReverbGain.gain.value = 0.15; // Subtle but noticeable 15% wet
-            
-            this.masterReverbNode.connect(this.masterReverbGain);
-            this.masterReverbGain.connect(this.masterAnalyser);
-
-            // MASTER LIMITER/PROTECTION CHAIN
-            this.masterLimiter = this.audioContext.createDynamicsCompressor();
-            this.masterLimiter.threshold.setValueAtTime(-1, this.audioContext.currentTime);
-            this.masterLimiter.knee.setValueAtTime(0, this.audioContext.currentTime);
-            this.masterLimiter.ratio.setValueAtTime(20, this.audioContext.currentTime);
-            this.masterLimiter.attack.setValueAtTime(0.003, this.audioContext.currentTime);
-            this.masterLimiter.release.setValueAtTime(0.1, this.audioContext.currentTime);
-
-            this.masterAnalyser.connect(this.masterLimiter);
-            
-            // --- EFFECTS RACK ---
-
-            // 0. EQ Chain (3-Band)
-            this.masterEqLow = this.audioContext.createBiquadFilter();
-            this.masterEqLow.type = 'lowshelf';
-            this.masterEqLow.frequency.value = 320;
-
-            this.masterEqMid = this.audioContext.createBiquadFilter();
-            this.masterEqMid.type = 'peaking';
-            this.masterEqMid.frequency.value = 1000;
-            this.masterEqMid.Q.value = 0.5;
-
-            this.masterEqHigh = this.audioContext.createBiquadFilter();
-            this.masterEqHigh.type = 'highshelf';
-            this.masterEqHigh.frequency.value = 3200;
-
-            // Connect EQ Chain: Low -> Mid -> High
-            this.masterEqLow.connect(this.masterEqMid);
-            this.masterEqMid.connect(this.masterEqHigh);
-            
-            // 1. Distortion (WaveShaper)
-            this.masterDistortionNode = this.audioContext.createWaveShaper();
-            this.masterDistortionNode.curve = this.makeDistortionCurve(0);
-            this.masterDistortionNode.oversample = '4x';
-            
-            // 2. Delay
-            this.masterDelayNode = this.audioContext.createDelay(2.0);
-            this.masterDelayNode.delayTime.value = 0.4;
-            this.masterDelayFeedback = this.audioContext.createGain();
-            this.masterDelayFeedback.gain.value = 0.4;
-            
-            // Delay Loop
-            this.masterDelayNode.connect(this.masterDelayFeedback);
-            this.masterDelayFeedback.connect(this.masterDelayNode);
-            
-            this.masterDelayGain = this.audioContext.createGain();
-            this.masterDelayGain.gain.value = 0; // Start off (mix)
-            this.masterDelayNode.connect(this.masterDelayGain);
-
-            // Connect Chain: Limiter -> [EQ] -> [Distortion] -> Gain -> Destination
-            this.masterLimiter.connect(this.masterEqLow);
-            this.masterEqHigh.connect(this.masterDistortionNode);
-            
-            this.masterGainNode = this.audioContext.createGain();
-            this.masterGainNode.gain.value = 2.5; // Increased baseline boost
-            
-            this.masterDistortionNode.connect(this.masterGainNode);
-            this.masterDelayGain.connect(this.masterGainNode);
-            
-            this.masterGainNode.connect(this.audioContext.destination);
-            
-            // Apply current master volume
+            this.masterBus = UnifiedAudioContext.getMasterBus();
+            this.masterAnalyser = this.masterBus.analyser;
             this.setMasterVolume(this.masterVolume);
         }
     }
 
     // --- Signal Chain Management (Web) ---
     // Simplified Signal Chain (Web) ---
-    getTrackSignalChain() {
+    async getTrackSignalChain() {
         if (!this.audioContext) {
-            this.init();
+            await this.init();
             if (!this.audioContext) return null;
         }
 
@@ -141,7 +59,7 @@ class AudioPlaybackService {
 
     // Get or create a GainNode for a specific track (Legacy/Compatibility)
     getTrackGainNode() {
-        return this.masterGainNode;
+        return this.masterBus?.gain || null;
     }
 
     // Distortion Curve Helper
@@ -158,38 +76,43 @@ class AudioPlaybackService {
     }
 
     setDistortion(amount) {
-        if (!this.masterDistortionNode) return;
-        this.masterDistortionNode.curve = this.makeDistortionCurve(amount);
+        if (!this.masterBus?.distortion) return;
+        this.masterBus.distortion.curve = UnifiedAudioContext.makeDistortionCurve(amount);
     }
 
     setDelay(mix, time = 0.4, feedback = 0.4) {
-        if (!this.masterDelayNode) return;
-        this.masterDelayGain.gain.setTargetAtTime(mix, this.audioContext.currentTime, 0.05);
-        this.masterDelayNode.delayTime.setTargetAtTime(time, this.audioContext.currentTime, 0.05);
-        this.masterDelayFeedback.gain.setTargetAtTime(feedback, this.audioContext.currentTime, 0.05);
+        if (!this.masterBus?.delay) return;
+        const now = this.audioContext.currentTime;
+        this.masterBus.delayMix.gain.setTargetAtTime(mix, now, 0.05);
+        this.masterBus.delay.delayTime.setTargetAtTime(time, now, 0.05);
+        this.masterBus.delayFeedback.gain.setTargetAtTime(feedback, now, 0.05);
     }
 
     setReverb(mix) {
-        if (!this.masterReverbGain) return;
-        this.masterReverbGain.gain.setTargetAtTime(mix, this.audioContext.currentTime, 0.05);
+        if (!this.masterBus?.reverbMix) return;
+        this.masterBus.reverbMix.gain.setTargetAtTime(mix, this.audioContext.currentTime, 0.05);
     }
 
     setCompressor(threshold, ratio) {
-        if (!this.masterLimiter) return;
-        this.masterLimiter.threshold.setTargetAtTime(threshold, this.audioContext.currentTime, 0.05);
-        this.masterLimiter.ratio.setTargetAtTime(ratio, this.audioContext.currentTime, 0.05);
+        if (!this.masterBus?.compressor) return;
+        this.masterBus.compressor.threshold.setTargetAtTime(threshold, this.audioContext.currentTime, 0.05);
+        this.masterBus.compressor.ratio.setTargetAtTime(ratio, this.audioContext.currentTime, 0.05);
     }
 
     setEQ(low, mid, high) {
-        if (!this.masterEqLow) return;
-        this.masterEqLow.gain.setTargetAtTime(low, this.audioContext.currentTime, 0.05);
-        this.masterEqMid.gain.setTargetAtTime(mid, this.audioContext.currentTime, 0.05);
-        this.masterEqHigh.gain.setTargetAtTime(high, this.audioContext.currentTime, 0.05);
+        if (!this.masterBus?.eqLow) return;
+        this.masterBus.eqLow.gain.setTargetAtTime(low, this.audioContext.currentTime, 0.05);
+        this.masterBus.eqMid.gain.setTargetAtTime(mid, this.audioContext.currentTime, 0.05);
+        this.masterBus.eqHigh.gain.setTargetAtTime(high, this.audioContext.currentTime, 0.05);
+    }
+
+    setMasterPreset(name) {
+        UnifiedAudioContext.applyPreset(name);
     }
 
     async loadAudioFromUri(uri, clipId) {
         if (Platform.OS === 'web') {
-            this.init();
+            await this.init();
             try {
                 const response = await fetch(uri);
                 const arrayBuffer = await response.arrayBuffer();
@@ -214,8 +137,8 @@ class AudioPlaybackService {
     }
 
     // --- Web Implementation ---
-    playClipWeb(clip, startOffset) {
-        this.init();
+    async playClipWeb(clip, startOffset) {
+        await this.init();
         return new Promise(async (resolve) => {
             try {
                 let audioBuffer = this.audioBuffers.get(clip.id);
@@ -230,13 +153,9 @@ class AudioPlaybackService {
                 const source = this.audioContext.createBufferSource();
                 source.buffer = audioBuffer;
 
-                // Connect to the specific track's Signal Chain Input
-                const chain = this.getTrackSignalChain(clip.trackId);
-                if (chain) {
-                    source.connect(chain.input);
-                } else {
-                    source.connect(this.audioContext.destination);
-                }
+                // Connect to the unified master bus input
+                const masterInput = this.masterBus?.input || this.audioContext.destination;
+                source.connect(masterInput);
 
                 const clipStartTime = clip.startTime / 1000;
                 const currentPlaybackTime = startOffset / 1000;
@@ -270,17 +189,26 @@ class AudioPlaybackService {
     // --- Native Implementation ---
     async playClipNative(clip, startOffset) {
         try {
+            // [STABILITY] Use expo-av for consistent playback with UnifiedAudioEngine
+             const { Audio } = require('expo-av');
+
             if (this.nativePlayers.has(clip.id)) {
-                this.nativePlayers.get(clip.id).pause();
+                try {
+                    const oldPlayer = this.nativePlayers.get(clip.id);
+                    oldPlayer.setOnPlaybackStatusUpdate(null); // Remove listeners
+                    await oldPlayer.stopAsync();
+                    await oldPlayer.unloadAsync(); // Fully release
+                } catch (e) {}
                 this.nativePlayers.delete(clip.id);
                 this.nativePlayerTrackIds.delete(clip.id);
             }
 
-            // In expo-audio, we use createAudioPlayer
-            const player = Audio.createAudioPlayer(clip.audioUri);
-            player.volume = this.masterVolume; // Apply master volume to clip
-            
-            this.nativePlayers.set(clip.id, player);
+            const { sound } = await Audio.Sound.createAsync(
+                { uri: clip.audioUri },
+                { shouldPlay: false, volume: this.masterVolume }
+            );
+
+            this.nativePlayers.set(clip.id, sound);
             this.nativePlayerTrackIds.set(clip.id, clip.trackId);
 
             const clipStartTime = clip.startTime;
@@ -288,22 +216,29 @@ class AudioPlaybackService {
 
             if (currentPlaybackTime >= clipStartTime) {
                 const offsetIntoClip = currentPlaybackTime - clipStartTime;
-                player.seekTo(offsetIntoClip);
-                player.play();
+                await sound.setPositionAsync(offsetIntoClip);
+                await sound.playAsync();
             } else {
                 const delay = clipStartTime - currentPlaybackTime;
-                setTimeout(() => {
+                const tid = setTimeout(async () => {
                     try {
-                        player.play();
+                        this._playbackTimeouts = this._playbackTimeouts.filter(t => t !== tid);
+                        await sound.playAsync();
                     } catch (e) {
                         console.warn('Delayed playback failed', e);
                     }
                 }, delay);
+                this._playbackTimeouts.push(tid);
             }
 
             // Cleanup when clip ends
-            player.addListener('playbackStatusUpdate', (status) => {
+            sound.setOnPlaybackStatusUpdate(async (status) => {
                 if (status.didJustFinish) {
+                    try {
+                        sound.setOnPlaybackStatusUpdate(null); // Clean up listener
+                        await sound.stopAsync();
+                        await sound.unloadAsync();
+                    } catch (e) {}
                     this.nativePlayers.delete(clip.id);
                     this.nativePlayerTrackIds.delete(clip.id);
                 }
@@ -316,13 +251,13 @@ class AudioPlaybackService {
 
     setMasterVolume(volume) {
         this.masterVolume = volume;
-        if (Platform.OS === 'web' && this.masterGainNode && this.audioContext) {
-            // Apply a 2.5x boost on top of the master slider (Professional Loudness)
-            this.masterGainNode.gain.setTargetAtTime(volume * 2.5, this.audioContext.currentTime, 0.05);
+        if (Platform.OS === 'web' && this.masterBus && this.audioContext) {
+            const targetGain = Math.min(volume, 2.0); 
+            this.masterBus.gain.gain.setTargetAtTime(targetGain, this.audioContext.currentTime, 0.05);
         } else if (Platform.OS !== 'web') {
             // Update all active native players
-            this.nativePlayers.forEach(player => {
-                try { player.volume = volume; } catch (e) {}
+            this.nativePlayers.forEach(async (sound) => {
+                try { await sound.setVolumeAsync(volume); } catch (e) {}
             });
         }
     }
@@ -334,13 +269,18 @@ class AudioPlaybackService {
             });
             this.activeSources = [];
         } else {
-            this.nativePlayers.forEach((player, clipId) => {
+            this.nativePlayers.forEach(async (sound, clipId) => {
                 try {
-                    player.pause();
+                    await sound.stopAsync();
+                    await sound.unloadAsync();
                 } catch (e) { }
             });
             this.nativePlayers.clear();
             this.nativePlayerTrackIds.clear();
+
+            // Clear pending timeouts
+            this._playbackTimeouts.forEach(clearTimeout);
+            this._playbackTimeouts = [];
         }
     }
 

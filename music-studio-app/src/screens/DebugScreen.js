@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Button, ScrollView, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { errorMonitor } from '../services/ErrorMonitor';
-import { useAuth } from '../contexts/AuthContext';
-
 export default function DebugScreen({ navigation }) {
     const [errors, setErrors] = useState([]);
     const [storageStatus, setStorageStatus] = useState('Checking...');
-    const [authStatus, setAuthStatus] = useState({});
-    const auth = useAuth();
 
     useEffect(() => {
         // Subscribe to error updates
@@ -21,16 +18,8 @@ export default function DebugScreen({ navigation }) {
         // Test Local Storage
         testStorage();
 
-        // Get auth status
-        setAuthStatus({
-            loading: auth.loading,
-            hasSession: !!auth.session,
-            hasUser: !!auth.user,
-            error: auth.error
-        });
-
         return unsubscribe;
-    }, [auth]);
+    }, []);
 
     const testStorage = async () => {
         try {
@@ -74,36 +63,16 @@ export default function DebugScreen({ navigation }) {
                 </TouchableOpacity>
             </View>
 
-            {/* Auth Status */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Auth Status</Text>
-                <Text style={styles.infoText}>Loading: {authStatus.loading ? 'Yes' : 'No'}</Text>
-                <Text style={styles.infoText}>Has Session: {authStatus.hasSession ? 'Yes' : 'No'}</Text>
-                <Text style={styles.infoText}>Has User: {authStatus.hasUser ? 'Yes' : 'No'}</Text>
-                {authStatus.error && (
-                    <Text style={styles.errorText}>Error: {authStatus.error}</Text>
-                )}
-            </View>
-
             {/* Navigation Tests */}
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Navigation Tests</Text>
                 <View style={styles.buttonGroup}>
                     <TouchableOpacity
                         style={styles.button}
-                        onPress={() => navigation.navigate('Login')}
+                        onPress={() => navigation.navigate('Main')}
                     >
-                        <Text style={styles.buttonText}>Go to Login</Text>
+                        <Text style={styles.buttonText}>Go to Main</Text>
                     </TouchableOpacity>
-
-                    {authStatus.hasSession && (
-                        <TouchableOpacity
-                            style={styles.button}
-                            onPress={() => navigation.navigate('Main')}
-                        >
-                            <Text style={styles.buttonText}>Go to Main</Text>
-                        </TouchableOpacity>
-                    )}
                 </View>
             </View>
 

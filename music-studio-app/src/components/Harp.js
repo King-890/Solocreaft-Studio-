@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimensions, PanResponder } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
@@ -32,6 +32,7 @@ const HARP_CONFIG = {
     NECK_HEIGHT: sc(40),
     NECK_TRANSLATE_Y: sc(6),
     FIELD_MARGIN_TOP: sc(-28),
+    STRING_FIELD_HEIGHT: sc(350), // Shared height constant
 };
 
 const HarpString = React.memo(({ str, index, isActive, vibrationAnim, playString }) => {
@@ -45,9 +46,7 @@ const HarpString = React.memo(({ str, index, isActive, vibrationAnim, playString
     const pinOffset = (HARP_CONFIG.NECK_TRANSLATE_Y + (HARP_CONFIG.NECK_HEIGHT / 2)) - (HARP_CONFIG.NECK_HEIGHT + HARP_CONFIG.FIELD_MARGIN_TOP);
     const pinY = pinOffset + (index * stringGap * Math.tan(radians));
     
-    const totalFieldH = sc(400); 
-    const soundboardBaseH = sc(75) + (index * sc(11));
-    const stringBottomY = totalFieldH - soundboardBaseH;
+    const stringBottomY = HARP_CONFIG.STRING_FIELD_HEIGHT - (sc(75) + (index * sc(11)));
     
     // Physics Calibration: String starts at EXACT pin center (+2.5 for 5x5 peg)
     const stringTop = pinY + sc(2.5); 
@@ -110,11 +109,19 @@ export default function Harp() {
     const [activeStrings, setActiveStrings] = useState({});
     const lastStrummedIndex = useRef(-1);
     
-    // Animation refs for string vibration
     const vibrationAnims = useRef(STRINGS.reduce((acc, s) => {
         acc[s.note] = new Animated.Value(0);
         return acc;
     }, {})).current;
+
+    const timeoutsRef = useRef({});
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            Object.values(timeoutsRef.current).forEach(clearTimeout);
+        };
+    }, []);
 
     const playString = useCallback((note, velocity = 0.7) => {
         UnifiedAudioEngine.activateAudio();
@@ -137,8 +144,10 @@ export default function Harp() {
             })
         ]).start();
 
-        setTimeout(() => {
+        if (timeoutsRef.current[note]) clearTimeout(timeoutsRef.current[note]);
+        timeoutsRef.current[note] = setTimeout(() => {
             setActiveStrings(prev => ({ ...prev, [note]: false }));
+            delete timeoutsRef.current[note];
         }, 800);
     }, []);
 
@@ -391,7 +400,7 @@ const styles = StyleSheet.create({
         ...createTextShadow({ color: '#000', radius: 1 }),
     },
     stringField: {
-        height: sc(320),
+        height: HARP_CONFIG.STRING_FIELD_HEIGHT,
         flexDirection: 'row',
         paddingHorizontal: sc(10),
         marginTop: HARP_CONFIG.FIELD_MARGIN_TOP,

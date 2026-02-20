@@ -84,6 +84,10 @@ export default function WorldPercussion() {
                                 style={[styles.padWrapper, { width: padWidth }]}
                                 onPress={() => handlePadPress(perc)}
                                 activeOpacity={0.9}
+                                accessible={true}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${perc.name} percussion pad`}
+                                accessibilityHint={`Plays the ${perc.name} sound`}
                             >
                                 <Animated.View style={[
                                     styles.impactRing,

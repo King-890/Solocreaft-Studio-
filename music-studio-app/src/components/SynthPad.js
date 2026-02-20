@@ -23,8 +23,9 @@ export default function SynthPad() {
             Animated.timing(padGlow, { toValue: 1, duration: 100, useNativeDriver: Platform.OS !== 'web' })
         ]).start();
         
+        // Note: Waveform is managed by the internal synth state when instrument='synth' is used
         UnifiedAudioEngine.playSound('C4', 'synth'); 
-    }, [waveform]);
+    }, []);
 
     const handlePressOut = useCallback(() => {
         Animated.parallel([
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
     },
     waveformHUD: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(0,b0,0,0.4)',
+        backgroundColor: 'rgba(0,0,0,0.4)',
         borderRadius: sc(15),
         padding: sc(4),
         marginBottom: sc(30),

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, ScrollView, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
@@ -25,6 +25,15 @@ export default function Marimba() {
         return acc;
     }, {})).current;
 
+    const barTimeoutRef = useRef(null);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (barTimeoutRef.current) clearTimeout(barTimeoutRef.current);
+        };
+    }, []);
+
     const playBar = useCallback((note) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(note, 'marimba', 0, 0.9);
@@ -35,8 +44,12 @@ export default function Marimba() {
             Animated.spring(vibrationAnims[note], { toValue: 0, friction: 3, tension: 50, useNativeDriver: Platform.OS !== 'web' })
         ]).start();
 
-        setTimeout(() => setActiveBar(null), 200);
-    }, []);
+        if (barTimeoutRef.current) clearTimeout(barTimeoutRef.current);
+        barTimeoutRef.current = setTimeout(() => {
+            setActiveBar(null);
+            barTimeoutRef.current = null;
+        }, 200);
+    }, [vibrationAnims]);
 
     return (
         <LinearGradient colors={['#1a0d06', '#2d1b10', '#1a0d06']} style={styles.container}>

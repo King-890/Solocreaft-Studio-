@@ -13,6 +13,8 @@ class AudioManager {
         this.audioContext = null;
         this.oscillators = [];
         this.gainNodes = [];
+        this._stopped = false;
+        this._ambienceTimeouts = [];
     }
 
     async initialize() {
@@ -43,23 +45,28 @@ class AudioManager {
             let currentSample = 0;
 
             const processNextChunk = () => {
+                if (this._stopped) return;
                 const end = Math.min(currentSample + chunkSize, bufferSize);
                 
                 for (let channel = 0; channel < 2; channel++) {
                     const data = buffer.getChannelData(channel);
                     for (let i = currentSample; i < end; i++) {
-                        // Pure white noise is very fast to generate
                         data[i] = (Math.random() * 2 - 1) * 0.5;
                     }
                 }
 
                 currentSample = end;
                 if (currentSample < bufferSize) {
-                    // Yield immediately to the scheduler
                     if (typeof requestAnimationFrame !== 'undefined') {
-                        requestAnimationFrame(() => setTimeout(processNextChunk, 0));
+                        requestAnimationFrame(() => {
+                            if (!this._stopped) {
+                                const tid = setTimeout(processNextChunk, 0);
+                                this._ambienceTimeouts.push(tid);
+                            }
+                        });
                     } else {
-                        setTimeout(processNextChunk, 0);
+                        const tid = setTimeout(processNextChunk, 0);
+                        this._ambienceTimeouts.push(tid);
                     }
                 } else {
                     finalizeRiver();
@@ -67,6 +74,7 @@ class AudioManager {
             };
 
             const finalizeRiver = () => {
+                if (this._stopped || !this.audioContext || this.audioContext.state === 'closed') return;
                 const source = this.audioContext.createBufferSource();
                 source.buffer = buffer;
                 source.loop = true;
@@ -120,7 +128,9 @@ class AudioManager {
             processNextChunk();
         };
 
-        setTimeout(generateRiverChunked, 50);
+        this._stopped = false;
+        const tid = setTimeout(generateRiverChunked, 50);
+        this._ambienceTimeouts.push(tid);
     }
 
     // Create ambient wind sound - SLOW BREEZE
@@ -136,6 +146,7 @@ class AudioManager {
             let currentSample = 0;
 
             const processNextChunk = () => {
+                if (this._stopped || !this.audioContext || this.audioContext.state === 'closed') return;
                 const end = Math.min(currentSample + chunkSize, bufferSize);
                 for (let channel = 0; channel < 2; channel++) {
                     const data = buffer.getChannelData(channel);
@@ -146,13 +157,24 @@ class AudioManager {
 
                 currentSample = end;
                 if (currentSample < bufferSize) {
-                    setTimeout(processNextChunk, 0);
+                    if (typeof requestAnimationFrame !== 'undefined') {
+                        requestAnimationFrame(() => {
+                            if (!this._stopped) {
+                                const tid = setTimeout(processNextChunk, 0);
+                                this._ambienceTimeouts.push(tid);
+                            }
+                        });
+                    } else {
+                        const tid = setTimeout(processNextChunk, 0);
+                        this._ambienceTimeouts.push(tid);
+                    }
                 } else {
                     finalizeWind();
                 }
             };
 
             const finalizeWind = () => {
+                if (this._stopped || !this.audioContext || this.audioContext.state === 'closed') return;
                 const source = this.audioContext.createBufferSource();
                 source.buffer = buffer;
                 source.loop = true;
@@ -202,7 +224,8 @@ class AudioManager {
             processNextChunk();
         };
 
-        setTimeout(generateWindChunked, 150);
+        const tid = setTimeout(generateWindChunked, 150);
+        this._ambienceTimeouts.push(tid);
     }
 
     // Create ambient instrument sound - PEACEFUL & MEDITATIVE
@@ -265,7 +288,8 @@ class AudioManager {
             osc.stop(now + 5);
 
             // Schedule next note - MUCH LONGER intervals (5-10 seconds)
-            setTimeout(playNote, 5000 + Math.random() * 5000);
+            const tid = setTimeout(playNote, 5000 + Math.random() * 5000);
+            this._ambienceTimeouts.push(tid);
         };
 
         playNote();
@@ -291,7 +315,8 @@ class AudioManager {
 
             console.log('🎵 Starting peaceful ambient soundscape...');
             // Defer ambience start to prevent blocking navigation/startup
-            setTimeout(() => this._startAmbience(), 500);
+            const tid = setTimeout(() => this._startAmbience(), 500);
+            this._ambienceTimeouts.push(tid);
             return true;
         }
         return false;
@@ -301,29 +326,47 @@ class AudioManager {
         if (Platform.OS === 'web' && this.audioContext && this.audioContext.state === 'suspended') {
             await this.audioContext.resume();
             console.log('🔊 AudioContext resumed! Starting soundscape...');
+            
+            // Unmute guard
+            const UnifiedAudioEngine = require('../services/UnifiedAudioEngine').default;
+            if (UnifiedAudioEngine && UnifiedAudioEngine.ambienceMute) {
+                return true;
+            }
+
             // Defer ambience start further to ensure UI responsiveness
-            setTimeout(() => this._startAmbience(), 500);
+            const tid = setTimeout(() => this._startAmbience(), 500);
+            this._ambienceTimeouts.push(tid);
             return true;
         }
         return false;
     }
 
     _startAmbience() {
+        if (this._stopped) return;
         // STAGGER initializations to avoid frame drops
         if (AUDIO_CONFIG.river.enabled) {
-            setTimeout(() => this.createRiverSound(), 100);
+            const tid = setTimeout(() => this.createRiverSound(), 100);
+            this._ambienceTimeouts.push(tid);
         }
 
         if (AUDIO_CONFIG.wind.enabled) {
-            setTimeout(() => this.createWindSound(), 2000); // Wait 2s for first sound to finish chunking
+            const tid = setTimeout(() => this.createWindSound(), 2000); // Wait 2s for first sound to finish chunking
+            this._ambienceTimeouts.push(tid);
         }
 
         if (AUDIO_CONFIG.instrument.enabled) {
-            setTimeout(() => this.createInstrumentSound(), 4000); // Wait 4s 
+            const tid = setTimeout(() => this.createInstrumentSound(), 4000); // Wait 4s 
+            this._ambienceTimeouts.push(tid);
         }
     }
 
     async stopAll() {
+        this._stopped = true;
+        
+        // Clear all pending timeouts
+        this._ambienceTimeouts.forEach(clearTimeout);
+        this._ambienceTimeouts = [];
+
         // Stop all oscillators
         this.oscillators.forEach(osc => {
             try {

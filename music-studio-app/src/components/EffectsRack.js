@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, PanResponder, TouchableOpacity, Platform } from 'react-native';
 import { COLORS, SPACING } from '../constants/UIConfig';
 import AudioPlaybackService from '../services/AudioPlaybackService';
@@ -6,22 +6,31 @@ import { sc, normalize } from '../utils/responsive';
 import { createShadow } from '../utils/shadows';
 
 const SimpleSlider = ({ label, value, min, max, onChange, unit = '' }) => {
-    const [sliderWidth, setSliderWidth] = useState(0);
+    const sliderWidthRef = useRef(0);
+    const propsRef = useRef({ min, max, onChange });
+
+    // Update props ref to avoid stale closures
+    useEffect(() => {
+        propsRef.current = { min, max, onChange };
+    }, [min, max, onChange]);
 
     const handleTouch = (evt) => {
-        if (sliderWidth === 0) return;
+        const { min, max, onChange } = propsRef.current;
+        if (sliderWidthRef.current === 0) return;
         const locationX = evt.nativeEvent.locationX;
-        const percentage = Math.max(0, Math.min(1, locationX / sliderWidth));
+        const percentage = Math.max(0, Math.min(1, locationX / sliderWidthRef.current));
         const newValue = min + percentage * (max - min);
         onChange(newValue);
     };
 
-    const panResponder = PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (evt) => handleTouch(evt),
-        onPanResponderMove: (evt) => handleTouch(evt),
-    });
+    const panResponderRef = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: () => true,
+            onPanResponderGrant: (evt) => handleTouch(evt),
+            onPanResponderMove: (evt) => handleTouch(evt),
+        })
+    );
 
     const percentage = (value - min) / (max - min);
 
@@ -33,8 +42,10 @@ const SimpleSlider = ({ label, value, min, max, onChange, unit = '' }) => {
             </View>
             <View 
                 style={styles.sliderTrack}
-                onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
-                {...panResponder.panHandlers}
+                onLayout={(e) => {
+                    sliderWidthRef.current = e.nativeEvent.layout.width;
+                }}
+                {...panResponderRef.current.panHandlers}
             >
                 <View style={[styles.sliderFill, { width: `${percentage * 100}%` }]} />
                 <View style={[styles.sliderThumb, { left: `${percentage * 100}%` }]} />
@@ -54,6 +65,12 @@ const EffectsRack = ({ visible }) => {
     const [eqLow, setEqLow] = useState(0);
     const [eqMid, setEqMid] = useState(0);
     const [eqHigh, setEqHigh] = useState(0);
+    const [activePreset, setActivePreset] = useState('Flat');
+
+    const handlePresetChange = (name) => {
+        setActivePreset(name);
+        AudioPlaybackService.setMasterPreset(name);
+    };
 
     const handleDistortionChange = (val) => {
         setDistortion(val);
@@ -98,6 +115,23 @@ const EffectsRack = ({ visible }) => {
     return (
         <View style={styles.rackContainer}>
             <Text style={styles.rackTitle}>FX RACK</Text>
+
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>MASTERING PRESETS</Text>
+                <View style={styles.presetContainer}>
+                    {['Flat', 'Lo-Fi', 'Cinematic', 'Radio Ready'].map((name) => (
+                        <TouchableOpacity
+                            key={name}
+                            style={[styles.presetButton, activePreset === name && styles.activePresetButton]}
+                            onPress={() => handlePresetChange(name)}
+                        >
+                            <Text style={[styles.presetButtonText, activePreset === name && styles.activePresetText]}>
+                                {name}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </View>
             
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>DISTORTION</Text>
@@ -286,6 +320,32 @@ const styles = StyleSheet.create({
             radius: 3,
             elevation: 4,
         }),
+    },
+    presetContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: sc(8),
+        marginBottom: sc(10),
+    },
+    presetButton: {
+        paddingHorizontal: sc(12),
+        paddingVertical: sc(8),
+        borderRadius: sc(8),
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    activePresetButton: {
+        backgroundColor: '#6200ee',
+        borderColor: '#BA55D3',
+    },
+    presetButtonText: {
+        color: '#aaa',
+        fontSize: normalize(10),
+        fontWeight: 'bold',
+    },
+    activePresetText: {
+        color: '#fff',
     },
 });
 

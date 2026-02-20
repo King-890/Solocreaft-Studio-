@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
@@ -11,6 +11,14 @@ const NOTE_MAP = ['G3', 'D3', 'G2', 'B2', 'D4'];
 export default function Banjo() {
     const [activeStrings, setActiveStrings] = useState([false, false, false, false, false]);
     const stringAnims = useRef(STRINGS.map(() => new Animated.Value(0))).current;
+    const timeoutRefs = useRef({});
+
+    // Cleanup timeouts on unmount
+    useEffect(() => {
+        return () => {
+            Object.values(timeoutRefs.current).forEach(clearTimeout);
+        };
+    }, []);
 
     const pluckString = useCallback((index) => {
         UnifiedAudioEngine.activateAudio();
@@ -30,12 +38,15 @@ export default function Banjo() {
             Animated.spring(stringAnims[index], { toValue: 0, friction: 3, useNativeDriver: Platform.OS !== 'web' })
         ]).start();
 
-        setTimeout(() => {
+        if (timeoutRefs.current[index]) clearTimeout(timeoutRefs.current[index]);
+
+        timeoutRefs.current[index] = setTimeout(() => {
             setActiveStrings(prev => {
                 const next = [...prev];
                 next[index] = false;
                 return next;
             });
+            delete timeoutRefs.current[index];
         }, 300);
     }, []);
 
@@ -135,6 +146,10 @@ export default function Banjo() {
                                     style={styles.pluckZone}
                                     onPress={() => pluckString(i)}
                                     activeOpacity={1}
+                                    accessible={true}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`String ${i + 1} (${STRINGS[i]})`}
+                                    accessibilityHint={`Plucks the ${STRINGS[i]} string`}
                                 />
                             </View>
                         ))}

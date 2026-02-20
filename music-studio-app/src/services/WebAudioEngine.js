@@ -7,7 +7,9 @@ class WebAudioEngine {
     constructor() {
         this.audioContext = null;
         this.initialized = false;
+        this.initPromise = null;
         this.bufferCache = {}; // Cache for AudioBuffers
+        // ... (rest of constructor unchanged)
         this.loadingPromises = {}; // Track active loads to prevent duplicates
         this.playingSources = new Map(); // Track active sources for stopping
         this.sustainActive = false; // Global sustain pedal state
@@ -21,9 +23,8 @@ class WebAudioEngine {
         this.reverbWetGain = null;
         this.reverbDryGain = null;
 
-        // [VOLUME OPTIMIZATION] Master Gain & Compression
-        this.masterGainNode = null;
-        this.masterCompressor = null;
+        // [VOLUME OPTIMIZATION] Master Bus will be provided by UnifiedAudioContext
+        this.masterBus = null;
     }
 
     setSustain(active) {
@@ -38,73 +39,48 @@ class WebAudioEngine {
         }
     }
 
+    isReady() {
+        return this.initialized && this.audioContext && this.audioContext.state === 'running';
+    }
+
     async init() {
         if (Platform.OS !== 'web') return false;
-        if (this.initialized) {
-            // Even if initialized, check if we need to resume
-            if (this.audioContext && this.audioContext.state === 'suspended') {
-                await UnifiedAudioContext.resume();
-            }
-            return true;
-        }
         
-        try {
-            this.audioContext = UnifiedAudioContext.get();
-            if (!this.audioContext) return false;
+        if (this.initPromise) return this.initPromise;
 
-            // Initialize Master Gain Staging
-            this.initMasterChain();
-
-            // Initialize Reverb Chain
-            this.initReverb();
-
-            // [RESUME]
-            if (this.audioContext.state === 'suspended') {
-                await UnifiedAudioContext.resume();
+        this.initPromise = (async () => {
+            if (this.initialized) {
+                if (this.audioContext && this.audioContext.state === 'suspended') {
+                    await UnifiedAudioContext.resume();
+                }
+                return true;
             }
+            
+            try {
+                this.audioContext = UnifiedAudioContext.get();
+                if (!this.audioContext) return false;
 
-            this.initialized = true;
-            console.log('✅ WebAudioEngine Initialized with Gain-Optimized Sound Engine');
-            return true;
-        } catch (error) {
-            console.error('❌ Failed to initialize WebAudioEngine:', error);
-            return false;
-        }
+                this.masterBus = UnifiedAudioContext.getMasterBus();
+                this.initReverb();
+
+                if (this.audioContext.state === 'suspended') {
+                    await UnifiedAudioContext.resume();
+                }
+
+                this.initialized = true;
+                console.log('✅ WebAudioEngine Initialized (Connected to Master Bus)');
+                return true;
+            } catch (error) {
+                console.error('❌ Failed to initialize WebAudioEngine:', error);
+                this.initPromise = null;
+                return false;
+            }
+        })();
+
+        return this.initPromise;
     }
 
-    initMasterChain() {
-        if (!this.audioContext) return;
 
-        // 1. Dynamics Compressor (Acts as an Automatic Gain Control)
-        this.masterCompressor = this.audioContext.createDynamicsCompressor();
-        this.masterCompressor.threshold.setValueAtTime(-24, this.audioContext.currentTime);
-        this.masterCompressor.knee.setValueAtTime(40, this.audioContext.currentTime);
-        this.masterCompressor.ratio.setValueAtTime(4, this.audioContext.currentTime);
-        this.masterCompressor.attack.setValueAtTime(0, this.audioContext.currentTime);
-        this.masterCompressor.release.setValueAtTime(0.25, this.audioContext.currentTime);
-
-        // 2. Master Gain (Baseline 200% boost)
-        this.masterGainNode = this.audioContext.createGain();
-        this.masterGainNode.gain.setValueAtTime(2.0, this.audioContext.currentTime);
-
-        // 3. Final Limiter Node (Prevent Distortion)
-        this.masterLimiter = this.audioContext.createDynamicsCompressor();
-        this.masterLimiter.threshold.setValueAtTime(-1.0, this.audioContext.currentTime);
-        this.masterLimiter.knee.setValueAtTime(0, this.audioContext.currentTime);
-        this.masterLimiter.ratio.setValueAtTime(20, this.audioContext.currentTime);
-        this.masterLimiter.attack.setValueAtTime(0, this.audioContext.currentTime);
-        this.masterLimiter.release.setValueAtTime(0.1, this.audioContext.currentTime);
-
-    // Connect Chain: Sources -> Compressor -> Gain -> Limiter -> Destination
-    this.masterCompressor.connect(this.masterGainNode);
-    this.masterGainNode.connect(this.masterLimiter);
-    this.masterLimiter.connect(this.audioContext.destination);
-    
-    // [REFINEMENT] Immediate context resume attempt
-    if (this.audioContext.state === 'suspended') {
-        this.audioContext.resume().catch(() => {});
-    }
-}
 
     initReverb() {
         if (!this.audioContext) return;
@@ -138,7 +114,7 @@ class WebAudioEngine {
     }
 
     async preloadInstrument(instrumentName) {
-        if (!this.init()) return;
+        if (!await this.init()) return;
         const instrumentKey = INSTRUMENTS[instrumentName.toUpperCase()] || instrumentName;
         // Preload middle C as a starter
         await this.loadSample(instrumentKey, 'C4');
@@ -146,11 +122,20 @@ class WebAudioEngine {
 
     async loadSample(instrumentKey, noteName, isPercussion = false, velocity = 0.8) {
         // Round Robin index for percussion
-        const rrIndex = isPercussion ? (this.percussionIndices[noteName] || 0) : 0;
+        if (isPercussion && !this.percussionIndices[noteName]) {
+            this.percussionIndices[noteName] = 0;
+        }
+        const rrIndex = isPercussion ? this.percussionIndices[noteName] : 0;
         
         const url = isPercussion 
             ? getLocalPercussionAsset(instrumentKey, noteName, rrIndex) 
             : getSampleUrl(instrumentKey, noteName, velocity);
+            
+        if (isPercussion) {
+            // For now assume 1 variant until assets are expanded, but logic is ready
+            const variantsCount = 1; 
+            this.percussionIndices[noteName] = (rrIndex + 1) % variantsCount;
+        }
             
         if (!url) return null;
         
@@ -161,7 +146,7 @@ class WebAudioEngine {
 
         this.loadingPromises[cacheKey] = (async () => {
             const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Sample load timeout')), 3000)
+                setTimeout(() => reject(new Error('Sample load timeout')), 10000)
             );
 
             try {
@@ -188,7 +173,7 @@ class WebAudioEngine {
             this.audioContext.resume().catch(() => {});
         }
         
-        if (!this.init()) return;
+        if (!await this.init()) return;
 
         const instrumentKey = INSTRUMENTS[instrument.toUpperCase()] || INSTRUMENTS.PIANO;
         const cacheKey = `${instrumentKey}-${noteName}-${velocity > 0.6 ? 'hard' : 'soft'}`;
@@ -233,13 +218,13 @@ class WebAudioEngine {
         gainNode.connect(panner);
         
         // [NATURAL SOUND] Route to Reverb Chain
-        const globalChainInput = this.masterCompressor || this.audioContext.destination;
-        panner.connect(globalChainInput); // Dry path (Now compressed & boosted)
+        const masterInput = this.masterBus?.input || this.audioContext.destination;
+        panner.connect(masterInput); // Dry path
         
-        if (this.convolverNode) {
+        if (this.convolverNode && this.reverbWetGain) {
             panner.connect(this.convolverNode); // Send to reverb
             this.convolverNode.connect(this.reverbWetGain);
-            this.reverbWetGain.connect(globalChainInput); // Wet path
+            this.reverbWetGain.connect(masterInput); // Wet path
         }
 
         panner.pan.setValueAtTime(pan, this.audioContext.currentTime);
@@ -282,6 +267,8 @@ class WebAudioEngine {
         let octaveNum = parseInt(octave);
         if (note === 'B#') { note = 'C'; octaveNum++; }
         if (note === 'E#') { note = 'F'; }
+        if (note === 'Cb') { note = 'B'; octaveNum--; }
+        if (note === 'Fb') { note = 'E'; }
         
         const freq = 440 * Math.pow(2, (octaveNum - 4) + (SEMITONE_MAP[note] - 9) / 12);
         if (!isFinite(freq)) return;
@@ -317,7 +304,8 @@ class WebAudioEngine {
 
             osc.connect(filter);
             filter.connect(gain);
-            gain.connect(destination || this.audioContext.destination);
+            const masterInput = this.masterBus?.input || this.audioContext.destination;
+            gain.connect(masterInput);
 
             gain.gain.setValueAtTime(0, now);
             gain.gain.linearRampToValueAtTime(velocity * 0.7, now + 0.01); // Increased from 0.3
@@ -354,7 +342,9 @@ class WebAudioEngine {
             const smoothing = 0.5; 
             
             for (let i = bufferSize; i < channelData.length; i++) {
-                const newVal = (channelData[i - bufferSize] + channelData[i - bufferSize - 1]) * smoothing * decay;
+                const prevIndex = i - bufferSize - 1;
+                const prevVal = prevIndex >= 0 ? channelData[prevIndex] : 0;
+                const newVal = (channelData[i - bufferSize] + prevVal) * smoothing * decay;
                 channelData[i] = newVal;
             }
 
@@ -362,7 +352,8 @@ class WebAudioEngine {
             const gain = this.audioContext.createGain();
             source.buffer = buffer;
             source.connect(gain);
-            gain.connect(destination || this.audioContext.destination);
+            const masterInput = this.masterBus?.input || this.audioContext.destination;
+            gain.connect(masterInput);
             
             gain.gain.setValueAtTime(1.0, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
@@ -407,7 +398,7 @@ class WebAudioEngine {
             this.audioContext.resume().catch(() => {});
         }
         
-        if (!this.init()) return;
+        if (!await this.init()) return;
 
         const AudioPlaybackService = require('./AudioPlaybackService').default;
         // Map instrument to signal chain (Drums, Tabla, Dholak all use '3' for percussion for now)
@@ -562,12 +553,14 @@ class WebAudioEngine {
             this.playingSources.forEach((sources) => {
                 sources.forEach(({ source, gainNode }) => {
                     try {
-                        if (gainNode && now) {
-                            gainNode.gain.cancelScheduledValues(now);
-                            gainNode.gain.setTargetAtTime(0, now, 0.05);
-                        }
+                             if (gainNode && typeof now === 'number' && !Number.isNaN(now)) {
+                             gainNode.gain.cancelScheduledValues(now);
+                             gainNode.gain.setTargetAtTime(0, now, 0.05);
+                         }
                         source.stop(now + 0.1);
-                    } catch (e) {}
+                    } catch (e) {
+                        console.warn('Error during stopAll cleanup:', e);
+                    }
                 });
             });
             this.playingSources.clear();

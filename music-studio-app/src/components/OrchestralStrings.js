@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
@@ -11,6 +11,14 @@ const NOTE_MAP = ['G2', 'D2', 'A1', 'E1']; // Lower octave for orchestral string
 export default function OrchestralStrings({ instrument = 'cello' }) {
     const [activeStrings, setActiveStrings] = useState([false, false, false, false]);
     const stringAnims = useRef(STRINGS.map(() => new Animated.Value(0))).current;
+    const timeoutsRef = useRef({});
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            Object.values(timeoutsRef.current).forEach(clearTimeout);
+        };
+    }, []);
 
     const pluckString = useCallback((index) => {
         UnifiedAudioEngine.activateAudio();
@@ -41,12 +49,14 @@ export default function OrchestralStrings({ instrument = 'cello' }) {
             })
         ]).start();
 
-        setTimeout(() => {
+        if (timeoutsRef.current[index]) clearTimeout(timeoutsRef.current[index]);
+        timeoutsRef.current[index] = setTimeout(() => {
             setActiveStrings(prev => {
                 const next = [...prev];
                 next[index] = false;
                 return next;
             });
+            delete timeoutsRef.current[index];
         }, 500);
     }, [instrument]);
 
@@ -87,6 +97,10 @@ export default function OrchestralStrings({ instrument = 'cello' }) {
                                     style={styles.hotZone}
                                     onPress={() => pluckString(i)}
                                     activeOpacity={1}
+                                    accessible={true}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`${instrument} string ${STRINGS[i]}`}
+                                    accessibilityHint={`Plays the ${NOTE_MAP[i]} note`}
                                 />
                             </View>
                         ))}

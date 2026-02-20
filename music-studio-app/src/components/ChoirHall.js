@@ -17,25 +17,28 @@ export default function ChoirHall() {
     
     const pulseAnims = useRef(VOCAL_RANGES.reduce((acc, range) => {
         range.notes.forEach(note => {
-            acc[note] = new Animated.Value(1);
+            const compositeKey = `${range.id}-${note}`;
+            acc[compositeKey] = new Animated.Value(1);
         });
         return acc;
     }, {})).current;
 
-    const playVocal = useCallback((note, velocity = 0.8) => {
+    const playVocal = useCallback((rangeId, note, velocity = 0.8) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(note, 'choir', 0, velocity);
-        setActiveNotes(prev => ({ ...prev, [note]: true }));
+        const compositeKey = `${rangeId}-${note}`;
+        setActiveNotes(prev => ({ ...prev, [compositeKey]: true }));
         
         Animated.sequence([
-            Animated.timing(pulseAnims[note], { toValue: 1.3, duration: 150, useNativeDriver: Platform.OS !== 'web' }),
-            Animated.spring(pulseAnims[note], { toValue: 1, friction: 3, tension: 40, useNativeDriver: Platform.OS !== 'web' })
+            Animated.timing(pulseAnims[compositeKey], { toValue: 1.3, duration: 150, useNativeDriver: Platform.OS !== 'web' }),
+            Animated.spring(pulseAnims[compositeKey], { toValue: 1, friction: 3, tension: 40, useNativeDriver: Platform.OS !== 'web' })
         ]).start();
     }, []);
 
-    const stopVocal = useCallback((note) => {
+    const stopVocal = useCallback((rangeId, note) => {
         UnifiedAudioEngine.stopSound(note, 'choir');
-        setActiveNotes(prev => ({ ...prev, [note]: false }));
+        const compositeKey = `${rangeId}-${note}`;
+        setActiveNotes(prev => ({ ...prev, [compositeKey]: false }));
     }, []);
 
     return (
@@ -55,13 +58,14 @@ export default function ChoirHall() {
                         
                         <View style={styles.voiceGems}>
                             {range.notes.map((note) => {
-                                const isActive = activeNotes[note];
+                                const compositeKey = `${range.id}-${note}`;
+                                const isActive = activeNotes[compositeKey];
                                 return (
                                     <TouchableOpacity
                                         key={note}
                                         style={styles.voiceGemWrapper}
-                                        onPressIn={() => playVocal(note)}
-                                        onPressOut={() => stopVocal(note)}
+                                        onPressIn={() => playVocal(range.id, note)}
+                                        onPressOut={() => stopVocal(range.id, note)}
                                         activeOpacity={1}
                                         delayPressIn={0}
                                     >
@@ -72,7 +76,7 @@ export default function ChoirHall() {
                                                     isActive && styles.voiceGemActive,
                                                     { 
                                                         borderColor: isActive ? '#fff' : 'rgba(255,255,255,0.05)',
-                                                        transform: [{ scale: pulseAnims[note] }]
+                                                        transform: [{ scale: pulseAnims[compositeKey] }]
                                                     }
                                                 ]}
                                             >
@@ -89,7 +93,7 @@ export default function ChoirHall() {
                                                         styles.aura,
                                                         { 
                                                             borderColor: range.color,
-                                                            transform: [{ scale: pulseAnims[note].interpolate({ inputRange: [1, 1.3], outputRange: [1, 2.5] }) }]
+                                                            transform: [{ scale: pulseAnims[compositeKey].interpolate({ inputRange: [1, 1.3], outputRange: [1, 2.5] }) }]
                                                         }
                                                     ]} 
                                                 />

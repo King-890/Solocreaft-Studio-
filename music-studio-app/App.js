@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { SettingsProvider } from './src/contexts/SettingsContext';
 import { ProjectProvider } from './src/contexts/ProjectContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
@@ -22,23 +21,27 @@ import { errorMonitor, setupGlobalErrorHandler } from './src/services/ErrorMonit
 // Ignore specific warnings
 LogBox.ignoreLogs([
   'props.pointerEvents is deprecated',
-  'shadow*" style props are deprecated',
+  'style props are deprecated', // Generalize to catch 'shadow*', 'shadowOffset', etc.
+  'Expo AV has been deprecated',
 ]);
 
-// Web & Production console suppression
-if (Platform.OS === 'web' || !__DEV__) {
+// Global console suppression (Web & Native)
+{
   const originalWarn = console.warn;
   console.warn = (...args) => {
     if (args[0] && typeof args[0] === 'string' && (
       args[0].includes('props.pointerEvents is deprecated') ||
-      args[0].includes('shadow*" style props are deprecated') ||
+      args[0].includes('style props are deprecated') ||
       args[0].includes('Node.contains: argument is not a Node') ||
       args[0].includes('VirtualizedLists should never be nested') ||
-      args[0].includes('Remote debugger')
+      args[0].includes('Remote debugger') ||
+      args[0].includes('Expo AV has been deprecated')
     )) {
       return;
     }
-    if (!__DEV__) return; // Suppress all warnings in production
+    // Strict production filtering
+    if (!__DEV__ && (Platform.OS === 'web')) return; 
+    
     originalWarn.apply(console, args);
   };
 
@@ -46,13 +49,17 @@ if (Platform.OS === 'web' || !__DEV__) {
   console.error = (...args) => {
     if (args[0] && typeof args[0] === 'string' && (
       args[0].includes('props.pointerEvents is deprecated') ||
-      args[0].includes('shadow*" style props are deprecated')
+      args[0].includes('style props are deprecated') ||
+      args[0].includes('Expo AV has been deprecated')
     )) {
       return;
     }
     // Track errors in production but suppress from console if not in dev
     if (!__DEV__) {
-        // Here we could add a production logging service call
+        errorMonitor.report(
+          args[0] instanceof Error ? args[0] : new Error(String(args[0])),
+          { type: 'CONSOLE_ERROR', source: 'console.error override' }
+        );
         return;
     }
     originalError.apply(console, args);
@@ -217,52 +224,30 @@ function MainTabs() {
   );
 }
 
-import LoginScreen from './src/screens/LoginScreen';
-import SignupScreen from './src/screens/SignupScreen';
+
 
 function AppContent() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#121212' }}>
-        <ActivityIndicator size="large" color="#6200ee" />
-      </View>
-    );
-  }
-
   return (
     <>
       <ErrorDisplay />
 
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {user ? (
-            // Protected Routes
-            <>
-              <Stack.Screen name="Main" component={MainTabs} />
-              <Stack.Screen name="Studio" component={StudioScreen} />
-              <Stack.Screen name="InstrumentsLibrary" component={InstrumentsLibraryScreen} />
-              <Stack.Screen name="InstrumentRoom" component={InstrumentRoomScreen} />
-              <Stack.Screen name="BandRoom" component={BandRoomScreen} />
-              <Stack.Screen
-                name="Debug"
-                component={DebugScreen}
-                options={{
-                  title: 'Debug Screen',
-                  headerShown: true,
-                  headerStyle: { backgroundColor: '#1a1a1a' },
-                  headerTintColor: '#fff'
-                }}
-              />
-            </>
-          ) : (
-            // Auth Routes
-            <>
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="Signup" component={SignupScreen} />
-            </>
-          )}
+          <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen name="Studio" component={StudioScreen} />
+          <Stack.Screen name="InstrumentsLibrary" component={InstrumentsLibraryScreen} />
+          <Stack.Screen name="InstrumentRoom" component={InstrumentRoomScreen} />
+          <Stack.Screen name="BandRoom" component={BandRoomScreen} />
+          <Stack.Screen
+            name="Debug"
+            component={DebugScreen}
+            options={{
+              title: 'Debug Screen',
+              headerShown: true,
+              headerStyle: { backgroundColor: '#1a1a1a' },
+              headerTintColor: '#fff'
+            }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </>
@@ -297,17 +282,15 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <SettingsProvider>
-          <ThemeProvider>
-            <UserProgressProvider>
-              <ProjectProvider>
-                <AppContent />
-              </ProjectProvider>
-            </UserProgressProvider>
-          </ThemeProvider>
-        </SettingsProvider>
-      </AuthProvider>
+      <SettingsProvider>
+        <ThemeProvider>
+          <UserProgressProvider>
+            <ProjectProvider>
+              <AppContent />
+            </ProjectProvider>
+          </UserProgressProvider>
+        </ThemeProvider>
+      </SettingsProvider>
     </ErrorBoundary>
   );
 }

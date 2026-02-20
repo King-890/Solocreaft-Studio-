@@ -55,25 +55,35 @@ const ExportService = {
     },
 
     /**
-     * Native: Shares the first available recording via system share sheet.
-     * (Multi-track mixing on native is a complex NDK/FFmpeg task deferred to v2)
+     * Web-only: Placeholder for MP3 export.
+     * Implementing full MP3 encoding on web without external libraries is 
+     * limited to WAV headers; for true MP3, libraries like lamejs are recommended.
      */
-    exportNative: async (recordings) => {
+    exportAsMP3: async (clips, tracks, tempo) => {
+        if (Platform.OS !== 'web') return null;
+        console.warn('MP3 export on web is currently using WAV format fallback.');
+        return ExportService.exportAsWAV(clips, tracks, tempo);
+    },
+
+    /**
+     * Native: Shares the first available recording via system share sheet.
+     */
+    exportNative: async (recordings, format = 'wav') => {
         if (Platform.OS === 'web') return null;
 
         if (!recordings || recordings.length === 0) {
-            throw new Error('No recordings found to export.');
+            throw new Error('No recordings found to export. Please record something first.');
         }
 
-        const recording = recordings[0]; // Export the latest/first recording
+        const recording = recordings[0];
         if (!(await Sharing.isAvailableAsync())) {
             throw new Error('Sharing is not available on this device');
         }
 
         await Sharing.shareAsync(recording.uri, {
-            mimeType: 'audio/m4a',
-            dialogTitle: 'Export your SoloCraft recording',
-            UTI: 'public.mpeg-4-audio'
+            mimeType: format === 'mp3' ? 'audio/mpeg' : 'audio/m4a',
+            dialogTitle: `Export project as ${format.toUpperCase()}`,
+            UTI: format === 'mp3' ? 'public.mp3' : 'public.mpeg-4-audio'
         });
 
         return { success: true };
@@ -99,7 +109,7 @@ function bufferToWav(buffer) {
 
     setUint32(0x46464952); // "RIFF"
     setUint32(length - 8);
-    setUint32(0x40455641); // "WAVE"
+    setUint32(0x45564157); // "WAVE"
     setUint32(0x20746d66); // "fmt "
     setUint32(16);
     setUint16(1); // PCM

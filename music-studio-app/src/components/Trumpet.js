@@ -39,7 +39,8 @@ export default function Trumpet({ instrument = 'trumpet' }) {
     };
 
     const getNoteFromValves = (valves) => {
-        const sorted = valves.sort().join('');
+        // [REFINEMENT] Sort a copy of the array to avoid mutating React state
+        const sorted = [...valves].sort().join('');
         const noteMap = { '': 'C4', '1': 'B3', '2': 'A3', '3': 'G3', '12': 'G#3', '13': 'F#3', '23': 'F3', '123': 'E3' };
         return noteMap[sorted] || 'C4';
     };

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
@@ -9,13 +9,26 @@ const HOLES = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
 
 export default function Flute({ instrument = 'flute' }) {
     const [activeHoles, setActiveHoles] = useState({});
+    const timeoutsRef = useRef({});
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            Object.values(timeoutsRef.current).forEach(clearTimeout);
+        };
+    }, []);
 
     const playNote = useCallback((note) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(note, instrument, 0, 0.7);
         setActiveHoles(prev => ({ ...prev, [note]: true }));
-        setTimeout(() => setActiveHoles(prev => ({ ...prev, [note]: false })), 300);
-    }, []);
+
+        if (timeoutsRef.current[note]) clearTimeout(timeoutsRef.current[note]);
+        timeoutsRef.current[note] = setTimeout(() => {
+            setActiveHoles(prev => ({ ...prev, [note]: false }));
+            delete timeoutsRef.current[note];
+        }, 300);
+    }, [instrument]);
 
     return (
         <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} style={styles.container}>

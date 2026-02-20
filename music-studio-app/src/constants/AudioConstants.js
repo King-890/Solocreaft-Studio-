@@ -30,9 +30,11 @@ export const INSTRUMENT_TRACK_MAP = {
     'orchestral_strings': '7',
     'ethnic_strings': '10',
     'sitar': '10',
+    'veena': '10',
     'shamisen': '10',
     'koto': '10',
     'harp': '12',
+    'kalimba': '12',
 
     // Wind
     'flute': '8',
@@ -76,5 +78,9 @@ export const INSTRUMENT_TRACK_MAP = {
     'world_percussion': '13',
     'ethnic_percussion': '13',
     'world': '13',
-    'global_rhythms': '13'
+    'global_rhythms': '13',
+
+    // Mallets
+    'marimba': '14',
+    'glockenspiel': '14'
 };

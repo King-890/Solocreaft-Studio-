@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, PanResponder, useWindowDimensions, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
@@ -13,8 +13,22 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
     const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     
     const [selectedChord, setSelectedChord] = useState('C');
+    const selectedChordRef = useRef('C'); // Ref to keep track of latest chord for PanResponder
     const [activeStrings, setActiveStrings] = useState(new Array(6).fill(false));
     const touchedStrings = useRef(new Set());
+    const timeoutsRef = useRef({}); // Store timeout IDs by index
+
+    // Keep selectedChordRef in sync
+    useEffect(() => {
+        selectedChordRef.current = selectedChord;
+    }, [selectedChord]);
+
+    // Cleanup timeouts on unmount
+    useEffect(() => {
+        return () => {
+            Object.values(timeoutsRef.current).forEach(id => clearTimeout(id));
+        };
+    }, []);
     
     // Adaptive dimensioning
     const bodyWidth = Math.min(width * 0.6, sc(400));
@@ -22,7 +36,8 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
     const stringHeight = bodyHeight / 6.4; // Proportional string spacing
 
     const playString = useCallback((index, velocity = 0.5) => {
-        const notes = GUITAR_CHORDS[selectedChord];
+        const currentChord = selectedChordRef.current; // Use ref for latest value
+        const notes = GUITAR_CHORDS[currentChord];
         const note = notes[index];
         
         if (note) {
@@ -32,15 +47,31 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
                 next[index] = true;
                 return next;
             });
-            setTimeout(() => {
+            
+            // Clear existing timeout for this string if any
+            if (timeoutsRef.current[index]) {
+                clearTimeout(timeoutsRef.current[index]);
+            }
+
+            timeoutsRef.current[index] = setTimeout(() => {
                 setActiveStrings(prev => {
                     const next = [...prev];
                     next[index] = false;
                     return next;
                 });
+                delete timeoutsRef.current[index];
             }, 150);
         }
-    }, [selectedChord, instrument]);
+    }, [instrument]); // Removed selectedChord dependency as we use ref
+
+    const processTouch = useCallback((y, velocity = 0.5) => {
+        const stringIndex = Math.floor(y / stringHeight);
+        if (stringIndex >= 0 && stringIndex < 6 && !touchedStrings.current.has(stringIndex)) {
+            touchedStrings.current.add(stringIndex);
+            const v = Math.min(Math.max(Math.abs(velocity) * 1.5, 0.4), 1.0);
+            playString(stringIndex, v);
+        }
+    }, [playString, stringHeight]);
 
     const panResponder = useRef(
         PanResponder.create({
@@ -59,15 +90,6 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
             }
         })
     ).current;
-
-    const processTouch = (y, velocity = 0.5) => {
-        const stringIndex = Math.floor(y / stringHeight);
-        if (stringIndex >= 0 && stringIndex < 6 && !touchedStrings.current.has(stringIndex)) {
-            touchedStrings.current.add(stringIndex);
-            const v = Math.min(Math.max(Math.abs(velocity) * 1.5, 0.4), 1.0);
-            playString(stringIndex, v);
-        }
-    };
 
     const isStackView = isPhone && !isLandscape;
 
@@ -161,7 +183,7 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
             </View>
 
             <View style={[styles.footer, { bottom: SAFE_BOTTOM + sc(15) }]}>
-                <Text style={styles.footerLabel}>SWIPE THE STRINGS • CONCERT SPRICE EDITION</Text>
+                <Text style={styles.footerLabel}>SWIPE THE STRINGS • CONCERT SPRUCE EDITION</Text>
             </View>
         </LinearGradient>
     );

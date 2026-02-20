@@ -181,6 +181,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [3, 4, 5, 6],
         defaultOctave: 4,
+        hasChords: false,
+        hasPads: false,
         color: '#e1bee7',
     },
     banjo: {
@@ -192,6 +194,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [3, 4, 5],
         defaultOctave: 4,
+        hasChords: false,
+        hasPads: false,
         color: '#ffcc80',
     },
     accordion: {
@@ -203,6 +207,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [3, 4, 5],
         defaultOctave: 4,
+        hasChords: false,
+        hasPads: false,
         color: '#f48fb1',
     },
     marimba: {
@@ -214,6 +220,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [3, 4, 5, 6],
         defaultOctave: 4,
+        hasChords: false,
+        hasPads: false,
         color: '#8d6e63',
     },
     choir: {
@@ -221,10 +229,12 @@ export const INSTRUMENTS = {
         name: 'choir',
         displayName: 'Choir',
         icon: '👥',
-        category: 'strings',
+        category: 'vocal',
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [2, 3, 4, 5],
         defaultOctave: 3,
+        hasChords: false,
+        hasPads: false,
         color: '#f0f4c3',
     },
     clarinet: {
@@ -236,6 +246,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [3, 4, 5],
         defaultOctave: 4,
+        hasChords: false,
+        hasPads: false,
         color: '#b2dfdb',
     },
     oboe: {
@@ -247,6 +259,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [4, 5, 6],
         defaultOctave: 4,
+        hasChords: false,
+        hasPads: false,
         color: '#80cbc4',
     },
     tuba: {
@@ -258,6 +272,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [1, 2, 3],
         defaultOctave: 2,
+        hasChords: false,
+        hasPads: false,
         color: '#ffb74d',
     },
     kalimba: {
@@ -269,6 +285,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [4, 5],
         defaultOctave: 4,
+        hasChords: false,
+        hasPads: false,
         color: '#a1887f',
     },
     shamisen: {
@@ -280,6 +298,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [3, 4],
         defaultOctave: 3,
+        hasChords: false,
+        hasPads: false,
         color: '#ffcdd2',
     },
     koto: {
@@ -291,6 +311,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [3, 4],
         defaultOctave: 3,
+        hasChords: false,
+        hasPads: false,
         color: '#c8e6c9',
     },
     sitar: {
@@ -302,6 +324,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [3, 4, 5],
         defaultOctave: 3,
+        hasChords: false,
+        hasPads: false,
         color: '#ffb74d',
     },
     veena: {
@@ -313,6 +337,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [3, 4],
         defaultOctave: 3,
+        hasChords: false,
+        hasPads: false,
         color: '#ce93d8',
     },
     cello: {
@@ -324,6 +350,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [2, 3, 4],
         defaultOctave: 2,
+        hasChords: false,
+        hasPads: false,
         color: '#a52a2a',
     },
     contrabass: {
@@ -335,6 +363,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [1, 2],
         defaultOctave: 1,
+        hasChords: false,
+        hasPads: false,
         color: '#5d4037',
     },
     french_horn: {
@@ -346,6 +376,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [2, 3, 4],
         defaultOctave: 3,
+        hasChords: false,
+        hasPads: false,
         color: '#ffd54f',
     },
     strings: {
@@ -357,6 +389,8 @@ export const INSTRUMENTS = {
         notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
         octaves: [3, 4, 5],
         defaultOctave: 4,
+        hasChords: false,
+        hasPads: false,
         color: '#ba68c8',
     },
 };

@@ -4,12 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AudioPlaybackService from '../services/AudioPlaybackService';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { INSTRUMENT_TRACKS, INSTRUMENT_TRACK_MAP } from '../constants/AudioConstants';
-import { useAuth } from './AuthContext';
-
 const ProjectContext = createContext({});
 
 export const ProjectProvider = ({ children }) => {
-    const { user } = useAuth();
     const normalizeTrack = (track) => {
         const defaults = {
             volume: 0.8,
@@ -71,8 +68,16 @@ export const ProjectProvider = ({ children }) => {
             if (saveTimeout.current) clearTimeout(saveTimeout.current);
             saveTimeout.current = setTimeout(() => {
                 saveRecordings();
+                saveTimeout.current = null;
             }, 1000);
         }
+
+        return () => {
+            if (saveTimeout.current) {
+                clearTimeout(saveTimeout.current);
+                saveTimeout.current = null;
+            }
+        };
     }, [recordings, areRecordingsLoaded]);
 
     // Initial cleanup/sync (Staggered initialization removed for performance)

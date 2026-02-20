@@ -61,6 +61,7 @@ export const HOME_THEMES = {
 
         // Shadows
         shadow: createShadow({ color: '#000', offsetY: 4, opacity: 0.4, radius: 10, elevation: 10 }),
+        shadowSmall: createShadow({ color: '#000', offsetY: 2, opacity: 0.3, radius: 5, elevation: 5 }),
 
         // Glows
         glow: createShadow({ color: '#FFD700', offsetY: 0, opacity: 0.4, radius: 10, elevation: 10 }),

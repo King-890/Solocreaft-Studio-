@@ -28,7 +28,7 @@ class MetronomeService {
 
     start(tempo, onBeat = null, countIn = false, onComplete = null) {
         this.init();
-        if (this.isPlaying) return;
+        if (this.isPlaying || !this.audioContext) return;
 
         this.isPlaying = true;
         this.tempo = tempo || 120;
@@ -37,7 +37,7 @@ class MetronomeService {
         this.isCountingIn = countIn;
         this.onCountInComplete = onComplete;
 
-        this.nextNoteTime = this.audioContext ? this.audioContext.currentTime : 0;
+        this.nextNoteTime = this.audioContext.currentTime;
         this.scheduler();
     }
 
@@ -48,7 +48,7 @@ class MetronomeService {
     }
 
     scheduler() {
-        if (!this.isPlaying) return;
+        if (!this.isPlaying || !this.audioContext) return;
 
         while (this.nextNoteTime < this.audioContext.currentTime + this.scheduleAheadTime) {
             this.scheduleNote(this.currentBeat, this.nextNoteTime);
@@ -88,9 +88,9 @@ class MetronomeService {
         const envelope = this.audioContext.createGain();
 
         // Accent on beat 0
-        osc.frequency.value = (beatNumber % 4 === 0) ? 1000 : 800;
+        osc.frequency.setValueAtTime((beatNumber % 4 === 0) ? 1000 : 800, time);
         
-        envelope.gain.value = 1;
+        envelope.gain.setValueAtTime(1, time);
         envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
 
         osc.connect(envelope);

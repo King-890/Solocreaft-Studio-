@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert, TextInput, Modal, Platform } from 'react-native';
 import AudioRecorder from '../components/AudioRecorder';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,7 +17,6 @@ import Timeline from '../components/Timeline';
 import ExportModal from '../components/ExportModal';
 import { useProject } from '../contexts/ProjectContext';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../contexts/AuthContext';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import ProjectManager from '../services/ProjectManager';
 import AnimatedCard from '../components/AnimatedCard';
@@ -26,6 +25,7 @@ import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import MetronomeService from '../services/MetronomeService';
 import EffectsRack from '../components/EffectsRack';
 import Visualizer from '../components/Visualizer';
+import MasterVisualizer from '../components/MasterVisualizer';
 import { PanResponder } from 'react-native';
 import { COLORS } from '../constants/UIConfig';
 import { createShadow } from '../utils/shadows';
@@ -49,19 +49,19 @@ const INSTRUMENTS = [
 const MasterVolumeSlider = ({ value, onValueChange }) => {
     const [sliderWidth, setSliderWidth] = useState(0);
 
-    const handleTouch = (evt) => {
+    const handleTouch = useCallback((evt) => {
         if (sliderWidth === 0) return;
         const locationX = evt.nativeEvent.locationX;
         const percentage = Math.max(0, Math.min(1, locationX / sliderWidth));
         onValueChange(percentage);
-    };
+    }, [sliderWidth, onValueChange]);
 
-    const panResponder = PanResponder.create({
+    const panResponder = useMemo(() => PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: (evt) => handleTouch(evt),
         onPanResponderMove: (evt) => handleTouch(evt),
-    });
+    }), [handleTouch]);
 
     return (
         <View style={styles.masterVolumeContainer}>
@@ -120,7 +120,6 @@ export default function StudioScreen({ route }) {
         tempo,
         currentTime 
     } = useProject();
-    const { user } = useAuth();
     const navigation = useNavigation();
 
     // Animations
@@ -165,6 +164,17 @@ export default function StudioScreen({ route }) {
         }
     }, [route?.params?.initialInstrument]);
 
+    // Metronome cleanup and mounted flag
+    useEffect(() => {
+        let isMounted = true;
+        
+        return () => {
+            isMounted = false;
+            MetronomeService.stop();
+            setIsMetronomeActive(false);
+        };
+    }, []);
+
     const handleInstrumentChange = (instrumentId) => {
         // [MOBILE UNLOCK] Attempt to activate audio on any interaction
         UnifiedAudioEngine.activateAudio().catch(() => {});
@@ -196,7 +206,11 @@ export default function StudioScreen({ route }) {
             MetronomeService.stop();
             setIsMetronomeActive(false);
         } else {
-            MetronomeService.start(tempo, (beat) => setMetronomeBeat(beat));
+            MetronomeService.start(tempo, (beat) => {
+                // The cleanup effect handles stopping the service, 
+                // but we also check existence of the setter to be safe
+                setMetronomeBeat(beat);
+            });
             setIsMetronomeActive(true);
         }
     };
@@ -321,7 +335,7 @@ export default function StudioScreen({ route }) {
                     </View>
                 </View>
 
-                <Visualizer type="waveform" height={40} color="#03dac6" />
+                <MasterVisualizer active={true} />
 
                 <EffectsRack visible={showEffectsRack} />
 
@@ -527,6 +541,11 @@ const styles = StyleSheet.create({
     activeIconButton: {
         backgroundColor: 'rgba(3, 218, 198, 0.2)',
         borderColor: '#03dac6',
+    },
+    metroContainer: {
+        width: '100%',
+        alignItems: 'center',
+        paddingVertical: 5,
     },
     metronomeIndicator: {
         flexDirection: 'row',

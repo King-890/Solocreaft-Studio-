@@ -1,7 +1,8 @@
 // Simple recording playback service that handles idb:// URIs
 // Uses HTML5 Audio on web, expo-audio on native
 import { Platform } from 'react-native';
-import * as Audio from 'expo-audio';
+// import * as Audio from 'expo-audio'; // Standardizing on expo-av for stability
+import { Audio } from 'expo-av';
 import { initDB, STORE_NAME } from '../utils/webStorage';
 
 class RecordingPlaybackService {
@@ -75,29 +76,43 @@ class RecordingPlaybackService {
                         reject(new Error('Failed to play audio'));
                     };
 
+                    this.currentPlayer = audio;
                     audio.play()
                         .then(() => {
-                            this.currentPlayer = audio;
+                            resolve();
                         })
-                        .catch(reject);
+                        .catch((err) => {
+                            if (this.currentPlayer === audio) {
+                                this.currentPlayer = null;
+                            }
+                            reject(err);
+                        });
                 } catch (error) {
                     this.cleanup();
                     reject(error);
                 }
             });
         } else {
-            // Native: Use expo-audio
+            // Native: Use expo-av
             try {
-                const player = Audio.createAudioPlayer(playableUri);
-                this.currentPlayer = player;
+                const { sound } = await Audio.Sound.createAsync(
+                    { uri: playableUri },
+                    { shouldPlay: true }
+                );
+                this.currentPlayer = sound;
 
-                player.addListener('playbackStatusUpdate', (status) => {
+                sound.setOnPlaybackStatusUpdate(async (status) => {
                     if (status.didJustFinish) {
-                        this.currentPlayer = null;
+                        try {
+                            sound.setOnPlaybackStatusUpdate(null);
+                            await sound.stopAsync();
+                            await sound.unloadAsync();
+                        } catch (e) {}
+                        if (this.currentPlayer === sound) {
+                            this.currentPlayer = null;
+                        }
                     }
                 });
-
-                player.play();
             } catch (error) {
                 console.error('Native audio playback error:', error);
                 throw error;
@@ -140,8 +155,14 @@ class RecordingPlaybackService {
                 this.currentPlayer.pause();
                 this.currentPlayer.currentTime = 0;
             } else {
-                this.currentPlayer.pause();
-                // seeker cleanup if needed
+                this.currentPlayer.setOnPlaybackStatusUpdate(null);
+                try {
+                    await this.currentPlayer.stopAsync();
+                    await this.currentPlayer.setPositionAsync(0);
+                } catch (e) {
+                    console.log('Error during native stop/rewind:', e);
+                }
+                await this.currentPlayer.unloadAsync();
             }
         } catch (error) {
             console.log('Error stopping sound:', error);
@@ -151,14 +172,19 @@ class RecordingPlaybackService {
         }
     }
 
-    isPlaying() {
+    async isPlaying() {
         if (!this.currentPlayer) return false;
 
         if (Platform.OS === 'web') {
             return !this.currentPlayer.paused;
         }
-        // In expo-audio, isPlaying might be a property or state
-        return this.currentPlayer.playing || false;
+        
+        try {
+            const status = await this.currentPlayer.getStatusAsync();
+            return status.isPlaying;
+        } catch (e) {
+            return false;
+        }
     }
 }
 

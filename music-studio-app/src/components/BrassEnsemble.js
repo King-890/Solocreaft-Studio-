@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
@@ -16,18 +16,20 @@ const BRASS_SECTIONS = [
 export default function BrassEnsemble({ instrument = 'brass' }) {
     const [activeSection, setActiveSection] = useState(null);
     
-    // Mechanical swell animations
     const swellAnims = useRef(BRASS_SECTIONS.reduce((acc, s) => {
         acc[s.id] = new Animated.Value(0);
         return acc;
     }, {})).current;
 
-    // Assuming handleNotePress is a new function to be added,
-    // and the subsequent lines in the instruction were meant to be part of playSection.
-    // The instruction specifically asks to add activateAudio() to handleNotePress.
-    // The `setActiveNotes` state variable is not defined in the original code,
-    // so it's commented out to avoid errors. If it's intended to be added,
-    // it should be defined with `useState`.
+    const timeoutRef = useRef(null);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, []);
+
     const playSection = useCallback((section) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(section.note, instrument, 0, 0.9);
@@ -38,8 +40,12 @@ export default function BrassEnsemble({ instrument = 'brass' }) {
             Animated.timing(swellAnims[section.id], { toValue: 0, duration: 400, useNativeDriver: Platform.OS !== 'web' })
         ]).start();
 
-        setTimeout(() => setActiveSection(null), 500);
-    }, []);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => {
+            setActiveSection(null);
+            timeoutRef.current = null;
+        }, 500);
+    }, [instrument]);
 
     return (
         <LinearGradient colors={['#1a0d06', '#2d1b10', '#1a0d06']} style={styles.container}>

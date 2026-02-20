@@ -21,7 +21,13 @@ export default function Knob({
 }) {
     const animatedValue = useRef(new Animated.Value(value)).current;
     const [displayValue, setDisplayValue] = useState(value);
+    const currentValueRef = useRef(value);
     const lastY = useRef(0);
+
+    // Sync ref with state
+    useEffect(() => {
+        currentValueRef.current = displayValue;
+    }, [displayValue]);
 
     // Update internal animation if external value changes
     useEffect(() => {
@@ -46,10 +52,11 @@ export default function Knob({
                 const sensitivity = 200; // Pixels for a full rotation
                 const delta = dy / sensitivity;
                 
-                const newValue = Math.min(Math.max(displayValue + delta, 0), 1);
+                const newValue = Math.min(Math.max(currentValueRef.current + delta, 0), 1);
                 
-                if (newValue !== displayValue) {
+                if (newValue !== currentValueRef.current) {
                     setDisplayValue(newValue);
+                    animatedValue.setValue(newValue); // Real-time rotation sync
                     if (onChange) {
                         const scaledValue = min + newValue * (max - min);
                         onChange(scaledValue);
@@ -81,7 +88,10 @@ export default function Knob({
                     height: size, 
                     borderRadius: size / 2,
                     backgroundColor: color,
-                    opacity: 0.1 + displayValue * 0.2
+                    opacity: 0.1 + displayValue * 0.2,
+                    ...Platform.select({
+                        web: { boxShadow: `0 0 15px ${color}` }
+                    })
                 }]} />
 
                 <Animated.View style={[
@@ -129,9 +139,6 @@ const styles = StyleSheet.create({
     },
     glow: {
         position: 'absolute',
-        ...Platform.select({
-            web: { boxShadow: '0 0 15px currentColor' }
-        })
     },
     knob: {
         backgroundColor: '#222',

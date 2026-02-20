@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
@@ -14,6 +14,15 @@ export default function Kalimba() {
         return acc;
     }, {})).current;
 
+    const timeoutRef = useRef(null);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, []);
+
     const playTine = useCallback((note) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(note, 'kalimba', 0, 0.75);
@@ -27,7 +36,11 @@ export default function Kalimba() {
             useNativeDriver: Platform.OS !== 'web'
         }).start();
 
-        setTimeout(() => setActiveTine(null), 250);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => {
+            setActiveTine(null);
+            timeoutRef.current = null;
+        }, 250);
     }, []);
 
     return (

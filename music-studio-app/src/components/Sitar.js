@@ -1,10 +1,10 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
 
-import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import { sc, normalize, useResponsive } from '../utils/responsive';
 
 const STRINGS = ['Ma', 'Sa', 'Pa', 'Sa_low'];
 const NOTE_MAP = {
@@ -15,15 +15,25 @@ const NOTE_MAP = {
 };
 
 export default function Sitar({ instrument = 'sitar' }) {
+    const { isLandscape, isPhone } = useResponsive();
     const [activeFret, setActiveFret] = useState([0, 0, 0, 0]);
     const [activeStrings, setActiveStrings] = useState([false, false, false, false]);
     
     const vibrationAnims = useRef(STRINGS.map(() => new Animated.Value(0))).current;
+    const stringTimeoutsRef = useRef({});
 
-    const playString = useCallback((stringIndex, velocity = 0.6) => {
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            Object.values(stringTimeoutsRef.current).forEach(clearTimeout);
+        };
+    }, []);
+
+    const playString = useCallback((stringIndex, velocity = 0.6, explicitFret = null) => {
         UnifiedAudioEngine.activateAudio();
         const stringName = STRINGS[stringIndex];
-        const fret = activeFret[stringIndex];
+        // [REFINEMENT] Use explicitFret if provided to avoid stale closure state
+        const fret = explicitFret !== null ? explicitFret : activeFret[stringIndex];
         const note = NOTE_MAP[stringName][fret];
         
         if (note) {
@@ -40,15 +50,20 @@ export default function Sitar({ instrument = 'sitar' }) {
                 Animated.spring(vibrationAnims[stringIndex], { toValue: 0, friction: 3, tension: 40, useNativeDriver: Platform.OS !== 'web' })
             ]).start();
             
-            setTimeout(() => {
+            if (stringTimeoutsRef.current[stringIndex]) {
+                clearTimeout(stringTimeoutsRef.current[stringIndex]);
+            }
+
+            stringTimeoutsRef.current[stringIndex] = setTimeout(() => {
                 setActiveStrings(prev => {
                     const next = [...prev];
                     next[stringIndex] = false;
                     return next;
                 });
+                delete stringTimeoutsRef.current[stringIndex];
             }, 400);
         }
-    }, [activeFret]);
+    }, [activeFret, instrument]);
 
     const handleFretPress = (stringIndex, fretIndex) => {
         setActiveFret(prev => {
@@ -56,7 +71,8 @@ export default function Sitar({ instrument = 'sitar' }) {
             next[stringIndex] = fretIndex;
             return next;
         });
-        playString(stringIndex);
+        // [REFINEMENT] Pass fretIndex directly to playString to ensure immediate sound feedback
+        playString(stringIndex, 0.6, fretIndex);
     };
 
     return (
@@ -69,7 +85,7 @@ export default function Sitar({ instrument = 'sitar' }) {
                 <Text style={styles.subtitle}>CONCERT {instrument.toUpperCase()} PRO • MAHOGANY & IVORY</Text>
             </View>
 
-            <View style={styles.sitarFrame}>
+            <View style={[styles.sitarFrame, { justifyContent: 'center' }]}>
                 {/* 1. MASTER DANDI (Neck) */}
                 <View style={styles.masterDandi}>
                     <LinearGradient
@@ -121,14 +137,18 @@ export default function Sitar({ instrument = 'sitar' }) {
                 </View>
 
                 {/* 3. SYNCHRONIZED SITAR STRINGS */}
-                <View style={styles.stringsOverlay} pointerEvents="none">
+                <View style={[styles.stringsOverlay, { left: 0 }]} pointerEvents="none">
                     {STRINGS.map((_, i) => (
                         <Animated.View 
                             key={i} 
                             style={[
                                 styles.mysticalString, 
                                 { 
-                                    left: sc(45) + (i * sc(25)),
+                                    // Align strings with the neck. Neck is 120 wide. Strings need to spread across it.
+                                    // If frame is centered, we need to calculate offset relative to the Neck.
+                                    // Since stringsOverlay is absoluteFill of sitarFrame, and Neck is the first child...
+                                    // We need to account for paddingHorizontal: sc(15) of sitarFrame.
+                                    left: sc(15) + sc(20) + (i * sc(25)), // sc(15) padding + sc(20) margin/inset
                                     backgroundColor: activeStrings[i] ? '#fff' : '#fcd34d',
                                     width: 1.2 + (i * 0.4),
                                     transform: [{ 

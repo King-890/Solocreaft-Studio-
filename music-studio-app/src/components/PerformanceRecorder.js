@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 're
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserProgress } from '../contexts/UserProgressContext';
 import { createShadow } from '../utils/shadows';
-import { sc, normalize, SCREEN_HEIGHT } from '../utils/responsive';
+import { sc, normalize } from '../utils/responsive';
 
 /**
  * PerformanceRecorder Component

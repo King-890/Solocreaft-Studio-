@@ -1,5 +1,6 @@
 
 import { Dimensions, Platform, PixelRatio, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
     widthPercentageToDP as wp,
     heightPercentageToDP as hp,
@@ -60,6 +61,7 @@ export const SAFE_BOTTOM = Platform.OS === 'ios' ? 34 : 0;
  */
 export function useResponsive() {
     const { width, height } = useWindowDimensions();
+    const insets = useSafeAreaInsets(); // Hook for accurate safe areas
     
     const isLandscape = width > height;
     const isPhone = width < 768;
@@ -95,8 +97,9 @@ export function useResponsive() {
         isTablet,
         isSmallDevice,
         isTallDevice,
-        SAFE_TOP,
-        SAFE_BOTTOM,
+        SAFE_TOP: insets.top,       // Dynamic safe area top
+        SAFE_BOTTOM: insets.bottom, // Dynamic safe area bottom
+        insets,                     // Expose full insets object if needed
         isLandscape,
     };
 }

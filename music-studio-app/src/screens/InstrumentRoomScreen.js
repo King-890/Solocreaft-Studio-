@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, PanResponder } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -213,6 +213,7 @@ export default function InstrumentRoomScreen() {
     const [volSliderWidth, setVolSliderWidth] = useState(0);
 
     const [isRecording, setIsRecording] = useState(false);
+    const recordingStartTimeRef = useRef(0);
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const pulseAnim = useRef(new Animated.Value(0.6)).current;
 
@@ -236,19 +237,19 @@ export default function InstrumentRoomScreen() {
     };
     const trackId = trackMap[instrumentType] || '2';
 
-    const handleVolTouch = (evt) => {
+    const handleVolTouch = useCallback((evt) => {
         if (volSliderWidth === 0) return;
         const locationX = evt.nativeEvent.locationX;
         const percentage = Math.max(0, Math.min(1, locationX / volSliderWidth));
         updateMasterVolume(percentage);
-    };
+    }, [volSliderWidth, updateMasterVolume]);
 
-    const volPanResponder = PanResponder.create({
+    const volPanResponder = useMemo(() => PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: (evt) => handleVolTouch(evt),
         onPanResponderMove: (evt) => handleVolTouch(evt),
-    });
+    }), [handleVolTouch]);
 
     // Lock to landscape orientation on mount
     useEffect(() => {
@@ -325,6 +326,7 @@ export default function InstrumentRoomScreen() {
                 console.log('Starting recording..');
                 await recorder.prepare();
                 recorder.record();
+                recordingStartTimeRef.current = Date.now();
                 setIsRecording(true);
                 console.log('Recording started');
             } else {
@@ -346,12 +348,14 @@ export default function InstrumentRoomScreen() {
 
         // Save to project context
         if (uri) {
-            // Calculate duration (approximate from recorder status or metadata)
-            // For now, let's use a default or estimate if metadata not easily reachable
-            const duration = 5000; // Placeholder or read from recorder if available
+            // Calculate real duration
+            const duration = recordingStartTimeRef.current > 0 
+                ? Date.now() - recordingStartTimeRef.current 
+                : 5000; // Fallback to 5s if start time missing
 
             await addRecording(uri, duration, null, 'instrument', instrumentType);
-            console.log('Performance saved to library');
+            console.log(`Performance saved to library (Duration: ${duration}ms)`);
+            recordingStartTimeRef.current = 0; // Reset
         }
 
         // Navigate back

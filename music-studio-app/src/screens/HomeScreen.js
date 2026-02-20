@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions, StatusBar, Animated } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNavigation } from '@react-navigation/native';
 import ParticleSystem from '../components/ParticleSystem';
@@ -10,6 +9,7 @@ import ThemeGallery from '../components/ThemeGallery';
 import ImmersiveBackground from '../components/ImmersiveBackground';
 import UIConfig from '../constants/UIConfig';
 import AudioManager from '../utils/AudioManager';
+import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import AnimatedCard from '../components/AnimatedCard';
 import { createTextShadow } from '../utils/shadows';
 
@@ -17,7 +17,6 @@ const { width, height } = Dimensions.get('window');
 const { COLORS, FONTS, SHADOWS, LAYOUT, ANIMATIONS } = UIConfig;
 
 export default function HomeScreen() {
-    const { user } = useAuth();
     const { audioEnabled, animationsEnabled } = useSettings();
     const navigation = useNavigation();
     const [showProfile, setShowProfile] = useState(false);
@@ -27,8 +26,13 @@ export default function HomeScreen() {
     useEffect(() => {
         if (audioEnabled) {
             const startAudio = async () => {
-                const started = await AudioManager.playHomeScreenAmbience();
-                setAudioStarted(started);
+                try {
+                    const started = await AudioManager.playHomeScreenAmbience();
+                    setAudioStarted(started);
+                } catch (error) {
+                    console.error('Failed to play home screen ambience:', error);
+                    setAudioStarted(false);
+                }
             };
             startAudio();
         } else {
@@ -43,8 +47,9 @@ export default function HomeScreen() {
 
     const handleScreenPress = async () => {
         // [MOBILE UNLOCK] Attempt to activate BOTH ambient and instrument engines
-        const UnifiedAudioEngine = require('../services/UnifiedAudioEngine').default;
-        UnifiedAudioEngine.activateAudio().catch(() => {});
+        UnifiedAudioEngine.activateAudio().catch((err) => {
+            console.error('Failed to activate audio engine on press:', err);
+        });
 
         if (!audioStarted && audioEnabled) {
             const resumed = await AudioManager.resumeContext();
@@ -101,9 +106,7 @@ export default function HomeScreen() {
                         onPress={() => setShowProfile(true)}
                     >
                         <View style={styles.orbInner}>
-                            <Text style={styles.orbText}>
-                                {user?.email?.charAt(0).toUpperCase() || '♪'}
-                            </Text>
+                            <Text style={styles.orbText}>👤</Text>
                         </View>
                     </TouchableOpacity>
                 </View>

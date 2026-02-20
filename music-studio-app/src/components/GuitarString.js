@@ -1,14 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View, Platform } from 'react-native';
 import { createShadow } from '../utils/shadows';
+import { sc } from '../utils/responsive';
 
 const GuitarString = ({ thickness, color, active, vibrationScale = 1 }) => {
     const vibrateAnim = useRef(new Animated.Value(0)).current;
     const isWeb = Platform.OS === 'web';
 
     useEffect(() => {
+        let anim;
         if (active) {
-            Animated.sequence([
+            anim = Animated.sequence([
                 Animated.timing(vibrateAnim, {
                     toValue: 1,
                     duration: 50,
@@ -20,8 +22,13 @@ const GuitarString = ({ thickness, color, active, vibrationScale = 1 }) => {
                     tension: 100,
                     useNativeDriver: !isWeb,
                 }),
-            ]).start();
+            ]);
+            anim.start();
         }
+        return () => {
+            if (anim) anim.stop();
+            vibrateAnim.stopAnimation();
+        };
     }, [active, vibrateAnim, isWeb]);
 
     const translateY = vibrateAnim.interpolate({
@@ -34,7 +41,6 @@ const GuitarString = ({ thickness, color, active, vibrationScale = 1 }) => {
         outputRange: [0.6, 1],
     });
 
-    // Handle shadows carefully for web
     const dynamicStyles = {
         height: thickness,
         backgroundColor: color,
@@ -57,7 +63,7 @@ const GuitarString = ({ thickness, color, active, vibrationScale = 1 }) => {
 const styles = StyleSheet.create({
     container: {
         width: '100%',
-        height: 65,
+        height: sc(65),
         justifyContent: 'center',
         paddingHorizontal: 20,
     },

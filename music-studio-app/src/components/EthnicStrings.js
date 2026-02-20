@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimensions, ScrollView, PanResponder } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
@@ -54,6 +54,14 @@ export default function EthnicStrings({ instrument = 'koto' }) {
     const [activeStrings, setActiveStrings] = useState(new Set());
     const lastStrummedIndex = useRef(-1);
     const stringAnims = useRef(STRINGS.map(() => new Animated.Value(0))).current;
+    const activeTimeouts = useRef({});
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            Object.values(activeTimeouts.current).forEach(clearTimeout);
+        };
+    }, []);
 
     const pluckString = useCallback((index, velocity = 0.75) => {
         UnifiedAudioEngine.activateAudio();
@@ -74,18 +82,32 @@ export default function EthnicStrings({ instrument = 'koto' }) {
             Animated.spring(stringAnims[index], { toValue: 0, friction: 3, tension: 50, useNativeDriver: Platform.OS !== 'web' })
         ]).start();
 
-        setTimeout(() => {
+        if (activeTimeouts.current[index]) clearTimeout(activeTimeouts.current[index]);
+        activeTimeouts.current[index] = setTimeout(() => {
             setActiveStrings(prev => {
                 const next = new Set(prev);
                 next.delete(index);
                 return next;
             });
+            delete activeTimeouts.current[index];
         }, 500);
     }, [instrument]);
 
+    const contentRef = useRef(null);
     const layoutInfo = useRef({ x: 0, width: 0 }).current;
+
+    const measureLayout = useCallback(() => {
+        if (contentRef.current && contentRef.current.measure) {
+            contentRef.current.measure((x, y, width, height, pageX, pageY) => {
+                if (pageX !== undefined) {
+                    layoutInfo.x = pageX;
+                    layoutInfo.width = width;
+                }
+            });
+        }
+    }, [layoutInfo]);
     
-    const handleTouch = (pageX) => {
+    const handleTouch = useCallback((pageX) => {
         // Precise string detection for glissando
         const STRING_GAP = sc(45);
         const relativeX = pageX - layoutInfo.x - sc(80) + sc(20); // x - startX - padding + half-gap approx
@@ -96,7 +118,12 @@ export default function EthnicStrings({ instrument = 'koto' }) {
             lastStrummedIndex.current = index;
             pluckString(index, 0.65);
         }
-    };
+    }, [pluckString, layoutInfo]);
+
+    const handleTouchRef = useRef(handleTouch);
+    useEffect(() => {
+        handleTouchRef.current = handleTouch;
+    }, [handleTouch]);
 
     const panResponder = useRef(
         PanResponder.create({
@@ -104,10 +131,11 @@ export default function EthnicStrings({ instrument = 'koto' }) {
             onMoveShouldSetPanResponder: () => true,
             onPanResponderGrant: (evt) => {
                 lastStrummedIndex.current = -1;
-                handleTouch(evt.nativeEvent.pageX);
+                measureLayout(); // Ensure fresh layout on start
+                handleTouchRef.current(evt.nativeEvent.pageX);
             },
             onPanResponderMove: (evt) => {
-                handleTouch(evt.nativeEvent.pageX);
+                handleTouchRef.current(evt.nativeEvent.pageX);
             },
             onPanResponderRelease: () => {
                 lastStrummedIndex.current = -1;
@@ -148,24 +176,13 @@ export default function EthnicStrings({ instrument = 'koto' }) {
                     showsHorizontalScrollIndicator={false} 
                     contentContainerStyle={styles.stringsLayout}
                     scrollEventThrottle={16}
-                    onLayout={(e) => {
-                        // For web, we might need pageX. For now, try simple layout.
-                        // Actually pageX is better.
-                    }}
-                    onContentSizeChange={() => {}}
+                    onScroll={measureLayout}
+                    onContentSizeChange={measureLayout}
                 >
                     <View 
-                        onLayout={(e) => {
-                            // Track the actual x position of the content relative to the screen
-                            // In React Native Web, we can use measure
-                        }}
                         ref={(ref) => {
-                            if (ref && ref.measure) {
-                                ref.measure((x, y, width, height, pageX, pageY) => {
-                                    layoutInfo.x = pageX;
-                                    layoutInfo.width = width;
-                                });
-                            }
+                            contentRef.current = ref;
+                            measureLayout();
                         }}
                         style={{ flexDirection: 'row' }}
                     >

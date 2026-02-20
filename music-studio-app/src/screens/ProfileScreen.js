@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, ScrollView, StatusBar, TouchableOpacity, Platfo
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from '../contexts/AuthContext';
 import { useProject } from '../contexts/ProjectContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { COLORS, SPACING } from '../constants/UIConfig';
@@ -12,8 +11,7 @@ import { moveRecordingToPermanentStorage } from '../utils/fileSystem';
 import { createShadow, createTextShadow } from '../utils/shadows';
 
 export default function ProfileScreen() {
-    const { user, signOut } = useAuth();
-    const { projects = [], tracks = [], clips = [] } = useProject() || {};
+    const { projects = [], tracks = [], clips = [], clearAllData } = useProject() || {};
     const { ambienceEnabled, toggleAmbience, stopAllAudio } = useSettings();
 
     // Calculate stats
@@ -26,7 +24,7 @@ export default function ProfileScreen() {
     const [avatarUri, setAvatarUri] = useState(null);
     const [profileData, setProfileData] = useState({
         name: '',
-        email: user?.email || '',
+        email: 'guest@solocraft.studio',
         bio: '',
         role: 'Music Producer',
     });
@@ -69,7 +67,6 @@ export default function ProfileScreen() {
                 setProfileData({
                     ...profileData,
                     ...data,
-                    email: user?.email || data.email,
                 });
                 if (data.avatarUri) {
                     setAvatarUri(data.avatarUri);
@@ -180,7 +177,7 @@ export default function ProfileScreen() {
                                     style={styles.avatarPlaceholder}
                                 >
                                     <Text style={styles.avatarText}>
-                                        {(profileData.name?.charAt(0) || user?.email?.charAt(0) || '?').toUpperCase()}
+                                        {(profileData.name?.charAt(0) || '♪').toUpperCase()}
                                     </Text>
                                 </LinearGradient>
                             )}
@@ -245,7 +242,7 @@ export default function ProfileScreen() {
                                 <Text style={styles.profileName}>
                                     {profileData.name || 'Set your name'}
                                 </Text>
-                                <Text style={styles.profileEmail}>{profileData.email || 'Not logged in'}</Text>
+                                <Text style={styles.profileEmail}>{profileData.email}</Text>
                                 <View style={styles.roleBadge}>
                                     <Text style={styles.profileLabel}>{profileData.role}</Text>
                                 </View>
@@ -364,7 +361,7 @@ export default function ProfileScreen() {
                                                 text: 'Delete Everything', 
                                                 style: 'destructive',
                                                 onPress: async () => {
-                                                    const result = await useProject().clearAllData();
+                                                    const result = await clearAllData();
                                                     if (result.success) {
                                                         Alert.alert('Success', 'All local data has been wiped.');
                                                     }

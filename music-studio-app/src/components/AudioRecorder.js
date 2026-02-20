@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import * as Audio from 'expo-audio';
 import { requestAudioPermissions } from '../utils/audioHelpers';
-import { useAuth } from '../contexts/AuthContext';
 import { useProject } from '../contexts/ProjectContext';
 import { saveFileToLocal } from '../utils/webStorage';
 import MetronomeService from '../services/MetronomeService';
@@ -25,7 +24,6 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
 
     const durationIntervalRef = useRef(null);
 
-    const { user } = useAuth();
     const { addClip, addRecording } = useProject();
 
     // Sync recorder status to local state for UI
@@ -45,6 +43,15 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
             }
         };
     }, [recorder]);
+
+    const isMountedRef = useRef(true);
+
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+             isMountedRef.current = false;
+        };
+    }, []);
 
     const startRecording = async () => {
         if (recorder.isRecording) return;
@@ -70,21 +77,35 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
 
             const tempo = 120; // Default tempo
             MetronomeService.start(tempo, (beat) => {
-                setCountInRemaining(prev => Math.max(0, 4 - beat));
+                if (isMountedRef.current) {
+                    setCountInRemaining(prev => Math.max(0, 4 - beat));
+                }
             }, true, async () => {
                 // Count-in complete, start recording
-                setIsCountingIn(false);
-                await recorder.prepare();
-                recorder.record();
+                if (!isMountedRef.current) return;
                 
-                setDuration(0);
-
-                // Start timer
-                durationIntervalRef.current = setInterval(() => {
-                    setDuration(prev => prev + 1000);
-                }, 1000);
-
-                console.log('Recording started after count-in');
+                try {
+                    setIsCountingIn(false);
+                    await recorder.prepare();
+                    recorder.record();
+                    
+                    if (isMountedRef.current) {
+                        setDuration(0);
+                        // Start timer
+                        durationIntervalRef.current = setInterval(() => {
+                            if (isMountedRef.current) {
+                                setDuration(prev => prev + 1000);
+                            }
+                        }, 1000);
+                    }
+                    console.log('Recording started after count-in');
+                } catch (recError) {
+                    console.error('Recording start failed:', recError);
+                    if (isMountedRef.current) {
+                         setIsCountingIn(false);
+                         alert(`Failed to start recording: ${recError.message}`);
+                    }
+                }
             });
 
         } catch (error) {
@@ -97,7 +118,10 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
     const startRecordingDirect = async () => {
         try {
             const hasPermission = await requestAudioPermissions();
-            if (!hasPermission) return;
+            if (!hasPermission) {
+                alert('Microphone permission is required to record audio.');
+                return;
+            };
 
             await Audio.setAudioModeAsync({
                 allowsRecordingIOS: true,
@@ -115,6 +139,7 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
             }, 1000);
         } catch (error) {
             console.error('Direct recording failed:', error);
+            alert(`Failed to start recording: ${error.message}`);
         }
     };
 
@@ -219,8 +244,9 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
                 ) : !isRecording ? (
                     <View style={styles.recordOptions}>
                         <TouchableOpacity
-                            style={styles.recordButton}
+                            style={[styles.recordButton, isCountingIn && { opacity: 0.5 }]}
                             onPress={startRecordingDirect}
+                            disabled={isCountingIn}
                         >
                             <View style={styles.recordIcon} />
                         </TouchableOpacity>

@@ -8,20 +8,25 @@ export default function ExportModal({ visible, onClose, projectName = 'My Projec
     const [exporting, setExporting] = useState(false);
     const [format, setFormat] = useState('wav');
 
-    // Calculate metadata
-    const activeTracks = tracks.filter(t => !t.muted).length;
-    const duration = clips.length > 0 
-        ? Math.max(...clips.map(c => c.startTime + c.duration)).toFixed(1)
-        : "0.0";
+    // Calculate metadata defensibly
+    const activeTracks = (tracks || []).filter(t => !t.muted).length;
+    const durationCount = (clips || [])
+        .filter(c => Number.isFinite(c.startTime) && Number.isFinite(c.duration))
+        .reduce((max, c) => Math.max(max, c.startTime + c.duration), 0);
+    const duration = durationCount.toFixed(1);
     const sampleRate = "44,100 Hz";
 
     const handleExport = async () => {
         setExporting(true);
         try {
             if (Platform.OS === 'web') {
-                await ExportService.exportAsWAV(clips, tracks, tempo);
+                if (format === 'mp3') {
+                    await ExportService.exportAsMP3(clips, tracks, tempo);
+                } else {
+                    await ExportService.exportAsWAV(clips, tracks, tempo);
+                }
             } else {
-                await ExportService.exportNative(recordings);
+                await ExportService.exportNative(recordings, format);
             }
             
             setExporting(false);

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, memo } from 'react';
 import { View, ScrollView, Text, StyleSheet, TouchableOpacity, Alert, Platform, Animated } from 'react-native';
 import { useProject } from '../contexts/ProjectContext';
 import Track from './Track';
@@ -7,8 +7,7 @@ const PIXELS_PER_SECOND = 50;
 const TRACK_HEADER_WIDTH = 150;
 
 // Performance-optimized Playhead component
-const Playhead = memo(({ pixelsPerSecond, headerWidth }) => {
-    const { timeAnimatedValue } = useProject();
+const Playhead = memo(({ pixelsPerSecond, headerWidth }) => {    const { timeAnimatedValue } = useProject();
     
     const playheadTranslateX = timeAnimatedValue.interpolate({
         inputRange: [0, 1000],
@@ -54,9 +53,6 @@ export default function Timeline() {
     const trackScrollRefs = useRef([]);
     const isScrolling = useRef(false);
     
-    // PERFORMANCE: Use Animated.Value for scroll to avoid re-rendering entire timeline
-    const scrollX = useRef(new Animated.Value(0)).current;
-
     const projectDuration = getProjectDuration();
     const pixelsPerSecond = PIXELS_PER_SECOND * zoomLevel;
     const timelineWidth = Math.max((projectDuration / 1000) * pixelsPerSecond, 3000);
@@ -90,9 +86,6 @@ export default function Timeline() {
 
         const newScrollX = event.nativeEvent.contentOffset.x;
         
-        // Update animated value for playhead
-        scrollX.setValue(newScrollX);
-
         // Sync ruler
         if (rulerScrollRef.current) {
             rulerScrollRef.current.scrollTo({ x: newScrollX, animated: false });

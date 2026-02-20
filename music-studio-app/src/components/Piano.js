@@ -28,12 +28,16 @@ export default function Piano({ instrument = 'piano' }) {
     const handleNotePress = useCallback((note, evt) => {
         UnifiedAudioEngine.activateAudio();
         const { locationY } = evt.nativeEvent;
+        
+        // [REFINEMENT] Adjust for zoom scale to get accurate local position for velocity
+        const adjustedY = locationY / zoomLevel;
+        
         // Velocity based on vertical position (lower part of key is louder)
-        const velocity = Math.min(Math.max((locationY / whiteKeyHeight) + 0.3, 0.6), 1.0);
+        const velocity = Math.min(Math.max((adjustedY / whiteKeyHeight) + 0.3, 0.6), 1.0);
         
         setPressedKeys(prev => new Set(prev).add(note));
         UnifiedAudioEngine.playSound(note, instrument, 0, velocity);
-    }, [instrument, whiteKeyHeight]);
+    }, [instrument, whiteKeyHeight, zoomLevel]);
 
     const handleNoteRelease = useCallback((note) => {
         setPressedKeys(prev => {
@@ -98,7 +102,7 @@ export default function Piano({ instrument = 'piano' }) {
             });
         }
         return keys;
-    }, [handleNotePress, handleNoteRelease, pressedKeys]);
+    }, [handleNotePress, handleNoteRelease, pressedKeys, whiteKeyWidth, whiteKeyHeight, octavesToRender, startOctave]);
 
     const blackKeys = useMemo(() => {
         const keys = [];
@@ -147,7 +151,7 @@ export default function Piano({ instrument = 'piano' }) {
             });
         }
         return keys;
-    }, [handleNotePress, handleNoteRelease, pressedKeys]);
+    }, [handleNotePress, handleNoteRelease, pressedKeys, whiteKeyWidth, blackKeyWidth, blackKeyHeight, octavesToRender, startOctave]);
 
     return (
         <View style={[styles.container, { paddingTop: SAFE_TOP }]}>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, useWindowDimensions, Platform, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
@@ -21,6 +21,14 @@ export default function Tabla() {
     const gapSize = isPhone ? sc(20) : sc(60);
     const dayanGlow = useRef(new Animated.Value(0)).current;
     const bayanGlow = useRef(new Animated.Value(0)).current;
+    const hitTimeoutRef = useRef(null);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (hitTimeoutRef.current) clearTimeout(hitTimeoutRef.current);
+        };
+    }, []);
 
     const track = tracks.find(t => t.name === 'Tabla') || { volume: 0.8, pan: 0, muted: false };
 
@@ -39,7 +47,11 @@ export default function Tabla() {
             Animated.timing(glow, { toValue: 0, duration: 250, useNativeDriver: Platform.OS !== 'web' })
         ]).start();
 
-        setTimeout(() => setActiveHit(null), 150);
+        if (hitTimeoutRef.current) clearTimeout(hitTimeoutRef.current);
+        hitTimeoutRef.current = setTimeout(() => {
+            setActiveHit(null);
+            hitTimeoutRef.current = null;
+        }, 150);
         UnifiedAudioEngine.playDrumSound(soundName, 'tabla', track.volume, track.pan);
     };
 
@@ -57,7 +69,7 @@ export default function Tabla() {
                     <Animated.View style={{ transform: [{ scale: bayanScale }] }}>
                         <TouchableOpacity 
                             activeOpacity={0.9} 
-                            onPressIn={(e) => playSound('bayan_ga', 'bayan', e)}
+                            onPressIn={() => playSound('bayan_ga', 'bayan')}
                             style={[styles.bayanPot, { width: bayanSize, height: bayanSize, borderRadius: bayanSize / 2 }]}
                         >
                             <LinearGradient colors={['#92400e', '#78350f', '#451a03']} style={styles.copperSurface} />
@@ -87,7 +99,7 @@ export default function Tabla() {
                     <Animated.View style={{ transform: [{ scale: dayanScale }] }}>
                         <TouchableOpacity 
                             activeOpacity={0.9} 
-                            onPressIn={(e) => playSound('dayan_na', 'dayan', e)}
+                            onPressIn={() => playSound('dayan_na', 'dayan')}
                             style={[styles.dayanPot, { width: dayanSize, height: dayanSize, borderRadius: dayanSize / 2 }]}
                         >
                             <LinearGradient colors={['#451a03', '#78350f', '#451a03']} style={styles.woodSurface} />
@@ -149,14 +161,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: sc(30),
     },
-    title: {
+    brandTitle: {
         color: '#fff',
         fontSize: normalize(20),
         fontWeight: '900',
         letterSpacing: 4,
         ...createTextShadow({ color: 'rgba(0,0,0,0.8)', radius: 10 }),
     },
-    subtitle: {
+    modelTitle: {
         color: '#fbbf24',
         fontSize: normalize(10),
         fontWeight: '900',
@@ -262,6 +274,11 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         opacity: 0.05,
         backgroundColor: '#8d6e63',
+    },
+    parchmentSkin: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: '#fef3c7',
+        opacity: 0.1,
     },
     maidan: {
         width: '100%',

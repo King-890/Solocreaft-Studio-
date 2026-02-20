@@ -17,8 +17,10 @@ export default function Visualizer({ trackId, type = 'bars', color = '#03dac6', 
         
         // Match internal resolution to display size for sharpness
         const dpr = window.devicePixelRatio || 1;
-        const renderWidth = (typeof width === 'number' ? width : SCREEN_WIDTH) * dpr;
-        const renderHeight = height * dpr;
+        const logicalWidth = (typeof width === 'number' ? width : SCREEN_WIDTH);
+        const logicalHeight = height;
+        const renderWidth = logicalWidth * dpr;
+        const renderHeight = logicalHeight * dpr;
         
         canvas.width = renderWidth;
         canvas.height = renderHeight;
@@ -39,12 +41,12 @@ export default function Visualizer({ trackId, type = 'bars', color = '#03dac6', 
             }
 
             if (!hasActivity) {
-                ctx.clearRect(0, 0, renderWidth, renderHeight);
+                ctx.clearRect(0, 0, logicalWidth, logicalHeight);
                 animationRef.current = requestAnimationFrame(draw);
                 return;
             }
 
-            ctx.clearRect(0, 0, renderWidth, renderHeight);
+            ctx.clearRect(0, 0, logicalWidth, logicalHeight);
 
             // PERFORMANCE: Draw fewer points (64 for bars, 128 for waveform)
             const step = Math.floor(data.length / (type === 'bars' ? 64 : 128));

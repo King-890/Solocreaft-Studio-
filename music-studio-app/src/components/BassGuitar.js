@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, PanResponder, Animated, Platform, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
@@ -22,12 +22,26 @@ const NOTE_MAP = {
 
 export default function BassGuitar() {
     const [frettedIndex, setFrettedIndex] = useState([0, 0, 0, 0]);
+    const frettedIndexRef = useRef([0, 0, 0, 0]); // Ref to track latest frets
     const [activeStrings, setActiveStrings] = useState([false, false, false, false]);
     const touchedStrings = useRef(new Set());
+    const activeTimeouts = useRef({}); // Ref to track timeouts
+
+    // Keep frettedIndexRef in sync
+    useEffect(() => {
+        frettedIndexRef.current = frettedIndex;
+    }, [frettedIndex]);
+
+    // Cleanup timeouts on unmount
+    useEffect(() => {
+        return () => {
+            Object.values(activeTimeouts.current).forEach(clearTimeout);
+        };
+    }, []);
 
     const playString = useCallback((index, velocity = 0.5) => {
         const stringName = STRINGS[index];
-        const fret = frettedIndex[index];
+        const fret = frettedIndexRef.current[index]; // Use ref for latest state
         const note = NOTE_MAP[stringName][fret];
         
         if (note) {
@@ -37,15 +51,40 @@ export default function BassGuitar() {
                 next[index] = true;
                 return next;
             });
-            setTimeout(() => {
+            
+            // Clear existing timeout
+            if (activeTimeouts.current[index]) clearTimeout(activeTimeouts.current[index]);
+
+            activeTimeouts.current[index] = setTimeout(() => {
                 setActiveStrings(prev => {
                     const next = [...prev];
                     next[index] = false;
                     return next;
                 });
+                delete activeTimeouts.current[index];
             }, 150);
         }
-    }, [frettedIndex]);
+    }, []);
+
+    // Define processPluck BEFORE PanResponder use (TDZ fix)
+    const processPluck = useCallback((y, velocity = 0.5) => {
+        // [FIX] Account for top padding (sc(45)) and scaled string height (sc(65))
+        const stringHeight = sc(65);
+        const topPadding = sc(45);
+        const stringIndex = Math.floor((y - topPadding) / stringHeight);
+        
+        if (stringIndex >= 0 && stringIndex < 4 && !touchedStrings.current.has(stringIndex)) {
+            touchedStrings.current.add(stringIndex);
+            const v = Math.min(Math.max(Math.abs(velocity) * 2.0, 0.4), 1.2);
+            playString(stringIndex, v);
+        }
+    }, [playString]);
+
+    // Use a ref to hold the latest processPluck to avoid stale closures in PanResponder
+    const processPluckRef = useRef(processPluck);
+    useEffect(() => {
+        processPluckRef.current = processPluck;
+    }, [processPluck]);
 
     const panResponder = useRef(
         PanResponder.create({
@@ -54,25 +93,16 @@ export default function BassGuitar() {
             onPanResponderGrant: (evt) => {
                 UnifiedAudioEngine.activateAudio();
                 touchedStrings.current.clear();
-                processPluck(evt.nativeEvent.locationY);
+                processPluckRef.current(evt.nativeEvent.locationY);
             },
             onPanResponderMove: (evt, gestureState) => {
-                processPluck(evt.nativeEvent.locationY, gestureState.vy);
+                processPluckRef.current(evt.nativeEvent.locationY, gestureState.vy);
             },
             onPanResponderRelease: () => {
                 touchedStrings.current.clear();
             }
         })
     ).current;
-
-    const processPluck = (y, velocity = 0.5) => {
-        const stringIndex = Math.floor(y / 70);
-        if (stringIndex >= 0 && stringIndex < 4 && !touchedStrings.current.has(stringIndex)) {
-            touchedStrings.current.add(stringIndex);
-            const v = Math.min(Math.max(Math.abs(velocity) * 2.0, 0.4), 1.2);
-            playString(stringIndex, v);
-        }
-    };
 
     return (
         <LinearGradient colors={['#0a0a0a', '#1e293b', '#0a0a0a']} style={styles.container}>
@@ -103,11 +133,16 @@ export default function BassGuitar() {
                                         <TouchableOpacity
                                             key={sIdx}
                                             style={[styles.fretZone, frettedIndex[sIdx] === (i+1) && styles.activeFretZone]}
-                                            onPress={() => {
-                                                const next = [...frettedIndex];
-                                                next[sIdx] = i + 1;
-                                                setFrettedIndex(next);
-                                            }}
+                                                onPress={() => {
+                                                    const next = [...frettedIndex];
+                                                    // Toggle: if currently set to this fret, reset to 0 (open), otherwise set to i+1
+                                                    if (next[sIdx] === i + 1) {
+                                                        next[sIdx] = 0;
+                                                    } else {
+                                                        next[sIdx] = i + 1;
+                                                    }
+                                                    setFrettedIndex(next);
+                                                }}
                                         >
                                             {frettedIndex[sIdx] === (i+1) && <View style={styles.neonDot} />}
                                         </TouchableOpacity>

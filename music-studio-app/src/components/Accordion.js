@@ -1,10 +1,10 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, ScrollView, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
 
-import { sc, normalize } from '../utils/responsive';
+import { sc, normalize, useResponsive } from '../utils/responsive';
 
 const RIGHT_KEYS = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5'];
 const LEFT_CHORDS = ['C', 'G', 'D', 'A', 'F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'B', 'E'];
@@ -27,12 +27,28 @@ export default function Accordion() {
         ]).start();
     };
 
+    const rightTimeoutRef = useRef(null);
+    const leftTimeoutRef = useRef(null);
+
+    // Cleanup timeouts on unmount
+    useEffect(() => {
+        return () => {
+            if (rightTimeoutRef.current) clearTimeout(rightTimeoutRef.current);
+            if (leftTimeoutRef.current) clearTimeout(leftTimeoutRef.current);
+        };
+    }, []);
+
     const playRightKey = useCallback((note) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(note, 'accordion', 0, 0.75);
         setActiveRight(prev => ({ ...prev, [note]: true }));
         animateBellows('squeeze');
-        setTimeout(() => setActiveRight(prev => ({ ...prev, [note]: false })), 150);
+        
+        if (rightTimeoutRef.current) clearTimeout(rightTimeoutRef.current);
+        rightTimeoutRef.current = setTimeout(() => {
+            setActiveRight(prev => ({ ...prev, [note]: false }));
+            rightTimeoutRef.current = null;
+        }, 150);
     }, []);
 
     const playLeftChord = useCallback((chord) => {
@@ -40,7 +56,12 @@ export default function Accordion() {
         UnifiedAudioEngine.playSound(`${chord}3`, 'accordion', 0, 0.65);
         setActiveLeft(prev => ({ ...prev, [chord]: true }));
         animateBellows('expand');
-        setTimeout(() => setActiveLeft(prev => ({ ...prev, [chord]: false })), 150);
+
+        if (leftTimeoutRef.current) clearTimeout(leftTimeoutRef.current);
+        leftTimeoutRef.current = setTimeout(() => {
+            setActiveLeft(prev => ({ ...prev, [chord]: false }));
+            leftTimeoutRef.current = null;
+        }, 150);
     }, []);
 
     return (

@@ -8,7 +8,6 @@ import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive'
 
 export default function Dholak() {
     const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
-    const [activeHit, setActiveHit] = useState(null);
     const { tracks } = useProject();
 
     const leftScale = useRef(new Animated.Value(1)).current;
@@ -26,7 +25,6 @@ export default function Dholak() {
     const playSound = (soundName, side) => {
         UnifiedAudioEngine.activateAudio();
         if (track.muted) return;
-        setActiveHit(soundName);
         const scale = side === 'left' ? leftScale : rightScale;
 
         scale.setValue(0.94);
@@ -37,7 +35,6 @@ export default function Dholak() {
             Animated.spring(barrelShake, { toValue: 0, friction: 4, tension: 40, useNativeDriver: Platform.OS !== 'web' })
         ]).start();
 
-        setTimeout(() => setActiveHit(null), 150);
         UnifiedAudioEngine.playDrumSound(soundName, 'dholak', track.volume, track.pan);
     };
 
@@ -239,7 +236,7 @@ const styles = StyleSheet.create({
     bolLink: { width: sc(85), height: sc(45), borderRadius: sc(12), ...createShadow({ color: '#000', radius: sc(8) }) },
     bolBtn: { flex: 1, borderRadius: sc(12), justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#b45309' },
     bolLabel: { color: '#fbbf24', fontSize: normalize(14), fontWeight: '900', letterSpacing: 3 },
-    footer: { marginTop: sc(30), width: '100%', alignItems: 'center' },
+    footer: { position: 'absolute', width: '100%', alignItems: 'center' },
     decorLine: { width: '60%', height: 2, backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: sc(12) },
     instruction: { color: '#475569', fontSize: normalize(10), fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
 });

@@ -54,12 +54,16 @@ export const VELOCITY_LAYERS = {
  * @returns {string} URL to the MP3 sample
  */
 export const getSampleUrl = (instrumentKey, noteName, velocity = 0.8) => {
+  // Validate instrumentKey
+  const validKeys = Object.values(INSTRUMENTS);
+  const safeInstrument = validKeys.includes(instrumentKey) ? instrumentKey : INSTRUMENTS.PIANO;
+
   // Normalize 's' to '#' first (e.g. 'Fs4' -> 'F#4')
   let normalizedNote = noteName.replace('s', '#');
   
   // Extract note and octave
   const match = normalizedNote.match(/^([A-G][#b]?)(\d)$/);
-  if (!match) return `${BASE_URL}/${instrumentKey}-mp3/C4.mp3`; // Fallback to safe note
+  if (!match) return `${BASE_URL}/${safeInstrument}-mp3/C4.mp3`; // Fallback to safe note
 
   let [, note, octave] = match;
   let octaveNum = parseInt(octave);
@@ -101,7 +105,7 @@ export const getSampleUrl = (instrumentKey, noteName, velocity = 0.8) => {
   */
 
   const finalNote = note + octaveNum + velocitySuffix;
-  return `${BASE_URL}/${instrumentKey}-mp3/${finalNote}.mp3`;
+  return `${BASE_URL}/${safeInstrument}-mp3/${finalNote}.mp3`;
 };
 
 /**
@@ -123,9 +127,9 @@ const PERCUSSION_REGISTRY = (() => {
       kick: safe(() => require('../../assets/sounds/drums/kick.wav')),
       snare: safe(() => require('../../assets/sounds/drums/snare.wav')),
       hihat: safe(() => require('../../assets/sounds/drums/hihat.wav')),
-      tom1: safe(() => require('../../assets/sounds/drums/bass-drum__025_forte_bass-drum-mallet.mp3')),
-      tom2: safe(() => require('../../assets/sounds/drums/agogo-bells__025_mezzo-forte_struck-singly.mp3')),
-      crash: safe(() => require('../../assets/sounds/drums/banana-shaker__long_forte_shaken.mp3')),
+      tom1: safe(() => require('../../assets/sounds/drums/kick.wav')), // Fallback to kick
+      tom2: safe(() => require('../../assets/sounds/drums/snare.wav')), // Fallback to snare
+      crash: safe(() => require('../../assets/sounds/drums/hihat.wav')), // Fallback to hihat
     },
     tabla: {
       dha: safe(() => require('../../assets/sounds/tabla/dha.wav')),
@@ -160,16 +164,16 @@ export const getLocalPercussionAsset = (instrument, soundId) => {
   const normalizedInstrument = String(instrument).toLowerCase();
   
   if (normalizedInstrument === 'drums' || normalizedInstrument === 'standard_drums') {
-    return PERCUSSION_REGISTRY.drums[soundId];
+    return PERCUSSION_REGISTRY.drums[soundId] || null;
   }
   if (normalizedInstrument === 'tabla' || normalizedInstrument === 'tabla_set') {
-    return PERCUSSION_REGISTRY.tabla[soundId];
+    return PERCUSSION_REGISTRY.tabla[soundId] || null;
   }
   if (normalizedInstrument === 'dholak' || normalizedInstrument === 'dholak_set') {
-    return PERCUSSION_REGISTRY.dholak[soundId];
+    return PERCUSSION_REGISTRY.dholak[soundId] || null;
   }
   if (normalizedInstrument === 'world' || normalizedInstrument === 'global_rhythms') {
-    return PERCUSSION_REGISTRY.world[soundId] || PERCUSSION_REGISTRY.drums['kick'];
+    return PERCUSSION_REGISTRY.world[soundId] || PERCUSSION_REGISTRY.drums['kick'] || null;
   }
   
   return null;

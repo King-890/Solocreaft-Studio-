@@ -90,6 +90,10 @@ export default function DrumMachine() {
                             style={[styles.padWrapper, { width: padSize, height: padSize }]}
                             onPressIn={(e) => handlePadPress(pad, e)}
                             activeOpacity={0.9}
+                            accessible={true}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Drum pad: ${pad.label}`}
+                            accessibilityHint={`Plays the ${pad.label} sound`}
                         >
                             <Animated.View style={[
                                 styles.padGlow, 
