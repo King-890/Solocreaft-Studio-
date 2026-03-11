@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { HOME_THEMES, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/HomeScreenThemes';
+import HapticService from '../../services/HapticService';
 
 /**
  * RecentProjectsCarousel Component
@@ -47,7 +48,10 @@ function ProjectCard({ project, onPress, theme }) {
     return (
         <TouchableOpacity
             style={[styles.card, { backgroundColor: theme.secondary }, theme.shadowSmall]}
-            onPress={onPress}
+            onPress={() => {
+                HapticService.selection();
+                onPress();
+            }}
             activeOpacity={0.8}
         >
             <View style={[styles.artwork, { backgroundColor: theme.primary }]}>

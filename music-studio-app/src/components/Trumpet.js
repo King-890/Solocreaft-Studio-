@@ -3,11 +3,15 @@ import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimension
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
-import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+
+import InstrumentContainer from './InstrumentContainer';
 
 const VALVES = [1, 2, 3];
 
 export default function Trumpet({ instrument = 'trumpet' }) {
+    const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [pressedValves, setPressedValves] = useState([]);
     
     const valveAnims = useRef({
@@ -35,6 +39,7 @@ export default function Trumpet({ instrument = 'trumpet' }) {
         const note = getNoteFromValves(newPressed);
         if (!isCurrentlyPressed) {
             UnifiedAudioEngine.playSound(note, instrument, 0, 0.82);
+            HapticService.light();
         }
     };
 
@@ -46,7 +51,8 @@ export default function Trumpet({ instrument = 'trumpet' }) {
     };
 
     return (
-        <LinearGradient colors={['#1a1005', '#2c1e0a', '#1a1005']} style={styles.container}>
+        <InstrumentContainer>
+            <LinearGradient colors={['#1a1005', '#2c1e0a', '#1a1005']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
             <View style={styles.header}>
                 <Text style={styles.title}>MAJESTIC BRASS</Text>
                 <Text style={styles.subtitle}>MASTERCLASS CUSTOM TRUMPET • LUMINOUS GOLD</Text>
@@ -100,7 +106,8 @@ export default function Trumpet({ instrument = 'trumpet' }) {
                     <Text style={styles.harmonicText}>VALVE STATE: {getNoteFromValves(pressedValves)} • HARMONIC SERIES ACTIVE</Text>
                 </View>
             </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -134,7 +141,7 @@ const styles = StyleSheet.create({
         width: '100%',
         height: sc(25),
         borderRadius: sc(12.5),
-        borderWidth: 2,
+        borderWidth: sc(2),
         borderColor: '#92400e',
         ...createShadow({ color: '#000', radius: sc(15) }),
     },
@@ -148,34 +155,34 @@ const styles = StyleSheet.create({
     casingMetal: {
         ...StyleSheet.absoluteFillObject,
         borderRadius: sc(30),
-        borderWidth: 3,
+        borderWidth: sc(3),
         borderColor: '#451a03',
     },
     casingHighlight: { width: sc(40), height: '100%', backgroundColor: 'rgba(255,255,255,0.08)', position: 'absolute', right: sc(20) },
     pistonsRow: { flex: 1, flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: sc(15), paddingTop: sc(40) },
     valveChannel: { alignItems: 'center', width: sc(55) },
-    topCap: { width: sc(48), height: sc(16), backgroundColor: '#78350f', borderTopLeftRadius: sc(10), borderTopRightRadius: sc(10), borderWidth: 2, borderColor: '#451a03', marginBottom: sc(-4), zIndex: 15 },
+    topCap: { width: sc(48), height: sc(16), backgroundColor: '#78350f', borderTopLeftRadius: sc(10), borderTopRightRadius: sc(10), borderWidth: sc(2), borderColor: '#451a03', marginBottom: sc(-4), zIndex: 15 },
     pistonAssembly: { width: '100%', alignItems: 'center' },
     pistonTouch: { width: sc(55), alignItems: 'center' },
     pearlButton: {
         width: sc(54),
         height: sc(54),
         borderRadius: sc(27),
-        borderWidth: 3,
+        borderWidth: sc(3),
         borderColor: '#fbbf24',
         justifyContent: 'center',
         alignItems: 'center',
-        ...createShadow({ color: '#000', radius: sc(12), offsetY: 6 }),
+        ...createShadow({ color: '#000', radius: sc(12), offsetY: sc(6) }),
     },
     pearlLuster: { width: sc(40), height: sc(40), borderRadius: sc(20), backgroundColor: 'rgba(255,255,255,0.5)', borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
-    nickelRod: { width: sc(18), height: sc(160), marginTop: sc(-10), backgroundColor: '#cbd5e1', borderWidth: 2, borderColor: '#94a3b8', zIndex: -1 },
+    nickelRod: { width: sc(18), height: sc(160), marginTop: sc(-10), backgroundColor: '#cbd5e1', borderWidth: sc(2), borderColor: '#94a3b8', zIndex: -1 },
     bellSection: { marginLeft: sc(-20), zIndex: 5 },
     bellFlare: {
         width: sc(190),
         height: sc(240),
         borderTopRightRadius: sc(120),
         borderBottomRightRadius: sc(120),
-        borderWidth: 4,
+        borderWidth: sc(4),
         borderColor: '#92400e',
         ...createShadow({ color: '#000', radius: sc(40) }),
     },

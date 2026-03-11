@@ -3,7 +3,9 @@ import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, ScrollVie
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
-import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+import InstrumentContainer from './InstrumentContainer';
 
 const BARS = [
     { note: 'C4', width: sc(250), color: '#451a03' },
@@ -19,6 +21,7 @@ const BARS = [
 ];
 
 export default function Marimba() {
+    const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [activeBar, setActiveBar] = useState(null);
     const vibrationAnims = useRef(BARS.reduce((acc, bar) => {
         acc[bar.note] = new Animated.Value(0);
@@ -37,6 +40,7 @@ export default function Marimba() {
     const playBar = useCallback((note) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(note, 'marimba', 0, 0.9);
+        HapticService.light();
         setActiveBar(note);
 
         Animated.sequence([
@@ -52,7 +56,8 @@ export default function Marimba() {
     }, [vibrationAnims]);
 
     return (
-        <LinearGradient colors={['#1a0d06', '#2d1b10', '#1a0d06']} style={styles.container}>
+        <InstrumentContainer>
+            <LinearGradient colors={['#1a0d06', '#2d1b10', '#1a0d06']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
             <View style={styles.header}>
                 <Text style={styles.title}>WOODEN RESONANCE</Text>
                 <Text style={styles.subtitle}>MASTERCLASS MARIMBA PRO • POLISHED ROSEWOOD & GOLD</Text>
@@ -100,7 +105,8 @@ export default function Marimba() {
                     <Text style={styles.badgeText}>ROSEWOOD-HARMONIC RESONANCE ACTIVE • 440HZ CONCERT CALIBRATION</Text>
                 </View>
             </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -123,21 +129,21 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     mainChassis: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
-    railTop: { position: 'absolute', top: '22%', left: 0, right: 0, height: sc(14), backgroundColor: '#3e2723', borderTopWidth: 2, borderBottomWidth: 2, borderColor: '#1a0d06', ...createShadow({ color: '#000', radius: sc(10) }) },
-    railBottom: { position: 'absolute', bottom: '22%', left: 0, right: 0, height: sc(14), backgroundColor: '#3e2723', borderTopWidth: 2, borderBottomWidth: 2, borderColor: '#1a0d06', ...createShadow({ color: '#000', radius: sc(10) }) },
+    railTop: { position: 'absolute', top: '22%', left: 0, right: 0, height: sc(14), backgroundColor: '#3e2723', borderTopWidth: sc(2), borderBottomWidth: sc(2), borderColor: '#1a0d06', ...createShadow({ color: '#000', radius: sc(10) }) },
+    railBottom: { position: 'absolute', bottom: '22%', left: 0, right: 0, height: sc(14), backgroundColor: '#3e2723', borderTopWidth: sc(2), borderBottomWidth: sc(2), borderColor: '#1a0d06', ...createShadow({ color: '#000', radius: sc(10) }) },
     masterScroll: { alignItems: 'center', paddingHorizontal: sc(60), gap: sc(18), zIndex: 10 },
     columnUnit: { alignItems: 'center', height: '100%', justifyContent: 'center' },
     barTouch: { zIndex: 20 },
     rosewoodBar: { width: sc(56), borderRadius: sc(8), ...createShadow({ color: '#000', radius: sc(15), offsetY: 8 }) },
-    barMaterial: { flex: 1, borderRadius: sc(8), borderWidth: 2, borderColor: '#1a0d06', justifyContent: 'space-between', alignItems: 'center', paddingVertical: sc(25), overflow: 'hidden' },
+    barMaterial: { flex: 1, borderRadius: sc(8), borderWidth: sc(2), borderColor: '#1a0d06', justifyContent: 'space-between', alignItems: 'center', paddingVertical: sc(25), overflow: 'hidden' },
     grainGlow: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.04)' },
     barRimDetail: { width: '70%', height: sc(6), backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: sc(3) },
     barNoteText: { color: 'rgba(255,255,255,0.25)', fontSize: normalize(13), fontWeight: '900', letterSpacing: 1 },
     resonatorHanger: { marginTop: sc(25), zIndex: 5 },
-    goldPipe: { width: sc(44), borderRadius: sc(22), borderWidth: 2, borderColor: '#92400e', alignItems: 'center', ...createShadow({ color: '#000', radius: sc(15), opacity: 0.6 }) },
+    goldPipe: { width: sc(44), borderRadius: sc(22), borderWidth: sc(2), borderColor: '#92400e', alignItems: 'center', ...createShadow({ color: '#000', radius: sc(15), opacity: 0.6 }) },
     pipeReflect: { width: sc(10), height: '80%', backgroundColor: 'rgba(255,255,255,0.2)', position: 'absolute', left: sc(10), borderRadius: sc(5), marginTop: '10%' },
     pipeCapTop: { width: '100%', height: sc(12), backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: sc(22) },
     footer: { marginTop: sc(35), width: '100%', alignItems: 'center' },
-    harmonicBadge: { backgroundColor: 'rgba(251,191,36,0.04)', paddingHorizontal: sc(30), paddingVertical: sc(10), borderRadius: sc(25), borderWidth: 1, borderColor: 'rgba(251,191,36,0.15)' },
+    harmonicBadge: { backgroundColor: 'rgba(251,191,36,0.04)', paddingHorizontal: sc(30), paddingVertical: sc(10), borderRadius: sc(25), borderWidth: sc(1), borderColor: 'rgba(251,191,36,0.15)' },
     badgeText: { color: '#475569', fontSize: normalize(10), fontWeight: '900', letterSpacing: 1.5 },
 });

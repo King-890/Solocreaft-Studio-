@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { COLORS, SHADOWS, SPACING } from '../constants/UIConfig';
+import HapticService from '../services/HapticService';
 
 /**
  * Beautiful Instrument Card Component
@@ -18,7 +19,10 @@ export default function InstrumentCard({
     return (
         <TouchableOpacity
             style={[styles.card, isSelected && styles.cardSelected, style]}
-            onPress={onPress}
+            onPress={() => {
+                HapticService.selection();
+                if (onPress) onPress();
+            }}
             activeOpacity={0.7}
         >
             {/* Glow effect when selected */}
@@ -94,11 +98,12 @@ const styles = StyleSheet.create({
         color: '#fff',
     },
     instrumentName: {
-        color: COLORS.text,
+        color: '#f8fafc',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '900',
         marginBottom: SPACING.xs,
         textAlign: 'center',
+        letterSpacing: -0.5,
     },
     categoryBadge: {
         paddingHorizontal: SPACING.sm,

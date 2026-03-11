@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, StatusBar, TouchableOpacity, Platform, Alert, TextInput, Image, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, StatusBar as RNStatusBar, TouchableOpacity, Platform, Alert, TextInput, Image, Animated } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,6 +9,7 @@ import { COLORS, SPACING } from '../constants/UIConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { moveRecordingToPermanentStorage } from '../utils/fileSystem';
 import { createShadow, createTextShadow } from '../utils/shadows';
+import HapticService from '../services/HapticService';
 
 export default function ProfileScreen() {
     const { projects = [], tracks = [], clips = [], clearAllData } = useProject() || {};
@@ -85,6 +86,7 @@ export default function ProfileScreen() {
             };
             await AsyncStorage.setItem('@user_profile', JSON.stringify(dataToSave));
             setIsEditing(false);
+            HapticService.selection();
             Alert.alert('Success', 'Profile updated successfully!');
         } catch (error) {
             console.error('Error saving profile:', error);
@@ -140,7 +142,7 @@ export default function ProfileScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             <ScrollView
                 style={styles.scrollView}
@@ -162,7 +164,10 @@ export default function ProfileScreen() {
                     >
                         <TouchableOpacity
                             style={styles.avatarContainer}
-                            onPress={handlePickImage}
+                            onPress={() => {
+                                HapticService.selection();
+                                handlePickImage();
+                            }}
                             activeOpacity={0.8}
                         >
                             {avatarUri && (Platform.OS === 'web' || avatarUri.startsWith('file://') || avatarUri.startsWith('http')) ? (
@@ -250,12 +255,15 @@ export default function ProfileScreen() {
                                     <Text style={styles.profileBio}>{profileData.bio}</Text>
                                 ) : null}
 
-                                <TouchableOpacity
-                                    style={styles.editProfileButton}
-                                    onPress={() => setIsEditing(true)}
-                                >
-                                    <Text style={styles.editProfileText}>✏️ Edit Profile</Text>
-                                </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.editProfileButton}
+                                        onPress={() => {
+                                            HapticService.selection();
+                                            setIsEditing(true);
+                                        }}
+                                    >
+                                        <Text style={styles.editProfileText}>✏️ Edit Profile</Text>
+                                    </TouchableOpacity>
                             </View>
                         )}
                     </LinearGradient>
@@ -287,7 +295,10 @@ export default function ProfileScreen() {
                             </View>
                             <TouchableOpacity 
                                 style={[styles.toggleBase, ambienceEnabled ? styles.toggleOn : styles.toggleOff]}
-                                onPress={() => toggleAmbience(!ambienceEnabled)}
+                                onPress={() => {
+                                    HapticService.selection();
+                                    toggleAmbience(!ambienceEnabled);
+                                }}
                             >
                                 <View style={[styles.toggleHandle, ambienceEnabled ? styles.handleOn : styles.handleOff]} />
                             </TouchableOpacity>
@@ -296,6 +307,7 @@ export default function ProfileScreen() {
                         <TouchableOpacity 
                             style={styles.stopButton}
                             onPress={() => {
+                                HapticService.heavy();
                                 stopAllAudio();
                                 if (Platform.OS !== 'web') {
                                     Alert.alert('Studio Muted', 'All active audio playback has been terminated.');
@@ -361,6 +373,7 @@ export default function ProfileScreen() {
                                                 text: 'Delete Everything', 
                                                 style: 'destructive',
                                                 onPress: async () => {
+                                                    HapticService.heavy();
                                                     const result = await clearAllData();
                                                     if (result.success) {
                                                         Alert.alert('Success', 'All local data has been wiped.');

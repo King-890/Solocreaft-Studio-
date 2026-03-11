@@ -16,6 +16,7 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import StudioScreen from './src/screens/StudioScreen';
 import DebugScreen from './src/screens/DebugScreen';
 import { View, Text, ActivityIndicator, LogBox, Platform } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { errorMonitor, setupGlobalErrorHandler } from './src/services/ErrorMonitor';
 
 // Ignore specific warnings
@@ -28,7 +29,15 @@ LogBox.ignoreLogs([
 // Global console suppression (Web & Native)
 {
   const originalWarn = console.warn;
+  const originalError = console.error;
+  let isReporting = false;
+
   console.warn = (...args) => {
+    if (isReporting) {
+      originalWarn.apply(console, args);
+      return;
+    }
+
     if (args[0] && typeof args[0] === 'string' && (
       args[0].includes('props.pointerEvents is deprecated') ||
       args[0].includes('style props are deprecated') ||
@@ -45,8 +54,12 @@ LogBox.ignoreLogs([
     originalWarn.apply(console, args);
   };
 
-  const originalError = console.error;
   console.error = (...args) => {
+    if (isReporting) {
+      originalError.apply(console, args);
+      return;
+    }
+
     if (args[0] && typeof args[0] === 'string' && (
       args[0].includes('props.pointerEvents is deprecated') ||
       args[0].includes('style props are deprecated') ||
@@ -56,10 +69,15 @@ LogBox.ignoreLogs([
     }
     // Track errors in production but suppress from console if not in dev
     if (!__DEV__) {
-        errorMonitor.report(
-          args[0] instanceof Error ? args[0] : new Error(String(args[0])),
-          { type: 'CONSOLE_ERROR', source: 'console.error override' }
-        );
+        try {
+            isReporting = true;
+            errorMonitor.report(
+              args[0] instanceof Error ? args[0] : new Error(String(args[0])),
+              { type: 'CONSOLE_ERROR', source: 'console.error override' }
+            );
+        } finally {
+            isReporting = false;
+        }
         return;
     }
     originalError.apply(console, args);
@@ -282,15 +300,17 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <SettingsProvider>
-        <ThemeProvider>
-          <UserProgressProvider>
-            <ProjectProvider>
-              <AppContent />
-            </ProjectProvider>
-          </UserProgressProvider>
-        </ThemeProvider>
-      </SettingsProvider>
+      <SafeAreaProvider>
+        <SettingsProvider>
+          <ThemeProvider>
+            <UserProgressProvider>
+              <ProjectProvider>
+                <AppContent />
+              </ProjectProvider>
+            </UserProgressProvider>
+          </ThemeProvider>
+        </SettingsProvider>
+      </SafeAreaProvider>
     </ErrorBoundary>
   );
 }

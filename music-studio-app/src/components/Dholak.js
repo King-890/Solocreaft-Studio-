@@ -5,6 +5,9 @@ import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { useProject } from '../contexts/ProjectContext';
 import { createShadow, createTextShadow } from '../utils/shadows';
 import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+
+import InstrumentContainer from './InstrumentContainer';
 
 export default function Dholak() {
     const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
@@ -36,78 +39,81 @@ export default function Dholak() {
         ]).start();
 
         UnifiedAudioEngine.playDrumSound(soundName, 'dholak', track.volume, track.pan);
+        HapticService.medium();
     };
 
     return (
-        <LinearGradient colors={['#1e1b4b', '#312e81', '#1e1b4b']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
-            <View style={styles.header}>
-                <Text style={styles.title}>FOLK DRIVE</Text>
-                <Text style={[styles.subtitle, isPhone && { fontSize: normalize(8) }]}>PREMIUM STUDIO DHOLAK • DEEP TEAK & GOATSKIN</Text>
-            </View>
+        <InstrumentContainer scrollEnabled={false}>
+            <LinearGradient colors={['#1e1b4b', '#312e81', '#1e1b4b']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>FOLK DRIVE</Text>
+                    <Text style={[styles.subtitle, isPhone && { fontSize: normalize(8) }]}>PREMIUM STUDIO DHOLAK • DEEP TEAK & GOATSKIN</Text>
+                </View>
 
-            <Animated.View style={[styles.dholakFrame, { transform: [{ translateX: barrelShake }], height: bassPlateSize * 1.5 }]}>
-                {/* 1. MASTER BARREL (Teak Wood) */}
-                <View style={[styles.barrelResonator, { width: barrelWidth, height: barrelHeight }]}>
-                    <LinearGradient colors={['#451a03', '#92400e', '#7c2d12', '#92400e', '#451a03']} style={[styles.teakShell, { borderRadius: barrelWidth * 0.3 }]}>
-                        <View style={styles.shellGrain} />
-                        <View style={styles.shellGloss} />
-                        
-                        {/* Woven Rope System (Structural Bond) */}
-                        <View style={styles.ropeNetwork}>
-                            {Array.from({ length: 14 }).map((_, i) => (
-                                <View key={i} style={[styles.ropeLine, { top: 18 + (i * 12) }]} />
-                            ))}
+                <Animated.View style={[styles.dholakFrame, { transform: [{ translateX: barrelShake }], height: bassPlateSize * 1.5 }]}>
+                    {/* 1. MASTER BARREL (Teak Wood) */}
+                    <View style={[styles.barrelResonator, { width: barrelWidth, height: barrelHeight }]}>
+                        <LinearGradient colors={['#451a03', '#92400e', '#7c2d12', '#92400e', '#451a03']} style={[styles.teakShell, { borderRadius: barrelWidth * 0.3 }]}>
+                            <View style={styles.shellGrain} />
+                            <View style={styles.shellGloss} />
+                            
+                            {/* Woven Rope System (Structural Bond) */}
+                            <View style={styles.ropeNetwork}>
+                                {Array.from({ length: 14 }).map((_, i) => (
+                                    <View key={i} style={[styles.ropeLine, { top: 18 + (i * 12) }]} />
+                                ))}
+                            </View>
+                        </LinearGradient>
+                    </View>
+
+                    {/* 2. DUAL HEADS (Aligned to Barrel) */}
+                    <View style={styles.headsLayout}>
+                        {/* Bass Head (Left) */}
+                        <View style={styles.headColumn}>
+                            <Animated.View style={[styles.headPlate, styles.bassPlate, { transform: [{ scale: leftScale }], width: bassPlateSize, height: bassPlateSize, borderRadius: bassPlateSize / 2 }]}>
+                                <View style={[styles.pardaRing, { borderRadius: bassPlateSize / 2 }]} />
+                                <TouchableOpacity style={styles.hitSurface} onPress={() => playSound('dha', 'left')} activeOpacity={0.9}>
+                                    <View style={styles.skinTexture} />
+                                    <Text style={[styles.hitLabel, { marginTop: bassPlateSize * 0.22 }]}>DHA</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
+                            <Text style={styles.labelSub}>RESONANT BASS</Text>
                         </View>
-                    </LinearGradient>
+
+                        {/* Treble Head (Right) */}
+                        <View style={styles.headColumn}>
+                            <Animated.View style={[styles.headPlate, styles.treblePlate, { transform: [{ scale: rightScale }], width: treblePlateSize, height: treblePlateSize, borderRadius: treblePlateSize / 2 }]}>
+                                <View style={[styles.pardaRing, { borderRadius: treblePlateSize / 2 }]} />
+                                <TouchableOpacity style={styles.hitSurface} onPress={() => playSound('ta', 'right')} activeOpacity={0.9}>
+                                    <View style={styles.skinTexture} />
+                                    <View style={styles.masalaPatch} />
+                                    <Text style={[styles.hitLabel, { marginTop: treblePlateSize * 0.22 }]}>TA</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
+                            <Text style={styles.labelSub}>TREBLE SNAP</Text>
+                        </View>
+                    </View>
+                </Animated.View>
+
+                <View style={styles.bolTray}>
+                    <TouchableOpacity style={styles.bolLink} onPress={() => playSound('ge', 'left')}>
+                        <LinearGradient colors={['#b45309', '#78350f']} style={styles.bolBtn}>
+                            <Text style={styles.bolLabel}>GE</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.bolLink} onPress={() => playSound('na', 'right')}>
+                        <LinearGradient colors={['#b45309', '#78350f']} style={styles.bolBtn}>
+                            <Text style={styles.bolLabel}>NA</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
                 </View>
 
-                {/* 2. DUAL HEADS (Aligned to Barrel) */}
-                <View style={styles.headsLayout}>
-                    {/* Bass Head (Left) */}
-                    <View style={styles.headColumn}>
-                        <Animated.View style={[styles.headPlate, styles.bassPlate, { transform: [{ scale: leftScale }], width: bassPlateSize, height: bassPlateSize, borderRadius: bassPlateSize / 2 }]}>
-                            <View style={[styles.pardaRing, { borderRadius: bassPlateSize / 2 }]} />
-                            <TouchableOpacity style={styles.hitSurface} onPress={() => playSound('dha', 'left')} activeOpacity={0.9}>
-                                <View style={styles.skinTexture} />
-                                <Text style={[styles.hitLabel, { marginTop: bassPlateSize * 0.22 }]}>DHA</Text>
-                            </TouchableOpacity>
-                        </Animated.View>
-                        <Text style={styles.labelSub}>RESONANT BASS</Text>
-                    </View>
-
-                    {/* Treble Head (Right) */}
-                    <View style={styles.headColumn}>
-                        <Animated.View style={[styles.headPlate, styles.treblePlate, { transform: [{ scale: rightScale }], width: treblePlateSize, height: treblePlateSize, borderRadius: treblePlateSize / 2 }]}>
-                            <View style={[styles.pardaRing, { borderRadius: treblePlateSize / 2 }]} />
-                            <TouchableOpacity style={styles.hitSurface} onPress={() => playSound('ta', 'right')} activeOpacity={0.9}>
-                                <View style={styles.skinTexture} />
-                                <View style={styles.masalaPatch} />
-                                <Text style={[styles.hitLabel, { marginTop: treblePlateSize * 0.22 }]}>TA</Text>
-                            </TouchableOpacity>
-                        </Animated.View>
-                        <Text style={styles.labelSub}>TREBLE SNAP</Text>
-                    </View>
+                <View style={[styles.footer, { bottom: SAFE_BOTTOM + sc(20) }]}>
+                    <View style={styles.decorLine} />
+                    <Text style={[styles.instruction, isPhone && { fontSize: normalize(8) }]}>DUAL-ZONE MASALA HEADS • ADAPTIVE DYNAMIC SENSITIVITY</Text>
                 </View>
-            </Animated.View>
-
-            <View style={styles.bolTray}>
-                <TouchableOpacity style={styles.bolLink} onPress={() => playSound('ge', 'left')}>
-                    <LinearGradient colors={['#b45309', '#78350f']} style={styles.bolBtn}>
-                        <Text style={styles.bolLabel}>GE</Text>
-                    </LinearGradient>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.bolLink} onPress={() => playSound('na', 'right')}>
-                    <LinearGradient colors={['#b45309', '#78350f']} style={styles.bolBtn}>
-                        <Text style={styles.bolLabel}>NA</Text>
-                    </LinearGradient>
-                </TouchableOpacity>
-            </View>
-
-            <View style={[styles.footer, { bottom: SAFE_BOTTOM + sc(20) }]}>
-                <View style={styles.decorLine} />
-                <Text style={[styles.instruction, isPhone && { fontSize: normalize(8) }]}>DUAL-ZONE MASALA HEADS • ADAPTIVE DYNAMIC SENSITIVITY</Text>
-            </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -155,7 +161,7 @@ const styles = StyleSheet.create({
     teakShell: {
         flex: 1,
         borderRadius: sc(50),
-        borderWidth: 3,
+        borderWidth: sc(3),
         borderColor: '#451a03',
         overflow: 'hidden',
         ...createShadow({ color: '#000', radius: sc(30) }),
@@ -175,7 +181,7 @@ const styles = StyleSheet.create({
     },
     ropeLine: {
         width: '100%',
-        height: 1.5,
+        height: sc(1.5),
         backgroundColor: 'rgba(255,255,255,0.12)',
     },
     headsLayout: {
@@ -191,7 +197,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#000',
         justifyContent: 'center',
         alignItems: 'center',
-        ...createShadow({ color: '#000', radius: sc(20), offsetY: 10 }),
+        ...createShadow({ color: '#000', radius: sc(20), offsetY: sc(10) }),
     },
     bassPlate: {
         justifyContent: 'center',
@@ -214,7 +220,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#fef3c7',
-        borderWidth: 2,
+        borderWidth: sc(2),
         borderColor: '#d7ccc8',
     },
     skinTexture: {
@@ -227,16 +233,16 @@ const styles = StyleSheet.create({
         height: sc(35),
         borderRadius: sc(17.5),
         backgroundColor: 'rgba(23,23,23,0.85)',
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: 'rgba(255,255,255,0.05)',
     },
     hitLabel: { color: 'rgba(69, 26, 3, 0.4)', fontSize: normalize(10), fontWeight: '900', letterSpacing: 2, marginTop: sc(40) },
     labelSub: { color: '#92400e', fontSize: normalize(10), fontWeight: '900', marginTop: sc(15), letterSpacing: 2 },
     bolTray: { flexDirection: 'row', gap: sc(25), marginTop: sc(40) },
     bolLink: { width: sc(85), height: sc(45), borderRadius: sc(12), ...createShadow({ color: '#000', radius: sc(8) }) },
-    bolBtn: { flex: 1, borderRadius: sc(12), justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#b45309' },
+    bolBtn: { flex: 1, borderRadius: sc(12), justifyContent: 'center', alignItems: 'center', borderWidth: sc(1.5), borderColor: '#b45309' },
     bolLabel: { color: '#fbbf24', fontSize: normalize(14), fontWeight: '900', letterSpacing: 3 },
     footer: { position: 'absolute', width: '100%', alignItems: 'center' },
-    decorLine: { width: '60%', height: 2, backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: sc(12) },
+    decorLine: { width: '60%', height: sc(2), backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: sc(12) },
     instruction: { color: '#475569', fontSize: normalize(10), fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
 });

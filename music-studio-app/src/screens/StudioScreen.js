@@ -13,6 +13,17 @@ import Trumpet from '../components/Trumpet';
 import Saxophone from '../components/Saxophone';
 import WorldPercussion from '../components/WorldPercussion';
 import Tabla from '../components/Tabla';
+import Sitar from '../components/Sitar';
+import Accordion from '../components/Accordion';
+import Banjo from '../components/Banjo';
+import Dholak from '../components/Dholak';
+import Harp from '../components/Harp';
+import Kalimba from '../components/Kalimba';
+import Marimba from '../components/Marimba';
+import EthnicStrings from '../components/EthnicStrings';
+import OrchestralStrings from '../components/OrchestralStrings';
+import BrassEnsemble from '../components/BrassEnsemble';
+import ChoirHall from '../components/ChoirHall';
 import Timeline from '../components/Timeline';
 import ExportModal from '../components/ExportModal';
 import { useProject } from '../contexts/ProjectContext';
@@ -29,6 +40,7 @@ import MasterVisualizer from '../components/MasterVisualizer';
 import { PanResponder } from 'react-native';
 import { COLORS } from '../constants/UIConfig';
 import { createShadow } from '../utils/shadows';
+import HapticService from '../services/HapticService';
 
 const INSTRUMENTS = [
     { id: 'timeline', name: 'Timeline' },
@@ -44,6 +56,17 @@ const INSTRUMENTS = [
     { id: 'trumpet', name: 'Trumpet' },
     { id: 'saxophone', name: 'Sax' },
     { id: 'world', name: 'World' },
+    { id: 'sitar', name: 'Sitar' },
+    { id: 'accordion', name: 'Accordion' },
+    { id: 'banjo', name: 'Banjo' },
+    { id: 'dholak', name: 'Dholak' },
+    { id: 'harp', name: 'Harp' },
+    { id: 'kalimba', name: 'Kalimba' },
+    { id: 'marimba', name: 'Marimba' },
+    { id: 'ethnic', name: 'Ethnic' },
+    { id: 'orchestral', name: 'Orchestra' },
+    { id: 'brass', name: 'Brass' },
+    { id: 'choir', name: 'Choir' },
 ];
 
 const MasterVolumeSlider = ({ value, onValueChange }) => {
@@ -54,6 +77,7 @@ const MasterVolumeSlider = ({ value, onValueChange }) => {
         const locationX = evt.nativeEvent.locationX;
         const percentage = Math.max(0, Math.min(1, locationX / sliderWidth));
         onValueChange(percentage);
+        HapticService.light();
     }, [sliderWidth, onValueChange]);
 
     const panResponder = useMemo(() => PanResponder.create({
@@ -88,7 +112,10 @@ const InstrumentSelector = React.memo(({ instruments, activeInstrument, onSelect
                         styles.selectorButton,
                         activeInstrument === inst.id && styles.activeSelector
                     ]}
-                    onPress={() => onSelect(inst.id)}
+                    onPress={() => {
+                        HapticService.selection();
+                        onSelect(inst.id);
+                    }}
                 >
                     <Text style={[
                         styles.selectorText,
@@ -178,6 +205,7 @@ export default function StudioScreen({ route }) {
     const handleInstrumentChange = (instrumentId) => {
         // [MOBILE UNLOCK] Attempt to activate audio on any interaction
         UnifiedAudioEngine.activateAudio().catch(() => {});
+        HapticService.selection();
 
         // Fade out
         Animated.timing(fadeAnim, {
@@ -199,6 +227,7 @@ export default function StudioScreen({ route }) {
         updateMasterVolume(val);
         // [MOBILE UNLOCK] Attempt to activate audio on volume change
         UnifiedAudioEngine.activateAudio().catch(() => {});
+        HapticService.light();
     };
 
     const toggleMetronome = () => {
@@ -213,6 +242,7 @@ export default function StudioScreen({ route }) {
             });
             setIsMetronomeActive(true);
         }
+        HapticService.selection();
     };
 
     const handleRecordingSaved = (data) => {
@@ -229,6 +259,7 @@ export default function StudioScreen({ route }) {
             try {
                 const project = await saveCurrentProject(newProjectName.trim());
                 setShowSaveModal(false);
+                HapticService.selection();
                 Alert.alert('Success', `Project "${project.name}" saved successfully!`);
             } catch (e) {
                 Alert.alert('Error', 'Failed to save project');
@@ -266,6 +297,28 @@ export default function StudioScreen({ route }) {
                 return <Saxophone />;
             case 'world':
                 return <WorldPercussion />;
+            case 'sitar':
+                return <Sitar />;
+            case 'accordion':
+                return <Accordion />;
+            case 'banjo':
+                return <Banjo />;
+            case 'dholak':
+                return <Dholak />;
+            case 'harp':
+                return <Harp />;
+            case 'kalimba':
+                return <Kalimba />;
+            case 'marimba':
+                return <Marimba />;
+            case 'ethnic':
+                return <EthnicStrings />;
+            case 'orchestral':
+                return <OrchestralStrings />;
+            case 'brass':
+                return <BrassEnsemble />;
+            case 'choir':
+                return <ChoirHall />;
             default:
                 return <AudioRecorder onRecordingSaved={handleRecordingSaved} tracks={tracks} />;
         }

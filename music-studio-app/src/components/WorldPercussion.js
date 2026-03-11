@@ -5,6 +5,8 @@ import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { useProject } from '../contexts/ProjectContext';
 import { createShadow, createTextShadow } from '../utils/shadows';
 import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+import InstrumentContainer from './InstrumentContainer';
 
 const PERCUSSION = [
     { id: 1, name: 'CONGA HIGH', id_str: 'conga high', note: 'C4', color: '#8d6e63' },
@@ -34,6 +36,7 @@ export default function WorldPercussion() {
 
         // Use id_str for consistent engine mapping
         UnifiedAudioEngine.playDrumSound(percussion.id_str, 'world', track.volume, track.pan);
+        HapticService.medium();
 
         Animated.sequence([
             Animated.timing(impactAnims[percussion.id], {
@@ -52,7 +55,8 @@ export default function WorldPercussion() {
     const padWidth = isPhone ? (width - sc(80)) / 2 : sc(180);
 
     return (
-        <LinearGradient colors={['#1a120f', '#0a0805']} style={[styles.container, { paddingTop: SAFE_TOP, paddingBottom: SAFE_BOTTOM + sc(10) }]}>
+        <InstrumentContainer>
+            <LinearGradient colors={['#1a120f', '#0a0805']} style={[styles.container, { paddingTop: SAFE_TOP, paddingBottom: SAFE_BOTTOM + sc(10) }]}>
             <View style={[styles.header, isPhone && { height: sc(60), marginBottom: sc(15) }]}>
                 <View style={styles.brandContainer}>
                     <Text style={styles.brandTitle}>SOLOCRAFT STUDIO</Text>
@@ -117,7 +121,8 @@ export default function WorldPercussion() {
             <View style={styles.footer}>
                 <Text style={[styles.instruction, isPhone && { fontSize: normalize(7) }]}>AUTHENTIC GLOBAL INSTRUMENT SAMPLES • 24-BIT STUDIO DEPTH</Text>
             </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -127,7 +132,7 @@ const styles = StyleSheet.create({
         borderRadius: sc(30),
         margin: sc(5),
         padding: sc(25),
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: 'rgba(255,255,255,0.05)',
         ...createShadow({ color: '#000', radius: sc(25), opacity: 0.6 }),
     },
@@ -162,7 +167,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: sc(14),
         paddingVertical: sc(8),
         borderRadius: sc(15),
-        borderWidth: 1,
+        borderWidth: sc(1),
         gap: sc(10),
     },
     badgeIndicator: {
@@ -198,7 +203,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         width: '115%',
         height: '115%',
-        borderWidth: 3,
+        borderWidth: sc(3),
         borderRadius: sc(28),
     },
     padBase: {
@@ -206,9 +211,9 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: sc(24),
         padding: sc(4),
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: 'rgba(255,255,255,0.08)',
-        ...createShadow({ color: '#000', offsetY: 12, radius: sc(10), opacity: 0.6 }),
+        ...createShadow({ color: '#000', offsetY: sc(12), radius: sc(10), opacity: 0.6 }),
     },
     padGlow: {
         ...StyleSheet.absoluteFillObject,
@@ -248,7 +253,7 @@ const styles = StyleSheet.create({
         marginTop: sc(25),
         alignItems: 'center',
         paddingTop: sc(15),
-        borderTopWidth: 1,
+        borderTopWidth: sc(1),
         borderTopColor: 'rgba(255,255,255,0.05)',
     },
     instruction: {

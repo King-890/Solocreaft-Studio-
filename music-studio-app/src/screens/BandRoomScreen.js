@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useProject } from '../contexts/ProjectContext';
 import Visualizer from '../components/Visualizer';
 import { createShadow, createTextShadow } from '../utils/shadows';
+import HapticService from '../services/HapticService';
 
 const INSTRUMENTS = [
     { id: 'piano', name: 'Grand Piano', icon: '🎹', color: '#4a9eff' },
@@ -34,6 +35,7 @@ export default function BandRoomScreen() {
     const padWidth = (width - 40 - (12 * (numColumns - 1))) / numColumns;
 
     const navigateToInstrument = (type) => {
+        HapticService.selection();
         navigation.navigate('InstrumentRoom', { instrumentType: type });
     };
 
@@ -83,14 +85,16 @@ export default function BandRoomScreen() {
                     <Text style={styles.sectionTitle}>Instruments Room</Text>
                     <TouchableOpacity 
                         style={styles.libraryBtn}
-                        onPress={() => navigation.navigate('InstrumentsLibrary')}
+                        onPress={() => {
+                            HapticService.selection();
+                            navigation.navigate('InstrumentsLibrary');
+                        }}
                     >
                         <Text style={styles.seeAll}>FULL LIBRARY</Text>
                         <Text style={styles.arrowIcon}>→</Text>
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.grid}>
                     {INSTRUMENTS.map((inst) => (
                         <TouchableOpacity
                             key={inst.id}
@@ -102,19 +106,21 @@ export default function BandRoomScreen() {
                             activeOpacity={0.7}
                         >
                             <LinearGradient
-                                colors={['rgba(255,255,255,0.05)', 'transparent']}
+                                colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
                                 style={styles.cardGlow}
                             />
                             <View style={[
                                 styles.instIconBg, 
-                                createShadow({ color: inst.color, radius: 15, opacity: 0.4, elevation: 8 })
+                                createShadow({ color: inst.color, radius: 20, opacity: 0.3, elevation: 12 })
                             ]}>
                                 <Text style={styles.instIcon}>{inst.icon}</Text>
                             </View>
                             <Text style={styles.instName}>{inst.name}</Text>
+                            <View style={[styles.instBadge, { backgroundColor: inst.color + '15' }]}>
+                                <Text style={[styles.instBadgeText, { color: inst.color }]}>PRO</Text>
+                            </View>
                         </TouchableOpacity>
                     ))}
-                </View>
 
                 {/* Performance Tip */}
                 <LinearGradient
@@ -311,9 +317,22 @@ const styles = StyleSheet.create({
     instName: {
         color: '#f1f5f9',
         fontSize: 13,
-        fontWeight: '800',
+        fontWeight: '900',
         textAlign: 'center',
         letterSpacing: -0.2,
+        marginBottom: 6,
+    },
+    instBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    instBadgeText: {
+        fontSize: 8,
+        fontWeight: '900',
+        letterSpacing: 1,
     },
     footerCard: {
         borderRadius: 30,

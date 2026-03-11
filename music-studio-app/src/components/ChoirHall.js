@@ -3,7 +3,9 @@ import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimension
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
-import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+import InstrumentContainer from './InstrumentContainer';
 
 const VOCAL_RANGES = [
     { id: 'soprano', label: 'SOPRANO', color: '#64b5f6', notes: ['C5', 'D5', 'E5', 'F5', 'G5', 'A5'] },
@@ -13,6 +15,7 @@ const VOCAL_RANGES = [
 ];
 
 export default function ChoirHall() {
+    const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [activeNotes, setActiveNotes] = useState({});
     
     const pulseAnims = useRef(VOCAL_RANGES.reduce((acc, range) => {
@@ -26,6 +29,7 @@ export default function ChoirHall() {
     const playVocal = useCallback((rangeId, note, velocity = 0.8) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(note, 'choir', 0, velocity);
+        HapticService.light();
         const compositeKey = `${rangeId}-${note}`;
         setActiveNotes(prev => ({ ...prev, [compositeKey]: true }));
         
@@ -42,7 +46,8 @@ export default function ChoirHall() {
     }, []);
 
     return (
-        <LinearGradient colors={['#020617', '#0f172a', '#020617']} style={styles.container}>
+        <InstrumentContainer>
+            <LinearGradient colors={['#020617', '#0f172a', '#020617']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
             <View style={styles.hallHeader}>
                 <Text style={styles.hallTitle}>CATHEDRAL OF VOICES</Text>
                 <Text style={styles.hallSubtitle}>MASTERCLASS CHOIR ENSEMBLE • CELESTIAL AURA</Text>
@@ -115,7 +120,8 @@ export default function ChoirHall() {
                     <Text style={styles.badgeText}>HARMONIC SPECTRAL SYNCHRONIZATION ACTIVE</Text>
                 </View>
             </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -129,7 +135,7 @@ const styles = StyleSheet.create({
     },
     hallHeader: { alignItems: 'center', marginBottom: sc(40) },
     hallTitle: { color: '#fff', fontSize: normalize(20), fontWeight: '900', letterSpacing: 12, ...createTextShadow({ color: 'rgba(56, 189, 248, 0.8)', radius: 20 }) },
-    hallSubtitle: { color: '#64748b', fontSize: normalize(10), fontWeight: '900', marginTop: sc(8), letterSpacing: 4, textTransform: 'uppercase' },
+    hallSubtitle: { color: '#64748b', fontSize: normalize(10), fontWeight: '900', marginTop: sc(8), letterSpacing: sc(4), textTransform: 'uppercase' },
     ensembleContainer: { flex: 1, justifyContent: 'space-between' },
     vocalSection: { flexDirection: 'row', alignItems: 'center', marginVertical: sc(15) },
     sectionHeader: { width: sc(110), alignItems: 'flex-end', marginRight: sc(30) },
@@ -138,12 +144,12 @@ const styles = StyleSheet.create({
     voiceGems: { flex: 1, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
     voiceGemWrapper: { alignItems: 'center' },
     gemBase: { width: sc(64), height: sc(64), justifyContent: 'center', alignItems: 'center', position: 'relative' },
-    voiceGem: { width: sc(50), height: sc(50), borderRadius: sc(25), backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: 1.5, justifyContent: 'center', alignItems: 'center', overflow: 'hidden', zIndex: 10 },
+    voiceGem: { width: sc(50), height: sc(50), borderRadius: sc(25), backgroundColor: 'rgba(255,255,255,0.02)', borderWidth: sc(1.5), justifyContent: 'center', alignItems: 'center', overflow: 'hidden', zIndex: 10 },
     voiceGemActive: { ...createShadow({ color: '#fff', radius: sc(20), opacity: 0.7 }) },
     spectralHighlight: { position: 'absolute', top: '10%', left: '10%', width: '30%', height: '30%', backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: sc(15) },
-    aura: { position: 'absolute', width: sc(60), height: sc(60), borderRadius: sc(30), borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.03)', zIndex: 5 },
+    aura: { position: 'absolute', width: sc(60), height: sc(60), borderRadius: sc(30), borderWidth: sc(1), backgroundColor: 'rgba(255,255,255,0.03)', zIndex: 5 },
     noteId: { color: '#334155', fontSize: normalize(10), fontWeight: '900', marginTop: sc(12), letterSpacing: 2 },
     footer: { marginTop: sc(30), alignItems: 'center' },
-    atmosphericBadge: { backgroundColor: 'rgba(56,189,248,0.05)', paddingHorizontal: sc(30), paddingVertical: sc(12), borderRadius: sc(25), borderWidth: 1, borderColor: 'rgba(56,189,248,0.2)' },
+    atmosphericBadge: { backgroundColor: 'rgba(56,189,248,0.05)', paddingHorizontal: sc(30), paddingVertical: sc(12), borderRadius: sc(25), borderWidth: sc(1), borderColor: 'rgba(56,189,248,0.2)' },
     badgeText: { color: '#334155', fontSize: normalize(9), fontWeight: '900', letterSpacing: 2.5 },
 });

@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { HOME_THEMES, SPACING, TYPOGRAPHY } from '../../constants/HomeScreenThemes';
+import HapticService from '../../services/HapticService';
 
 /**
  * QuickActionGrid Component
@@ -28,6 +29,7 @@ function QuickActionItem({ icon, label, color, onPress, theme }) {
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
     const handlePressIn = () => {
+        HapticService.selection();
         Animated.spring(scaleAnim, {
             toValue: 0.9,
             useNativeDriver: Platform.OS !== 'web',

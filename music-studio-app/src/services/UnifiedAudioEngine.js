@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 import WebAudioEngine from './WebAudioEngine';
-import { Audio } from 'expo-av';
+import * as Audio from 'expo-audio';
 import { Asset } from 'expo-asset';
-import { INSTRUMENTS, getSampleUrl, getLocalPercussionAsset } from './SampleLibrary';
+import { INSTRUMENTS, getSafeSampleUrl, getLocalPercussionAsset } from './SampleLibrary';
 import AudioPlaybackService from './AudioPlaybackService';
 import AudioManager from '../utils/AudioManager';
 import { INSTRUMENT_TRACK_MAP } from '../constants/AudioConstants';
@@ -19,6 +19,7 @@ class NativeAudioEngine {
         
         // Track playing oscillators for stopping
         this.playingNodes = new Map();
+        this.playerPool = new Map();
     }
 
     async init() {
@@ -26,22 +27,33 @@ class NativeAudioEngine {
         if (this.initFailed) return false;
         
         try {
-            console.log('🎵 Initializing Native Audio (Sample Mode via expo-av)...');
+            // console.log('🎵 Initializing Native Audio (Sample Mode via expo-audio)...');
             
             // Set Audio Mode for iOS/Android
-            await Audio.setAudioModeAsync({
-                playsInSilentModeIOS: true,
-                staysActiveInBackground: true,
-                shouldDuckAndroid: true,
-            });
+            const audioMode = {
+                playsInSilentMode: true,
+                shouldPlayInBackground: true,
+                interruptionMode: 'mixWithOthers',
+                shouldRouteThroughEarpiece: false,
+            };
+
+            // [MOBILE COMPATIBILITY] Add Android-specific fallback if needed, though expo-audio should handle it
+            if (Platform.OS === 'android') {
+                audioMode.interruptionModeAndroid = 'mixWithOthers';
+            }
+
+            await Audio.setAudioModeAsync(audioMode);
+
+            // Ensure Audio Session is Active
+            await Audio.setIsAudioActiveAsync(true);
 
             // 1. Get the Unified Context
             this.ctx = UnifiedAudioContext.get();
             if (!this.ctx) {
-                this.initFailed = true;
-                // [MOBILE FAILOVER] Demote to info log as this is expected in Expo Go
-                console.log('ℹ️ Synthesis Engine Unavailable. Falling back to Sample Playback (Expo Go mode).');
-                return false;
+                // [MOBILE FAILOVER] expected in Expo Go/Native
+                if (__DEV__) console.debug('ℹ️ Synthesis Engine Unavailable. Using Sample Playback.');
+                this.initialized = true; 
+                return true;
             }
 
             // 3. Setup Master Chain
@@ -50,10 +62,11 @@ class NativeAudioEngine {
             this.masterGain.connect(this.ctx.destination);
 
             this.initialized = true;
-            console.log('✅ NativeAudioEngine (Audio API) Initialized');
+            // console.log('✅ NativeAudioEngine (Audio API) Initialized');
             return true;
         } catch (error) {
-            console.log('ℹ️ Native Audio Failover:', error.message);
+            if (__DEV__) console.debug('ℹ️ Native Audio Failover:', error.message);
+            this.initFailed = true; // Mark as failed to avoid loops
             return false;
         }
     }
@@ -63,83 +76,110 @@ class NativeAudioEngine {
     }
 
     playSound(noteName, instrument = 'piano', delay = 0, velocity = 1.0) {
+        const lowerInst = String(instrument).toLowerCase();
+        
         if (!this.initialized && !this.initFailed) {
             this.init().then(() => {
                 if (this.ctx) {
-                    this.playSynthesizedSound(noteName, instrument, delay, velocity).catch(err => {
+                    this.playSynthesizedSound(noteName, lowerInst, delay, velocity).catch(err => {
                         console.debug('playSynthesizedSound error', err);
                     });
                 } else {
-                    this.playSampleSound(noteName, instrument, velocity);
+                    this.playSampleSound(noteName, lowerInst, velocity);
                 }
             });
             return;
         }
 
         if (this.ctx) {
-            this.playSynthesizedSound(noteName, instrument, delay, velocity).catch(err => {
+            this.playSynthesizedSound(noteName, lowerInst, delay, velocity).catch(err => {
                 console.debug('playSynthesizedSound error', err);
             });
         } else {
-            this.playSampleSound(noteName, instrument, velocity);
+            this.playSampleSound(noteName, lowerInst, velocity);
         }
     }
 
     async playSampleSound(noteName, instrument, volume = 1.0) {
         const instrumentKey = INSTRUMENTS[instrument.toUpperCase()] || instrument;
-        const url = getSampleUrl(instrumentKey, noteName);
+        const url = getSafeSampleUrl(instrumentKey, noteName);
         const key = `${instrumentKey}-${noteName}`;
         
-        // [PERFORMANCE] Reuse players to avoid memory spikes and lag on mobile
-        if (!this.playerPool) this.playerPool = new Map();
+        // console.log(`🎵 [AudioEngine] Playing ${key} - URL: ${url}`);
+        
+        const MAX_POOL_SIZE = 32;
 
-        const createPlayer = async () => {
-            const { sound } = await Audio.Sound.createAsync(
-                { uri: url },
-                { shouldPlay: false, volume: volume * this.masterVolume }
-            );
-            return sound;
+        const createPlayer = () => {
+            try {
+                const player = Audio.createAudioPlayer(url);
+                player.volume = volume * this.masterVolume;
+                player._lastPlayed = Date.now();
+                return player;
+            } catch (e) {
+                console.error(`❌ [AudioEngine] Create player failed for ${key}:`, e);
+                return null;
+            }
         };
 
-        let soundObj = this.playerPool.get(key);
+        // --- Pool Management (LRU Disposal) ---
+        if (this.playerPool.size >= MAX_POOL_SIZE && !this.playerPool.has(key)) {
+            let oldestKey = null;
+            let oldestTime = Date.now();
 
-        try {
-            if (!soundObj) {
-                soundObj = await createPlayer();
-                this.playerPool.set(key, soundObj);
-            } else {
-                try {
-                    await soundObj.setPositionAsync(0);
-                    await soundObj.setVolumeAsync(volume * this.masterVolume);
-                } catch (resetError) {
-                    console.log(`♻️ Player reset failed for ${key}, recreating...`);
-                    this.playerPool.delete(key);
-                    soundObj = await createPlayer();
-                    this.playerPool.set(key, soundObj);
+            for (const [k, p] of this.playerPool.entries()) {
+                if (p._lastPlayed < oldestTime) {
+                    oldestTime = p._lastPlayed;
+                    oldestKey = k;
                 }
             }
 
-            // Attempt playback
-            await soundObj.playAsync();
-        } catch (playError) {
-            console.warn(`⚠️ Playback failed for ${key}: ${playError.message}. Retrying once...`);
-            
-            // ONE-TIME RETRY: Force recreation if playback failed (e.g. "Player does not exist")
-            try {
-                this.playerPool.delete(key);
-                soundObj = await createPlayer();
-                this.playerPool.set(key, soundObj);
-                await soundObj.playAsync();
-                console.log(`✅ Retry successful for ${key}`);
-            } catch (retryError) {
-                console.error(`❌ Final playback failure for ${key}:`, retryError.message);
-                this.playerPool.delete(key);
+            if (oldestKey) {
+                const oldestPlayer = this.playerPool.get(oldestKey);
+                try {
+                    oldestPlayer.stop();
+                    // [CRITICAL] In expo-audio SDK 54, players must be explicitly removed 
+                    // to free native resources and avoid "no sound" errors after multiple notes.
+                    if (oldestPlayer.remove) oldestPlayer.remove();
+                } catch (e) {
+                    console.debug('Failed to remove player from native side', e.message);
+                }
+                this.playerPool.delete(oldestKey);
             }
         }
-    }
 
-    async stopPlayerQuiet(key) {
-        // Legacy compat
+        let player = this.playerPool.get(key);
+
+        try {
+            if (!player) {
+                player = createPlayer();
+                if (player) this.playerPool.set(key, player);
+            } else {
+                // Ensure player is stopped before seeking/restarting
+                try { player.stop(); } catch (e) {}
+                player.seekTo(0);
+                player.volume = volume * this.masterVolume;
+                player._lastPlayed = Date.now();
+            }
+
+            if (player) {
+                player.play();
+            }
+        } catch (playError) {
+            // [ROBUSTNESS] Silent fallback to synthesis - never let the user experience silence
+            try {
+                const oldPlayer = this.playerPool.get(key);
+                if (oldPlayer && oldPlayer.remove) try { oldPlayer.remove(); } catch(e){}
+                
+                this.playerPool.delete(key);
+                
+                // If synthesis engine is available, use it immediately as fallback
+                if (this.ctx) {
+                    this.playSynthesizedSound(noteName, instrument, 0, volume);
+                }
+            } catch (fallbackError) {
+                // Last resort: fail silently but don't crash
+            }
+        }
     }
 
     async playDrumSoundNative(id, instrument, volume, pan = 0) {
@@ -147,12 +187,10 @@ class NativeAudioEngine {
         if (!asset) return;
         
         try {
-            const { sound } = await Audio.Sound.createAsync(
-                asset,
-                { shouldPlay: true, volume: volume * this.masterVolume }
-            );
-            // Fire and forget for drums, letting GC handle it naturally or rely on unloadAll
-            // For better perf, we should pool these too, but let's fix sound first.
+            const player = Audio.createAudioPlayer(asset);
+            player.volume = volume * this.masterVolume;
+            player.play();
+            // In expo-audio, we don't necessarily need to unload immediately for fire-and-forget
         } catch (e) {
             console.warn('⚠️ Native drum playback failed', e.message);
         }
@@ -168,14 +206,12 @@ class NativeAudioEngine {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
 
-        // [SYNTHESIS ENGINE]
-        osc.type = instrument === 'piano' ? 'triangle' : 'sine';
+        osc.type = instrument === 'piano' ? 'triangle' : 'sawtooth';
         osc.frequency.setValueAtTime(freq, startTime);
         
-        // ADSR
         gain.gain.setValueAtTime(0, startTime);
         gain.gain.linearRampToValueAtTime(velocity * 0.7, startTime + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 1.5);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 1.2);
 
         osc.connect(gain);
         gain.connect(this.masterGain);
@@ -240,11 +276,10 @@ class NativeAudioEngine {
         });
         this.playingNodes.clear();
 
-        // [MOBILE FALLBACK] Stop all cached players
         if (this.playerPool) {
             this.playerPool.forEach(player => {
                 try {
-                    if (player.playing) player.pause();
+                    player.pause();
                     player.seekTo(0);
                 } catch (e) {}
             });
@@ -253,16 +288,12 @@ class NativeAudioEngine {
 
     async unloadAll() {
         this.stopAll();
-        // Clear all native players to free up memory
         if (this.playerPool) {
-            this.playerPool.forEach(player => {
-                try {
-                    player.unloadAsync();
-                } catch (e) {}
-            });
+            // In expo-audio, we don't have an explicit unloadAsync per player the same way,
+            // but we can release references.
             this.playerPool.clear();
         }
-        console.log('🧹 Native Audio Engine: Resources Unloaded');
+        // console.log('🧹 Native Audio Engine: Resources Unloaded');
     }
 
     setMixerSettings(instrumentId, settings) {
@@ -315,7 +346,7 @@ const UnifiedAudioEngine = {
      * This addresses both Web Audio suspension and Native Audio Session activation.
      */
     activateAudio: async () => {
-        console.log('🔗 UnifiedAudioEngine: Activating Audio...');
+        // console.log('🔗 UnifiedAudioEngine: Activating Audio...');
         try {
             await UnifiedAudioContext.resume();
 
@@ -331,7 +362,7 @@ const UnifiedAudioEngine = {
     },
 
     playSound: async (noteName, instrument = 'piano', delay = 0, velocity = 0.5) => {
-        console.log(`🔊 UnifiedAudioEngine.playSound called: ${instrument} - ${noteName}`);
+        // console.log(`🔊 UnifiedAudioEngine.playSound called: ${instrument} - ${noteName}`);
         if (Platform.OS === 'web') {
             return WebAudioEngine.playSound(noteName, instrument, delay, velocity);
         } else {

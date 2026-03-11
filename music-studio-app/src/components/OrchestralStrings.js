@@ -3,12 +3,15 @@ import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimension
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
-import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+import InstrumentContainer from './InstrumentContainer';
 
 const STRINGS = ['G', 'D', 'A', 'E'];
 const NOTE_MAP = ['G2', 'D2', 'A1', 'E1']; // Lower octave for orchestral strings
 
 export default function OrchestralStrings({ instrument = 'cello' }) {
+    const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [activeStrings, setActiveStrings] = useState([false, false, false, false]);
     const stringAnims = useRef(STRINGS.map(() => new Animated.Value(0))).current;
     const timeoutsRef = useRef({});
@@ -24,6 +27,7 @@ export default function OrchestralStrings({ instrument = 'cello' }) {
         UnifiedAudioEngine.activateAudio();
         const note = NOTE_MAP[index];
         UnifiedAudioEngine.playSound(note, instrument, 0, 0.7);
+        HapticService.medium();
         
         setActiveStrings(prev => {
             const next = [...prev];
@@ -61,10 +65,11 @@ export default function OrchestralStrings({ instrument = 'cello' }) {
     }, [instrument]);
 
     return (
-        <LinearGradient
-            colors={['#1a0d06', '#2a1810', '#1a0d06']}
-            style={styles.container}
-        >
+        <InstrumentContainer>
+            <LinearGradient
+                colors={['#1a0d06', '#2a1810', '#1a0d06']}
+                style={[styles.container, { paddingTop: SAFE_TOP }]}
+            >
             <View style={styles.header}>
                 <Text style={styles.title}>MAJESTIC SYMPHONY</Text>
                 <Text style={styles.subtitle}>CONCERT {instrument.toUpperCase()} PRO</Text>
@@ -115,7 +120,8 @@ export default function OrchestralStrings({ instrument = 'cello' }) {
             <View style={styles.footer}>
                 <Text style={styles.instruction}>Draw the bow or pluck the heavy strings for deep resonance</Text>
             </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -156,7 +162,7 @@ const styles = StyleSheet.create({
         borderRadius: sc(30),
         overflow: 'hidden',
         position: 'relative',
-        ...createShadow({ color: '#000', radius: sc(20), offsetY: 15, opacity: 0.7 }),
+        ...createShadow({ color: '#000', radius: sc(20), offsetY: sc(15), opacity: 0.7 }),
     },
     fingerboard: {
         position: 'absolute',

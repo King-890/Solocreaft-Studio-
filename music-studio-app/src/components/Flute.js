@@ -3,11 +3,15 @@ import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Platform } from '
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
-import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+
+import InstrumentContainer from './InstrumentContainer';
 
 const HOLES = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
 
 export default function Flute({ instrument = 'flute' }) {
+    const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [activeHoles, setActiveHoles] = useState({});
     const timeoutsRef = useRef({});
 
@@ -21,6 +25,7 @@ export default function Flute({ instrument = 'flute' }) {
     const playNote = useCallback((note) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(note, instrument, 0, 0.7);
+        HapticService.light();
         setActiveHoles(prev => ({ ...prev, [note]: true }));
 
         if (timeoutsRef.current[note]) clearTimeout(timeoutsRef.current[note]);
@@ -31,7 +36,8 @@ export default function Flute({ instrument = 'flute' }) {
     }, [instrument]);
 
     return (
-        <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} style={styles.container}>
+        <InstrumentContainer>
+            <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
             <View style={styles.header}>
                 <Text style={styles.title}>{instrument.toUpperCase()}</Text>
                 <Text style={styles.subtitle}>MASTERCLASS {instrument.toUpperCase()} • CONCERT SERIES</Text>
@@ -90,7 +96,8 @@ export default function Flute({ instrument = 'flute' }) {
                     <Text style={styles.statusText}>PHASE-COHERENT AIRFLOW ENGINE ACTIVE</Text>
                 </View>
             </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -149,9 +156,9 @@ const styles = StyleSheet.create({
         height: '110%',
         top: '-5%',
         backgroundColor: '#cbd5e1',
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: '#94a3b8',
-        borderRadius: 2,
+        borderRadius: sc(2),
     },
     keyOverlay: {
         ...StyleSheet.absoluteFillObject,
@@ -166,25 +173,25 @@ const styles = StyleSheet.create({
         width: sc(44),
         height: sc(44),
         borderRadius: sc(22),
-        borderWidth: 2,
+        borderWidth: sc(2),
         borderColor: '#94a3b8',
         justifyContent: 'center',
         alignItems: 'center',
-        ...createShadow({ color: '#000', radius: 8, offsetY: 4 }),
+        ...createShadow({ color: '#000', radius: sc(8), offsetY: sc(4) }),
     },
-    keyCenter: { width: sc(30), height: sc(30), borderRadius: sc(15), backgroundColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
+    keyCenter: { width: sc(30), height: sc(30), borderRadius: sc(15), backgroundColor: 'rgba(255,255,255,0.2)', borderWidth: sc(1), borderColor: 'rgba(0,0,0,0.1)' },
     resonantGlow: { position: 'absolute', width: sc(60), height: sc(60), borderRadius: sc(30), backgroundColor: 'rgba(56,189,248,0.1)', zIndex: -1 },
-    keyText: { color: '#64748b', fontSize: normalize(10), fontWeight: '900', letterSpacing: 1 },
+    keyText: { color: '#64748b', fontSize: normalize(10), fontWeight: '900', letterSpacing: sc(1) },
     headJoint: { position: 'absolute', left: sc(20), top: sc(-20) },
     lipPlate: {
         width: sc(70),
         height: sc(35),
         borderRadius: sc(18),
-        borderWidth: 1.5,
+        borderWidth: sc(1.5),
         borderColor: '#cbd5e1',
         justifyContent: 'center',
         alignItems: 'center',
-        ...createShadow({ color: '#000', radius: 10, opacity: 0.3 }),
+        ...createShadow({ color: '#000', radius: sc(10), opacity: 0.3 }),
     },
     embouchureHole: { width: sc(18), height: sc(12), borderRadius: sc(6), backgroundColor: '#000' },
     footer: { marginTop: sc(40), width: '100%', alignItems: 'center' },
@@ -193,7 +200,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: sc(20),
         paddingVertical: sc(6),
         borderRadius: sc(20),
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: 'rgba(255,255,255,0.1)',
     },
     statusText: { color: '#475569', fontSize: normalize(9), fontWeight: '900', letterSpacing: 2 },

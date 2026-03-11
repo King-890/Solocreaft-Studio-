@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { HOME_THEMES, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/HomeScreenThemes';
+import HapticService from '../../services/HapticService';
 
 /**
  * NowPlayingMiniPlayer Component
@@ -19,7 +20,10 @@ export default function NowPlayingMiniPlayer({
     return (
         <TouchableOpacity
             style={[styles.container, { backgroundColor: theme.secondary }, theme.shadow]}
-            onPress={onPress}
+            onPress={() => {
+                HapticService.selection();
+                onPress();
+            }}
             activeOpacity={0.9}
         >
             {/* Progress Bar (at top) */}
@@ -52,7 +56,10 @@ export default function NowPlayingMiniPlayer({
                 {/* Controls */}
                 <TouchableOpacity
                     style={styles.playButton}
-                    onPress={onPlayPause}
+                    onPress={() => {
+                        HapticService.selection();
+                        onPlayPause();
+                    }}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                     <Text style={[styles.playIcon, { color: theme.accent }]}>

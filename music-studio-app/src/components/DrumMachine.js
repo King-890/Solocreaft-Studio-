@@ -5,6 +5,7 @@ import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { useProject } from '../contexts/ProjectContext';
 import { createShadow, createTextShadow } from '../utils/shadows';
 import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
 
 const DRUM_PADS = [
     { id: 'kick', label: 'KICK', color: '#ff4444', row: 0, col: 0 },
@@ -14,6 +15,8 @@ const DRUM_PADS = [
     { id: 'tom2', label: 'TOM 2', color: '#ff44aa', row: 1, col: 1 },
     { id: 'crash', label: 'CRASH', color: '#44aaff', row: 1, col: 2 },
 ];
+
+import InstrumentContainer from './InstrumentContainer';
 
 export default function DrumMachine() {
     const { tracks } = useProject();
@@ -41,6 +44,7 @@ export default function DrumMachine() {
         const velocity = Math.max(1.0 - (dist / padSize), 0.4);
 
         UnifiedAudioEngine.playDrumSound(pad.id, 'drums', track.volume * velocity, track.pan);
+        HapticService.medium();
 
         Animated.sequence([
             Animated.timing(animValues[pad.id], {
@@ -57,79 +61,80 @@ export default function DrumMachine() {
     };
 
     return (
-        <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={[styles.container, { paddingTop: SAFE_TOP, paddingBottom: SAFE_BOTTOM + sc(10) }]}>
-            <View style={[styles.header, isPhone && { marginBottom: sc(10) }]}>
-                <View>
-                    <Text style={styles.brandTitle}>SOLOCRAFT INDUSTRIAL</Text>
-                    <Text style={[styles.modelTitle, isPhone && { fontSize: normalize(12) }]}>PRO-DRUM MK-III</Text>
-                </View>
-                {!isPhone && (
-                    <View style={styles.masterLedContainer}>
-                        <View style={styles.ledLabel}><Text style={styles.ledLabelText}>PWR</Text></View>
-                        <View style={[styles.led, styles.ledGreen]} />
-                        <View style={styles.ledLabel}><Text style={styles.ledLabelText}>SIG</Text></View>
-                        <View style={[styles.led, styles.ledRed]} />
+        <InstrumentContainer scrollEnabled={false}>
+            <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={[styles.container, { paddingTop: SAFE_TOP, paddingBottom: SAFE_BOTTOM + sc(10) }]}>
+                <View style={[styles.header, isPhone && { marginBottom: sc(10) }]}>
+                    <View>
+                        <Text style={styles.brandTitle}>SOLOCRAFT INDUSTRIAL</Text>
+                        <Text style={[styles.modelTitle, isPhone && { fontSize: normalize(12) }]}>PRO-DRUM MK-III</Text>
                     </View>
-                )}
-            </View>
+                    {!isPhone && (
+                        <View style={styles.masterLedContainer}>
+                            <View style={styles.ledLabel}><Text style={styles.ledLabelText}>PWR</Text></View>
+                            <View style={[styles.led, styles.ledGreen]} />
+                            <View style={styles.ledLabel}><Text style={styles.ledLabelText}>SIG</Text></View>
+                            <View style={[styles.led, styles.ledRed]} />
+                        </View>
+                    )}
+                </View>
 
-            <View style={[styles.grid, { gap: isPhone ? sc(10) : sc(15) }]}>
-                {DRUM_PADS.map((pad) => {
-                    const glowScale = animValues[pad.id].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [1, 1.1],
-                    });
-                    const glowOpacity = animValues[pad.id].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 0.6],
-                    });
+                <View style={[styles.grid, { gap: isPhone ? sc(10) : sc(15) }]}>
+                    {DRUM_PADS.map((pad) => {
+                        const glowScale = animValues[pad.id].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [1, 1.1],
+                        });
+                        const glowOpacity = animValues[pad.id].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 0.6],
+                        });
 
-                    return (
-                        <TouchableOpacity
-                            key={pad.id}
-                            style={[styles.padWrapper, { width: padSize, height: padSize }]}
-                            onPressIn={(e) => handlePadPress(pad, e)}
-                            activeOpacity={0.9}
-                            accessible={true}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Drum pad: ${pad.label}`}
-                            accessibilityHint={`Plays the ${pad.label} sound`}
-                        >
-                            <Animated.View style={[
-                                styles.padGlow, 
-                                { backgroundColor: pad.color, opacity: glowOpacity, transform: [{ scale: glowScale }] }
-                            ]} />
-                            <LinearGradient
-                                colors={['#334155', '#1e293b', '#0f172a']}
-                                style={[styles.pad, { width: padSize, height: padSize, borderColor: 'rgba(255,255,255,0.1)' }]}
+                        return (
+                            <TouchableOpacity
+                                key={pad.id}
+                                style={[styles.padWrapper, { width: padSize, height: padSize }]}
+                                onPressIn={(e) => handlePadPress(pad, e)}
+                                activeOpacity={0.9}
+                                accessible={true}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Drum pad: ${pad.label}`}
+                                accessibilityHint={`Plays the ${pad.label} sound`}
                             >
-                                <View style={[styles.innerSurface, { borderColor: pad.color + '66' }]}>
-                                    {/* Texture Overlay */}
-                                    <View style={[styles.siliconeTexture, { backgroundColor: pad.color, opacity: 0.05 }]} />
-                                    <View style={[styles.padStatusLed, { backgroundColor: pad.color }]} />
-                                    <Text style={[styles.padText, { color: '#fff', fontSize: isPhone ? normalize(8) : normalize(10) }]}>{pad.label}</Text>
-                                    <View style={[styles.cornerDecorator, { borderTopColor: pad.color, borderLeftColor: pad.color }]} />
-                                </View>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    );
-                })}
-            </View>
+                                <Animated.View style={[
+                                    styles.padGlow, 
+                                    { backgroundColor: pad.color, opacity: glowOpacity, transform: [{ scale: glowScale }] }
+                                ]} />
+                                <LinearGradient
+                                    colors={['#334155', '#1e293b', '#0f172a']}
+                                    style={[styles.pad, { width: padSize, height: padSize, borderColor: 'rgba(255,255,255,0.1)' }]}
+                                >
+                                    <View style={[styles.innerSurface, { borderColor: pad.color + '66' }]}>
+                                        <View style={[styles.siliconeTexture, { backgroundColor: pad.color, opacity: 0.05 }]} />
+                                        <View style={[styles.padStatusLed, { backgroundColor: pad.color }]} />
+                                        <Text style={[styles.padText, { color: '#fff', fontSize: isPhone ? normalize(8) : normalize(10) }]}>{pad.label}</Text>
+                                        <View style={[styles.cornerDecorator, { borderTopColor: pad.color, borderLeftColor: pad.color }]} />
+                                    </View>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
 
-            <View style={styles.footer}>
-                <Text style={[styles.instruction, isPhone && { fontSize: normalize(7) }]}>PRESSURE SENSITIVE SILICONE PADS • CENTER ATK MODE</Text>
-            </View>
-        </LinearGradient>
+                <View style={styles.footer}>
+                    <Text style={[styles.instruction, isPhone && { fontSize: normalize(7) }]}>PRESSURE SENSITIVE SILICONE PADS • CENTER ATK MODE</Text>
+                </View>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         padding: sc(20),
-        borderRadius: 40,
+        borderRadius: sc(40),
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
-        ...createShadow({ color: '#000', offsetY: 20, opacity: 0.8, radius: 30, elevation: 20 }),
+        ...createShadow({ color: '#000', offsetY: sc(20), opacity: 0.8, radius: sc(30), elevation: 20 }),
     },
     header: {
         flexDirection: 'row',
@@ -154,10 +159,10 @@ const styles = StyleSheet.create({
     masterLedContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
+        gap: sc(10),
         backgroundColor: 'rgba(0,0,0,0.3)',
-        padding: 8,
-        borderRadius: 12,
+        padding: sc(8),
+        borderRadius: sc(12),
     },
     ledLabel: {
         marginRight: -4,
@@ -168,15 +173,15 @@ const styles = StyleSheet.create({
         fontWeight: '900',
     },
     led: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
+        width: sc(10),
+        height: sc(10),
+        borderRadius: sc(5),
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
     },
     ledGreen: {
         backgroundColor: '#44ff44',
-        ...createShadow({ color: '#44ff44', radius: 8, opacity: 0.8 }),
+        ...createShadow({ color: '#44ff44', radius: sc(8), opacity: 0.8 }),
     },
     ledRed: {
         backgroundColor: '#ff4444',
@@ -199,18 +204,18 @@ const styles = StyleSheet.create({
         left: -sc(10),
         right: -sc(10),
         bottom: -sc(10),
-        borderRadius: 30,
+        borderRadius: sc(30),
         zIndex: -1,
     },
     pad: {
-        borderRadius: 20,
+        borderRadius: sc(20),
         borderWidth: 1.5,
         padding: sc(6),
-        ...createShadow({ color: '#000', offsetY: 12, opacity: 0.5, radius: 15, elevation: 12 }),
+        ...createShadow({ color: '#000', offsetY: sc(12), opacity: 0.5, radius: sc(15), elevation: 12 }),
     },
     innerSurface: {
         flex: 1,
-        borderRadius: 14,
+        borderRadius: sc(14),
         backgroundColor: '#0f172a',
         justifyContent: 'center',
         alignItems: 'center',
@@ -219,26 +224,26 @@ const styles = StyleSheet.create({
     },
     siliconeTexture: {
         ...StyleSheet.absoluteFillObject,
-        borderRadius: 14,
+        borderRadius: sc(14),
     },
     padStatusLed: {
         position: 'absolute',
-        top: 10,
-        right: 10,
-        width: 6,
-        height: 6,
-        borderRadius: 3,
+        top: sc(10),
+        right: sc(10),
+        width: sc(6),
+        height: sc(6),
+        borderRadius: sc(3),
         opacity: 0.6,
-        ...createShadow({ color: '#fff', radius: 4, opacity: 0.5 }),
+        ...createShadow({ color: '#fff', radius: sc(4), opacity: 0.5 }),
     },
     cornerDecorator: {
         position: 'absolute',
-        top: 8,
-        left: 8,
-        width: 15,
-        height: 15,
-        borderTopWidth: 2,
-        borderLeftWidth: 2,
+        top: sc(8),
+        left: sc(8),
+        width: sc(15),
+        height: sc(15),
+        borderTopWidth: sc(2),
+        borderLeftWidth: sc(2),
         opacity: 0.4,
     },
     padText: {

@@ -1,163 +1,77 @@
 # Privacy Policy for SoloCraft Studio
 
-**Last Updated**: February 16, 2026
+**Last Updated**: March 10, 2026
+**Effective Date for Brazil (Digital ECA)**: March 17, 2026
 
-## Introduction
+## 1. Introduction
 
-SoloCraft Studio ("we", "our", or "the app") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and protect your information when you use our mobile music creation application.
+SoloCraft Studio ("we", "our", or "the app") is a mobile music creation application designed for a broad audience. We are committed to protecting the privacy of our users across **196 countries**. This Privacy Policy is designed to comply with global data protection standards, including the GDPR (Europe), CCPA/CPRA (California, USA), LGPD/Digital ECA (Brazil), and other applicable international laws.
 
-## Information We Collect
+## 2. Our Commitment to Safety and Integrity
 
-### 1. User Account Information
+SoloCraft Studio is built with safety as a core principle. We explicitly state that:
 
-- Email address (for account creation and login)
-- Username (chosen by you)
-- Profile information (optional)
+- **No 18+ Content**: We do not host, allow, or generate any adult, vulgar, or mature-rated content.
+- **No Loot Boxes**: We do not use "loot boxes," "gacha" mechanics, or any form of randomized virtual purchases.
+- **Child-Friendly Design**: The app is designed to be accessible and safe for users of all ages, including children and adolescents.
 
-### 2. Content You Create
+## 3. Information We Collect and Why
 
-- Audio recordings created within the app
-- Musical compositions and projects
-- Custom themes and settings
+We adhere to the principle of **Data Minimization**. We only collect information that is strictly necessary for the app to function.
 
-### 3. Device Permissions
+### A. Information Provided by You
 
-#### Camera Permission
+- **User Account (Optional)**: If you choose to create an account, we collect an email address and username for authentication and cloud synchronization.
+- **Content Creations**: Audio recordings and musical projects are stored **locally** on your device. We only access them if you explicitly enable Cloud Sync.
 
-- **Purpose**: To capture photos for custom background themes
-- **Usage**: Only when you explicitly choose to take a photo for a theme
-- **Storage**: Photos are stored locally on your device
-- **Control**: You can deny this permission; the app will still function without it
+### B. Device Permissions
 
-#### Microphone Permission
+- **Microphone**: Required to record audio for music creation. Recorded audio stay on your device unless you choose to share or sync them.
+- **Camera**: Used only for a specific feature where you take a photo to customize your workspace theme.
+- **Storage**: Required to save your music files and projects to your device.
 
-- **Purpose**: To record audio and create music
-- **Usage**: Only when you are actively recording
-- **Storage**: Recordings are stored locally on your device
-- **Control**: Required for core app functionality
+### C. Age Verification (Brazil - Digital ECA Compliance)
 
-#### Storage Permission
+Starting March 17, 2026, for users in **Brazil**, we use the **Google Play Age Signals API** to receive age range data provided by the Play Store.
 
-- **Purpose**: To save and load your musical projects
-- **Usage**: To read/write audio files and project data
-- **Storage**: All data stored locally on your device
-- **Control**: Required for saving your work
+- **Usage**: This data is used solely to ensure the app experience is appropriate for your age group and to meet legal requirements.
+- **Protection**: We do not store precise birth dates; we only receive age range signals (e.g., "Minor," "Adult").
 
-### 4. Automatically Collected Information
+## 4. International Compliance by Region
 
-- App usage statistics (crashes, performance metrics)
-- Device type and operating system version
-- App version and settings
+This policy applies to users in all **196 countries**. Specific protections are highlighted below:
 
-## How We Use Your Information
+### Brazil (Digital ECA - Law No. 15.211/2025)
 
-We use the collected information to:
+- We provide "Protective Design by Default."
+- We do not use targeted advertising or profiling for commercial purposes.
+- We support parental supervision tools provided by the operating system (Android/iOS).
 
-- Provide core app functionality (music creation, recording, playback)
-- Save and sync your projects across devices (if cloud sync is enabled)
-- Improve app performance and fix bugs
-- Provide customer support
-- Send important app updates and notifications
+### European Union & UK (GDPR/UK GDPR)
 
-## Data Storage and Security
+- **Lawful Basis**: We process data based on your "Consent" and "Contractual Necessity" (to provide the service).
+- **Data Subject Rights**: You have the right to access, rectify, or erase your data ("Right to be Forgotten").
 
-### Local Storage
+### USA (CCPA/CPRA)
 
-- All your creations (recordings, projects) are stored locally on your device
-- We do not automatically upload your content to our servers
+- We do not "sell" or "share" your personal information for cross-context behavioral advertising.
+- California residents may request a report on the categories of information collected.
 
-### Cloud Storage (Optional)
+## 5. Global List of Protected Jurisdictions
 
-- If you enable cloud sync, your projects are encrypted and stored securely
-- You can disable cloud sync at any time
+This policy protects users in 196 countries, including but not limited to:
+_Afghanistan, Albania, Algeria, Andorra, Angola, Antigua and Barbuda, Argentina, Armenia, Australia, Austria, Azerbaijan, Bahamas, Bahrain, Bangladesh, Barbados, Belarus, Belgium, Belize, Benin, Bhutan, Bolivia, Bosnia and Herzegovina, Botswana, Brazil, Brunei, Bulgaria, Burkina Faso, Burundi, Cabo Verde, Cambodia, Cameroon, Canada, Central African Republic, Chad, Chile, China, Colombia, Comoros, Congo (Congo-Brazzazzaville), Costa Rica, Croatia, Cuba, Cyprus, Czechia (Czech Republic), Democratic Republic of the Congo, Denmark, Djibouti, Dominica, Dominican Republic, Ecuador, Egypt, El Salvador, Equatorial Guinea, Eritrea, Estonia, Eswatini, Ethiopia, Fiji, Finland, France, Gabon, Gambia, Georgia, Germany, Ghana, Greece, Grenada, Guatemala, Guinea, Guinea-Bissau, Guyana, Haiti, Holy See, Honduras, Hungary, Iceland, India, Indonesia, Iran, Iraq, Ireland, Israel, Italy, Jamaica, Japan, Jordan, Kazakhstan, Kenya, Kiribati, Kuwait, Kyrgyzstan, Laos, Latvia, Lebanon, Lesotho, Liberia, Libya, Liechtenstein, Lithuania, Luxembourg, Madagascar, Malawi, Malaysia, Maldives, Mali, Malta, Marshall Islands, Mauritania, Mauritius, Mexico, Micronesia, Moldova, Monaco, Mongolia, Montenegro, Morocco, Mozambique, Myanmar, Namibia, Nauru, Nepal, Netherlands, New Zealand, Nicaragua, Niger, Nigeria, North Korea, North Macedonia, Norway, Oman, Pakistan, Palau, Palestine State, Panama, Papua New Guinea, Paraguay, Peru, Philippines, Poland, Portugal, Qatar, Romania, Russia, Rwanda, Saint Kitts and Nevis, Saint Lucia, Saint Vincent and the Grenadines, Samoa, San Marino, Sao Tome and Principe, Saudi Arabia, Senegal, Serbia, Seychelles, Sierra Leone, Singapore, Slovakia, Slovenia, Solomon Islands, Somalia, South Africa, South Korea, South Sudan, Spain, Sri Lanka, Sudan, Suriname, Sweden, Switzerland, Syria, Tajikistan, Tanzania, Thailand, Timor-Leste, Togo, Tonga, Trinidad and Tobago, Tunisia, Turkey, Turkmenistan, Tuvalu, Uganda, Ukraine, United Arab Emirates, United Kingdom, United States of America, Uruguay, Uzbekistan, Vanuatu, Venezuela, Vietnam, Yemen, Zambia, Zimbabwe._
 
-### Security Measures
+## 6. Data Security and Sharing
 
-- Industry-standard encryption for data transmission
-- Secure authentication for user accounts
-- Regular security audits and updates
+- **Third Parties**: We use Supabase for authentication. We do not share your data with third parties for marketing or advertising.
+- **Security**: We use TLS/SSL encryption for all data transmissions between the app and our servers.
 
-## Data Sharing
+## 7. Your Rights and Contact Information
 
-We **DO NOT**:
+You can delete your account and all associated data at any time from within the App Settings.
 
-- Sell your personal information to third parties
-- Share your recordings or projects without your permission
-- Use your data for advertising purposes
-
-We **MAY** share data only in these cases:
-
-- With your explicit consent
-- To comply with legal obligations
-- To protect our rights and safety
-
-## Third-Party Services
-
-The app may use third-party services for:
-
-- Authentication (Supabase)
-- Analytics (crash reporting)
-- Cloud storage (optional)
-
-These services have their own privacy policies. We recommend reviewing them.
-
-## Your Rights
-
-You have the right to:
-
-- Access your personal data
-- Delete your account and all associated data
-- Export your recordings and projects
-- Opt-out of analytics
-- Disable specific permissions
-
-## Children's Privacy
-
-SoloCraft Studio is suitable for users aged 13 and above. We do not knowingly collect information from children under 13. If you believe we have collected such information, please contact us immediately.
-
-## Camera Permission Specific Notice
-
-**Why we need camera access**:
-
-- To let you take photos for custom background themes
-- Photos are processed and stored only on your device
-- We never upload photos to our servers
-- You can use the app without granting camera permission
-
-**What we don't do**:
-
-- We don't access your camera without your action
-- We don't take photos in the background
-- We don't share your photos with anyone
-- We don't use photos for any purpose other than themes
-
-## Changes to This Policy
-
-We may update this Privacy Policy from time to time. We will notify you of significant changes through:
-
-- In-app notifications
-- Email (if you have an account)
-- Updated "Last Updated" date at the top
-
-## Data Retention
-
-- Account data: Retained until you delete your account
-- Recordings: Stored indefinitely on your device until you delete them
-- Analytics: Anonymized data retained for 90 days
-
-## Contact Us
-
-If you have questions about this Privacy Policy or your data:
-
+For any privacy-related questions or to exercise your data rights, contact us at:
 **Email**: support@ujstudios.com
-**App**: Settings → Help & Support → Contact Us
-
-## Your Consent
-
-By using SoloCraft Studio, you consent to this Privacy Policy.
-
----
-
-**SoloCraft Studio**
-Version 1.0.1
-© 2024 UJ Studios. All rights reserved.
+**Website**: [https://ujstudios.com](https://ujstudios.com)
+**Mailing Address**: UJ Studios, ATTN: Privacy Officer (Global Compliance).

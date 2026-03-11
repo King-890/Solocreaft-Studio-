@@ -5,6 +5,9 @@ import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { useProject } from '../contexts/ProjectContext';
 import { createShadow, createTextShadow } from '../utils/shadows';
 import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+
+import InstrumentContainer from './InstrumentContainer';
 
 export default function Tabla() {
     const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
@@ -53,98 +56,101 @@ export default function Tabla() {
             hitTimeoutRef.current = null;
         }, 150);
         UnifiedAudioEngine.playDrumSound(soundName, 'tabla', track.volume, track.pan);
+        HapticService.medium();
     };
 
     return (
-        <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
-            <View style={styles.header}>
-                <Text style={styles.brandTitle}>SOLOCRAFT CLASSIC</Text>
-                <Text style={[styles.modelTitle, isPhone && { fontSize: normalize(18) }]}>MAHARAJA CONCERT TABLA</Text>
-            </View>
+        <InstrumentContainer scrollEnabled={false}>
+            <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
+                <View style={styles.header}>
+                    <Text style={styles.brandTitle}>SOLOCRAFT CLASSIC</Text>
+                    <Text style={[styles.modelTitle, isPhone && { fontSize: normalize(18) }]}>MAHARAJA CONCERT TABLA</Text>
+                </View>
 
-            <View style={[styles.tablaSet, { gap: gapSize }]}>
-                {/* 1. BAYAN (Bass Drum - Copper Body) */}
-                <View style={styles.drumCol}>
-                    <Animated.View style={[styles.glowRing, { opacity: bayanGlow, borderColor: '#fbbf24' }]} />
-                    <Animated.View style={{ transform: [{ scale: bayanScale }] }}>
-                        <TouchableOpacity 
-                            activeOpacity={0.9} 
-                            onPressIn={() => playSound('bayan_ga', 'bayan')}
-                            style={[styles.bayanPot, { width: bayanSize, height: bayanSize, borderRadius: bayanSize / 2 }]}
-                        >
-                            <LinearGradient colors={['#92400e', '#78350f', '#451a03']} style={styles.copperSurface} />
-                            <View style={styles.leatherStraps}>
-                                {Array.from({ length: 16 }).map((_, i) => (
-                                    <View key={i} style={[styles.strap, { transform: [{ rotate: `${i * 22.5}deg` }] }]} />
-                                ))}
-                            </View>
-                            <View style={styles.skinAssembly}>
-                                <TouchableOpacity style={styles.maidan} onPress={() => playSound('ge', 'bayan')} activeOpacity={0.9}>
-                                    <View style={styles.parchmentGrain} />
-                                    <Text style={styles.bolLabel}>GE</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.syahi} onPress={() => playSound('ke', 'bayan')} activeOpacity={0.9}>
-                                    <LinearGradient colors={['#171717', '#000', '#171717']} style={styles.syahiInner} />
-                                    <Text style={styles.bolLabelSyahi}>KE</Text>
-                                </TouchableOpacity>
-                            </View>
+                <View style={[styles.tablaSet, { gap: gapSize }]}>
+                    {/* 1. BAYAN (Bass Drum - Copper Body) */}
+                    <View style={styles.drumCol}>
+                        <Animated.View style={[styles.glowRing, { opacity: bayanGlow, borderColor: '#fbbf24' }]} />
+                        <Animated.View style={{ transform: [{ scale: bayanScale }] }}>
+                            <TouchableOpacity 
+                                activeOpacity={0.9} 
+                                onPressIn={() => playSound('bayan_ga', 'bayan')}
+                                style={[styles.bayanPot, { width: bayanSize, height: bayanSize, borderRadius: bayanSize / 2 }]}
+                            >
+                                <LinearGradient colors={['#92400e', '#78350f', '#451a03']} style={styles.copperSurface} />
+                                <View style={styles.leatherStraps}>
+                                    {Array.from({ length: 16 }).map((_, i) => (
+                                        <View key={i} style={[styles.strap, { transform: [{ rotate: `${i * 22.5}deg` }] }]} />
+                                    ))}
+                                </View>
+                                <View style={styles.skinAssembly}>
+                                    <TouchableOpacity style={styles.maidan} onPress={() => playSound('ge', 'bayan')} activeOpacity={0.9}>
+                                        <View style={styles.parchmentGrain} />
+                                        <Text style={styles.bolLabel}>GE</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.syahi} onPress={() => playSound('ke', 'bayan')} activeOpacity={0.9}>
+                                        <LinearGradient colors={['#171717', '#000', '#171717']} style={styles.syahiInner} />
+                                        <Text style={styles.bolLabelSyahi}>KE</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </TouchableOpacity>
+                        </Animated.View>
+                        <Text style={styles.partLabel}>CHROME COPPER BAYAN</Text>
+                    </View>
+
+                    {/* 2. DAYAN (Treble Drum - Sheesham Wood) */}
+                    <View style={[styles.drumCol, { width: dayanSize, height: dayanSize }]}>
+                        <Animated.View style={[styles.glowRing, { opacity: dayanGlow, borderColor: '#3b82f6', width: dayanSize * 1.05, height: dayanSize * 1.05, borderRadius: (dayanSize * 1.05) / 2 }]} />
+                        <Animated.View style={{ transform: [{ scale: dayanScale }] }}>
+                            <TouchableOpacity 
+                                activeOpacity={0.9} 
+                                onPressIn={() => playSound('dayan_na', 'dayan')}
+                                style={[styles.dayanPot, { width: dayanSize, height: dayanSize, borderRadius: dayanSize / 2 }]}
+                            >
+                                <LinearGradient colors={['#451a03', '#78350f', '#451a03']} style={styles.woodSurface} />
+                                <View style={styles.gatteRing}>
+                                    {Array.from({ length: 8 }).map((_, i) => (
+                                        <View key={i} style={[styles.gatteBlock, { transform: [{ rotate: `${i * 45}deg` }, { translateY: dayanSize * 0.43 }] }]} />
+                                    ))}
+                                </View>
+                                <View style={styles.skinAssemblyDayan}>
+                                    <TouchableOpacity style={styles.kinar} onPress={() => playSound('na', 'dayan')} activeOpacity={0.9}>
+                                        <View style={styles.parchmentGrain} />
+                                        <View style={[styles.parchmentSkin, { borderRadius: (dayanSize * 0.8) / 2 }]} />
+                                        <Text style={styles.bolLabelDayan}>NA</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.maidanDayan} onPress={() => playSound('tin', 'dayan')} activeOpacity={0.9}>
+                                        <Text style={styles.bolLabelDayan}>TIN</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.syahiDayan} onPress={() => playSound('te', 'dayan')} activeOpacity={0.9}>
+                                        <LinearGradient colors={['#171717', '#000', '#171717']} style={styles.syahiInner} />
+                                        <Text style={styles.bolLabelSyahi}>TE</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </TouchableOpacity>
+                        </Animated.View>
+                        <Text style={styles.partLabel}>DARK SHEESHAM DAYAN</Text>
+                    </View>
+                </View>
+
+                <View style={styles.bolGrid}>
+                    {['tun', 'kat'].map(bol => (
+                        <TouchableOpacity key={bol} style={styles.bolAnchor} onPress={() => playSound(bol, bol === 'kat' ? 'bayan' : 'dayan')}>
+                            <LinearGradient colors={['#1e293b', '#0f172a']} style={styles.bolCapsule}>
+                                <Text style={styles.bolText}>{bol}</Text>
+                            </LinearGradient>
                         </TouchableOpacity>
-                    </Animated.View>
-                    <Text style={styles.partLabel}>CHROME COPPER BAYAN</Text>
+                    ))}
                 </View>
 
-                {/* 2. DAYAN (Treble Drum - Sheesham Wood) */}
-                <View style={[styles.drumCol, { width: dayanSize, height: dayanSize }]}>
-                    <Animated.View style={[styles.glowRing, { opacity: dayanGlow, borderColor: '#3b82f6', width: dayanSize * 1.05, height: dayanSize * 1.05, borderRadius: (dayanSize * 1.05) / 2 }]} />
-                    <Animated.View style={{ transform: [{ scale: dayanScale }] }}>
-                        <TouchableOpacity 
-                            activeOpacity={0.9} 
-                            onPressIn={() => playSound('dayan_na', 'dayan')}
-                            style={[styles.dayanPot, { width: dayanSize, height: dayanSize, borderRadius: dayanSize / 2 }]}
-                        >
-                            <LinearGradient colors={['#451a03', '#78350f', '#451a03']} style={styles.woodSurface} />
-                            <View style={styles.gatteRing}>
-                                {Array.from({ length: 8 }).map((_, i) => (
-                                    <View key={i} style={[styles.gatteBlock, { transform: [{ rotate: `${i * 45}deg` }, { translateY: dayanSize * 0.43 }] }]} />
-                                ))}
-                            </View>
-                            <View style={styles.skinAssemblyDayan}>
-                                <TouchableOpacity style={styles.kinar} onPress={() => playSound('na', 'dayan')} activeOpacity={0.9}>
-                                    <View style={styles.parchmentGrain} />
-                                    <View style={[styles.parchmentSkin, { borderRadius: (dayanSize * 0.8) / 2 }]} />
-                                    <Text style={styles.bolLabelDayan}>NA</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.maidanDayan} onPress={() => playSound('tin', 'dayan')} activeOpacity={0.9}>
-                                    <Text style={styles.bolLabelDayan}>TIN</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.syahiDayan} onPress={() => playSound('te', 'dayan')} activeOpacity={0.9}>
-                                    <LinearGradient colors={['#171717', '#000', '#171717']} style={styles.syahiInner} />
-                                    <Text style={styles.bolLabelSyahi}>TE</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </TouchableOpacity>
-                    </Animated.View>
-                    <Text style={styles.partLabel}>DARK SHEESHAM DAYAN</Text>
+                <View style={styles.footer}>
+                    <View style={styles.guide}>
+                        <View style={styles.line} />
+                        <Text style={styles.guideText}>TAP SYAHI OR MAIDAN FOR PITCHED BOLS • PRO EDITION</Text>
+                    </View>
                 </View>
-            </View>
-
-            <View style={styles.bolGrid}>
-                {['tun', 'kat'].map(bol => (
-                    <TouchableOpacity key={bol} style={styles.bolAnchor} onPress={() => playSound(bol, bol === 'kat' ? 'bayan' : 'dayan')}>
-                        <LinearGradient colors={['#1e293b', '#0f172a']} style={styles.bolCapsule}>
-                            <Text style={styles.bolText}>{bol}</Text>
-                        </LinearGradient>
-                    </TouchableOpacity>
-                ))}
-            </View>
-
-            <View style={styles.footer}>
-                <View style={styles.guide}>
-                    <View style={styles.line} />
-                    <Text style={styles.guideText}>TAP SYAHI OR MAIDAN FOR PITCHED BOLS • PRO EDITION</Text>
-                </View>
-            </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -196,29 +202,29 @@ const styles = StyleSheet.create({
     },
     bayanPot: {
         backgroundColor: '#b0bec5',
-        borderWidth: 4,
+        borderWidth: sc(4),
         borderColor: '#455a64',
         justifyContent: 'center',
         alignItems: 'center',
-        ...createShadow({ color: '#000', radius: sc(30), offsetY: 15 }),
+        ...createShadow({ color: '#000', radius: sc(30), offsetY: sc(15) }),
     },
     dayanPot: {
         backgroundColor: '#5d4037',
-        borderWidth: 4,
+        borderWidth: sc(4),
         borderColor: '#3e2723',
         justifyContent: 'center',
         alignItems: 'center',
-        ...createShadow({ color: '#000', radius: sc(25), offsetY: 15 }),
+        ...createShadow({ color: '#000', radius: sc(25), offsetY: sc(15) }),
     },
     copperSurface: {
         ...StyleSheet.absoluteFillObject,
         borderRadius: sc(130),
-        borderWidth: 4,
+        borderWidth: sc(4),
     },
     woodSurface: {
         ...StyleSheet.absoluteFillObject,
         borderRadius: sc(110),
-        borderWidth: 4,
+        borderWidth: sc(4),
         borderColor: 'rgba(255,255,255,0.1)',
     },
     leatherStraps: {
@@ -255,7 +261,7 @@ const styles = StyleSheet.create({
         borderRadius: sc(110),
         backgroundColor: '#fef3c7',
         overflow: 'hidden',
-        borderWidth: 3,
+        borderWidth: sc(3),
         borderColor: '#d7ccc8',
         justifyContent: 'center',
         alignItems: 'center',
@@ -265,7 +271,7 @@ const styles = StyleSheet.create({
         height: '82%',
         backgroundColor: '#fef3c7',
         overflow: 'hidden',
-        borderWidth: 3,
+        borderWidth: sc(3),
         borderColor: '#d7ccc8',
         justifyContent: 'center',
         alignItems: 'center',
@@ -294,7 +300,7 @@ const styles = StyleSheet.create({
         bottom: sc(20),
         right: sc(20),
         borderRadius: sc(55),
-        borderWidth: 4,
+        borderWidth: sc(4),
         borderColor: '#000',
         overflow: 'hidden',
         justifyContent: 'center',
@@ -325,7 +331,7 @@ const styles = StyleSheet.create({
         width: sc(100),
         height: sc(100),
         borderRadius: sc(50),
-        borderWidth: 4,
+        borderWidth: sc(4),
         borderColor: '#000',
         zIndex: 2,
         overflow: 'hidden',
@@ -343,6 +349,6 @@ const styles = StyleSheet.create({
     bolText: { color: '#fff', fontSize: normalize(14), fontWeight: '900', letterSpacing: 2, textTransform: 'uppercase' },
     footer: { marginTop: sc(30), width: '100%', alignItems: 'center' },
     guide: { alignItems: 'center', width: '100%' },
-    line: { width: '60%', height: 2, backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: sc(10) },
+    line: { width: '60%', height: sc(2), backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: sc(10) },
     guideText: { color: '#475569', fontSize: normalize(10), fontWeight: '900', letterSpacing: 1.5 },
 });

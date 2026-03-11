@@ -16,6 +16,17 @@ const INSTRUMENTS = [
     { id: 'trumpet', name: 'Trumpet', icon: '🎺', color: '#f39c12' },
     { id: 'saxophone', name: 'Saxophone', icon: '🎷', color: '#1abc9c' },
     { id: 'world', name: 'World Percussion', icon: '🪘', color: '#8B4513' },
+    { id: 'sitar', name: 'Sitar', icon: '🪕', color: '#fcd34d' },
+    { id: 'accordion', name: 'Accordion', icon: '🪗', color: '#fbbf24' },
+    { id: 'banjo', name: 'Banjo', icon: '🪕', color: '#d97706' },
+    { id: 'dholak', name: 'Dholak', icon: '🪘', color: '#92400e' },
+    { id: 'harp', name: 'Harp', icon: '🎻', color: '#94a3b8' },
+    { id: 'kalimba', name: 'Kalimba', icon: '🎹', color: '#64748b' },
+    { id: 'marimba', name: 'Marimba', icon: '🪵', color: '#451a03' },
+    { id: 'ethnic', name: 'Ethnic Strings', icon: '🎻', color: '#fbbf24' },
+    { id: 'orchestral', name: 'Orchestral Strings', icon: '🎻', color: '#d4af37' },
+    { id: 'brass', name: 'Brass Ensemble', icon: '🎺', color: '#fbbf24' },
+    { id: 'choir', name: 'Choir Hall', icon: '👼', color: '#64b5f6' },
 ];
 
 export default function InstrumentsLibrary() {

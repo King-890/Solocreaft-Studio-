@@ -3,8 +3,9 @@ import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimension
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
+import HapticService from '../services/HapticService';
 
-import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
 
 const width = SCREEN_WIDTH;
 
@@ -105,7 +106,10 @@ const HarpString = React.memo(({ str, index, isActive, vibrationAnim, playString
     );
 });
 
+import InstrumentContainer from './InstrumentContainer';
+
 export default function Harp() {
+    const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [activeStrings, setActiveStrings] = useState({});
     const lastStrummedIndex = useRef(-1);
     
@@ -127,6 +131,7 @@ export default function Harp() {
         UnifiedAudioEngine.activateAudio();
         setActiveStrings(prev => ({ ...prev, [note]: true }));
         UnifiedAudioEngine.playSound(note, 'harp', 0, velocity);
+        HapticService.light();
         
         // Trigger vibration
         vibrationAnims[note].setValue(1);
@@ -182,14 +187,15 @@ export default function Harp() {
     ).current;
 
     return (
-        <LinearGradient
-            colors={['#0f172a', '#1e293b', '#0f172a']}
-            style={styles.container}
-        >
-            <View style={styles.header}>
-                <Text style={styles.title}>ANGELIC RESONANCE</Text>
-                <Text style={styles.subtitle}>CONCERT GRAND HARP • ULTRA-PREMIUM EDITION</Text>
-            </View>
+        <InstrumentContainer>
+            <LinearGradient
+                colors={['#0f172a', '#1e293b', '#0f172a']}
+                style={[styles.container, { paddingTop: SAFE_TOP }]}
+            >
+                <View style={styles.header}>
+                    <Text style={styles.title}>ANGELIC RESONANCE</Text>
+                    <Text style={styles.subtitle}>CONCERT GRAND HARP • ULTRA-PREMIUM EDITION</Text>
+                </View>
 
             <View style={styles.harpFrame} {...panResponder.panHandlers}>
                 {/* 1. Ornate Golden Pillar - Ultra Premium */}
@@ -269,7 +275,8 @@ export default function Harp() {
                 <Text style={styles.bottomText}>CONCERT HARP • PHYSICS-BASED RESONANCE ENGINE</Text>
             </View>
         </LinearGradient>
-    );
+    </InstrumentContainer>
+);
 }
 
 const styles = StyleSheet.create({
@@ -318,7 +325,7 @@ const styles = StyleSheet.create({
         height: sc(14),
         borderRadius: sc(4),
         marginBottom: sc(-4),
-        borderWidth: 1.5,
+        borderWidth: sc(1.5),
         borderColor: '#92400e',
         zIndex: 110,
         justifyContent: 'center',
@@ -336,7 +343,7 @@ const styles = StyleSheet.create({
         width: '100%',
         flex: 1,
         borderRadius: sc(15),
-        borderWidth: 2,
+        borderWidth: sc(2),
         borderColor: '#92400e',
         overflow: 'hidden',
         ...createShadow({ color: '#000', radius: sc(15), opacity: 0.3 }),
@@ -358,7 +365,7 @@ const styles = StyleSheet.create({
         height: sc(16),
         borderRadius: sc(6),
         marginTop: sc(-6),
-        borderWidth: 2,
+        borderWidth: sc(2),
         borderColor: '#92400e',
         zIndex: 110,
         ...createShadow({ color: '#000', radius: sc(8), opacity: 0.5 }),
@@ -377,7 +384,7 @@ const styles = StyleSheet.create({
     neckBar: {
         flex: 1,
         borderRadius: sc(12),
-        borderWidth: 2,
+        borderWidth: sc(2),
         borderColor: '#1a0f0a',
         backgroundColor: '#451a03',
         justifyContent: 'center',
@@ -418,7 +425,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#2d1b10',
         borderRadius: sc(15),
         opacity: 0.7,
-        borderWidth: 1.5,
+        borderWidth: sc(1.5),
         borderColor: '#451a03',
         ...createShadow({ color: '#000', radius: sc(20), opacity: 0.6 }),
     },
@@ -430,7 +437,7 @@ const styles = StyleSheet.create({
         marginLeft: '-1%', 
         borderTopLeftRadius: sc(4),
         borderTopRightRadius: sc(4),
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderBottomWidth: 0,
         borderColor: '#1a0f0a',
         backgroundColor: '#451a03',
@@ -447,7 +454,7 @@ const styles = StyleSheet.create({
         borderRadius: sc(3),
         position: 'absolute',
         zIndex: 95,
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: '#92400e',
         ...createShadow({ color: '#000', radius: sc(3), opacity: 0.7 }),
     },
@@ -467,7 +474,7 @@ const styles = StyleSheet.create({
         borderRadius: sc(1.5),
         position: 'absolute',
         zIndex: 15,
-        borderWidth: 0.8,
+        borderWidth: sc(0.8),
         borderColor: '#78350f',
         ...createShadow({ color: '#000', radius: sc(2), opacity: 0.8 }),
     },
@@ -482,7 +489,7 @@ const styles = StyleSheet.create({
         borderRadius: sc(4), // Square-ish "Note Rail" feel
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: 'rgba(0,0,0,0.2)',
         zIndex: 100,
         ...createShadow({ color: '#000', radius: sc(5), opacity: 0.5 }),

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions, StatusBar, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions, Animated } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNavigation } from '@react-navigation/native';
 import ParticleSystem from '../components/ParticleSystem';
@@ -12,6 +13,7 @@ import AudioManager from '../utils/AudioManager';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import AnimatedCard from '../components/AnimatedCard';
 import { createTextShadow } from '../utils/shadows';
+import HapticService from '../services/HapticService';
 
 const { width, height } = Dimensions.get('window');
 const { COLORS, FONTS, SHADOWS, LAYOUT, ANIMATIONS } = UIConfig;
@@ -46,6 +48,7 @@ export default function HomeScreen() {
     }, [audioEnabled]);
 
     const handleScreenPress = async () => {
+        HapticService.selection();
         // [MOBILE UNLOCK] Attempt to activate BOTH ambient and instrument engines
         UnifiedAudioEngine.activateAudio().catch((err) => {
             console.error('Failed to activate audio engine on press:', err);
@@ -82,7 +85,7 @@ export default function HomeScreen() {
     return (
         <ImmersiveBackground>
             <View style={styles.container} onTouchStart={handleScreenPress}>
-                <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+                <StatusBar style="light" />
 
                 {animationsEnabled && <ParticleSystem count={ANIMATIONS.particles.petalCount} />}
 
@@ -103,7 +106,10 @@ export default function HomeScreen() {
                     )}
                     <TouchableOpacity
                         style={styles.profileOrb}
-                        onPress={() => setShowProfile(true)}
+                        onPress={() => {
+                            HapticService.selection();
+                            setShowProfile(true);
+                        }}
                     >
                         <View style={styles.orbInner}>
                             <Text style={styles.orbText}>👤</Text>

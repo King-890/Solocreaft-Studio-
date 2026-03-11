@@ -189,26 +189,21 @@ class AudioPlaybackService {
     // --- Native Implementation ---
     async playClipNative(clip, startOffset) {
         try {
-            // [STABILITY] Use expo-av for consistent playback with UnifiedAudioEngine
-             const { Audio } = require('expo-av');
+            const Audio = require('expo-audio');
 
             if (this.nativePlayers.has(clip.id)) {
                 try {
                     const oldPlayer = this.nativePlayers.get(clip.id);
-                    oldPlayer.setOnPlaybackStatusUpdate(null); // Remove listeners
-                    await oldPlayer.stopAsync();
-                    await oldPlayer.unloadAsync(); // Fully release
+                    oldPlayer.stop();
                 } catch (e) {}
                 this.nativePlayers.delete(clip.id);
                 this.nativePlayerTrackIds.delete(clip.id);
             }
 
-            const { sound } = await Audio.Sound.createAsync(
-                { uri: clip.audioUri },
-                { shouldPlay: false, volume: this.masterVolume }
-            );
+            const player = Audio.createAudioPlayer(clip.audioUri);
+            player.volume = this.masterVolume;
 
-            this.nativePlayers.set(clip.id, sound);
+            this.nativePlayers.set(clip.id, player);
             this.nativePlayerTrackIds.set(clip.id, clip.trackId);
 
             const clipStartTime = clip.startTime;
@@ -216,33 +211,20 @@ class AudioPlaybackService {
 
             if (currentPlaybackTime >= clipStartTime) {
                 const offsetIntoClip = currentPlaybackTime - clipStartTime;
-                await sound.setPositionAsync(offsetIntoClip);
-                await sound.playAsync();
+                player.seekTo(offsetIntoClip);
+                player.play();
             } else {
                 const delay = clipStartTime - currentPlaybackTime;
-                const tid = setTimeout(async () => {
+                const tid = setTimeout(() => {
                     try {
                         this._playbackTimeouts = this._playbackTimeouts.filter(t => t !== tid);
-                        await sound.playAsync();
+                        player.play();
                     } catch (e) {
                         console.warn('Delayed playback failed', e);
                     }
                 }, delay);
                 this._playbackTimeouts.push(tid);
             }
-
-            // Cleanup when clip ends
-            sound.setOnPlaybackStatusUpdate(async (status) => {
-                if (status.didJustFinish) {
-                    try {
-                        sound.setOnPlaybackStatusUpdate(null); // Clean up listener
-                        await sound.stopAsync();
-                        await sound.unloadAsync();
-                    } catch (e) {}
-                    this.nativePlayers.delete(clip.id);
-                    this.nativePlayerTrackIds.delete(clip.id);
-                }
-            });
 
         } catch (error) {
             console.error('Error playing clip (Native):', error);
@@ -256,8 +238,8 @@ class AudioPlaybackService {
             this.masterBus.gain.gain.setTargetAtTime(targetGain, this.audioContext.currentTime, 0.05);
         } else if (Platform.OS !== 'web') {
             // Update all active native players
-            this.nativePlayers.forEach(async (sound) => {
-                try { await sound.setVolumeAsync(volume); } catch (e) {}
+            this.nativePlayers.forEach(player => {
+                try { player.volume = volume; } catch (e) {}
             });
         }
     }
@@ -269,10 +251,9 @@ class AudioPlaybackService {
             });
             this.activeSources = [];
         } else {
-            this.nativePlayers.forEach(async (sound, clipId) => {
+            this.nativePlayers.forEach(player => {
                 try {
-                    await sound.stopAsync();
-                    await sound.unloadAsync();
+                    player.stop();
                 } catch (e) { }
             });
             this.nativePlayers.clear();

@@ -3,13 +3,17 @@ import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimension
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
-import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+
+import InstrumentContainer from './InstrumentContainer';
 
 const width = SCREEN_WIDTH;
 const STRINGS = ['G', 'D', 'A', 'E'];
 const NOTE_MAP = { 'G': 'G3', 'D': 'D4', 'A': 'A4', 'E': 'E5' };
 
 export default function Violin({ instrument = 'violin' }) {
+    const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [activeStrings, setActiveStrings] = useState({});
     
     const vibrationAnims = useRef(STRINGS.reduce((acc, str) => {
@@ -23,7 +27,9 @@ export default function Violin({ instrument = 'violin' }) {
         const locationY = evt?.nativeEvent?.locationY || 100;
         const velocity = Math.min(Math.max((locationY / 400) + 0.3, 0.4), 1.0);
         
+        
         UnifiedAudioEngine.playSound(note, instrument, 0, velocity);
+        HapticService.light();
         setActiveStrings(prev => ({ ...prev, [str]: true }));
 
         vibrationAnims[str].setValue(1);
@@ -38,10 +44,11 @@ export default function Violin({ instrument = 'violin' }) {
     }, []);
 
     return (
-        <LinearGradient
-            colors={['#1a0f0a', '#2d1b10', '#1a0f0a']}
-            style={styles.container}
-        >
+        <InstrumentContainer>
+            <LinearGradient
+                colors={['#1a0f0a', '#2d1b10', '#1a0f0a']}
+                style={[styles.container, { paddingTop: SAFE_TOP }]}
+            >
             <View style={styles.header}>
                 <Text style={styles.brandTitle}>STRADIVARIUS SERIES</Text>
                 <Text style={styles.modelTitle}>CONCERT VIOLIN • HIGH-GLOSS EDITION</Text>
@@ -130,7 +137,8 @@ export default function Violin({ instrument = 'violin' }) {
                 </View>
                 <Text style={styles.instruction}>SWIPE OR TAP THE CONCERT STRINGS • MASTERCLASS SERIES</Text>
             </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -213,7 +221,7 @@ const styles = StyleSheet.create({
     pegPin: {
         flex: 1,
         borderRadius: sc(6),
-        borderWidth: 1.5,
+        borderWidth: sc(1.5),
         borderColor: '#050505',
     },
     ebonyFingerboard: {
@@ -239,12 +247,12 @@ const styles = StyleSheet.create({
     varnishedBody: {
         flex: 1,
         borderRadius: sc(90),
-        borderWidth: 3,
+        borderWidth: sc(3),
         borderColor: '#3e2723',
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        ...createShadow({ color: '#000', radius: sc(40), offsetY: 15, opacity: 0.9 }),
+        ...createShadow({ color: '#000', radius: sc(40), offsetY: sc(15), opacity: 0.9 }),
     },
     varnishHighlight: {
         ...StyleSheet.absoluteFillObject,
@@ -283,7 +291,7 @@ const styles = StyleSheet.create({
     bridgeStructure: {
         flex: 1,
         borderRadius: sc(10),
-        borderWidth: 1.5,
+        borderWidth: sc(1.5),
         borderColor: '#9ca3af',
     },
     stringsOverlay: {

@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Dimension
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
+import HapticService from '../services/HapticService';
 
-import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import InstrumentContainer from './InstrumentContainer';
 
 const BRASS_SECTIONS = [
     { id: 'trumpets', label: 'TRUMPETS', note: 'C4', color: '#fbbf24', flex: 1 },
@@ -14,6 +16,7 @@ const BRASS_SECTIONS = [
 ];
 
 export default function BrassEnsemble({ instrument = 'brass' }) {
+    const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [activeSection, setActiveSection] = useState(null);
     
     const swellAnims = useRef(BRASS_SECTIONS.reduce((acc, s) => {
@@ -33,6 +36,7 @@ export default function BrassEnsemble({ instrument = 'brass' }) {
     const playSection = useCallback((section) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(section.note, instrument, 0, 0.9);
+        HapticService.medium();
         setActiveSection(section.id);
 
         Animated.sequence([
@@ -48,7 +52,8 @@ export default function BrassEnsemble({ instrument = 'brass' }) {
     }, [instrument]);
 
     return (
-        <LinearGradient colors={['#1a0d06', '#2d1b10', '#1a0d06']} style={styles.container}>
+        <InstrumentContainer>
+            <LinearGradient colors={['#1a0d06', '#2d1b10', '#1a0d06']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
             <View style={styles.header}>
                 <Text style={styles.title}>SYMPHONIC BRASS</Text>
                 <Text style={styles.subtitle}>MASTERCLASS ENSEMBLE • BURNISHED GOLD SECTION</Text>
@@ -87,17 +92,18 @@ export default function BrassEnsemble({ instrument = 'brass' }) {
                     <Text style={styles.badgeText}>ORCHESTRAL SWELL DYNAMICS ACTIVE • 32-BIT HIGH-MASS TIMBRE</Text>
                 </View>
             </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        borderRadius: 40,
-        margin: 5,
+        borderRadius: sc(40),
+        margin: sc(5),
         padding: sc(20),
-        ...createShadow({ color: '#000', radius: 45, opacity: 0.9 }),
+        ...createShadow({ color: '#000', radius: sc(45), opacity: 0.9 }),
     },
     header: { alignItems: 'center', marginBottom: sc(25) },
     title: { color: '#fbbf24', fontSize: normalize(18), fontWeight: '900', letterSpacing: 6, ...createTextShadow({ color: 'rgba(0,0,0,0.8)', radius: 15 }) },
@@ -112,14 +118,14 @@ const styles = StyleSheet.create({
     },
     sectionWrapper: { height: '85%', minWidth: sc(70) },
     sectionTouch: { flex: 1 },
-    brassBox: { flex: 1, borderRadius: 15, borderWidth: 2, borderColor: '#451a03', padding: sc(12), justifyContent: 'flex-end', overflow: 'hidden' },
+    brassBox: { flex: 1, borderRadius: sc(15), borderWidth: sc(2), borderColor: '#451a03', padding: sc(12), justifyContent: 'flex-end', overflow: 'hidden' },
     metallicGlitter: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.03)' },
     brushedShine: { position: 'absolute', top: 0, left: '10%', width: '30%', height: '100%', backgroundColor: 'rgba(255,255,255,0.08)', transform: [{ skewX: '-20deg' }] },
     activeGlow: { ...StyleSheet.absoluteFillObject },
     labelZone: { alignItems: 'center', gap: 8 },
     sectionLabel: { color: 'rgba(255,252,243,0.5)', fontSize: normalize(10), fontWeight: '900', letterSpacing: 1.2, textAlign: 'center' },
-    mechanicalValve: { width: 10, height: 10, borderRadius: 5, borderWidth: 1, borderColor: '#1a0d06' },
+    mechanicalValve: { width: sc(10), height: sc(10), borderRadius: sc(5), borderWidth: sc(1), borderColor: '#1a0d06' },
     footer: { marginTop: sc(20), alignItems: 'center' },
-    symphonicBadge: { backgroundColor: 'rgba(251,191,36,0.04)', paddingHorizontal: sc(20), paddingVertical: sc(8), borderRadius: 20, borderWidth: 1, borderColor: 'rgba(251,191,36,0.15)' },
+    symphonicBadge: { backgroundColor: 'rgba(251,191,36,0.04)', paddingHorizontal: sc(20), paddingVertical: sc(8), borderRadius: sc(20), borderWidth: sc(1), borderColor: 'rgba(251,191,36,0.15)' },
     badgeText: { color: '#475569', fontSize: normalize(8), fontWeight: '900', letterSpacing: 2 },
 });

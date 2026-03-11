@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, StatusBar, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import InstrumentCard from '../components/InstrumentCard';
 import CategoryHeader from '../components/CategoryHeader';
 import { COLORS, SPACING, INSTRUMENT_CATEGORIES } from '../constants/UIConfig';
 import { createShadow, createTextShadow } from '../utils/shadows';
+import HapticService from '../services/HapticService';
 
 export default function InstrumentsLibraryScreen({ navigation, route }) {
     const [selectedInstrument, setSelectedInstrument] = useState(route?.params?.selectedInstrument || null);
@@ -59,7 +61,7 @@ export default function InstrumentsLibraryScreen({ navigation, route }) {
                 style={StyleSheet.absoluteFill}
             />
             <SafeAreaView style={{ flex: 1 }}>
-                <StatusBar barStyle="light-content" />
+                <StatusBar style="light" />
 
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Studio Library</Text>
@@ -73,7 +75,10 @@ export default function InstrumentsLibraryScreen({ navigation, route }) {
                 >
                     <TouchableOpacity
                         activeOpacity={0.8}
-                        onPress={() => navigation.navigate('BandRoom')}
+                        onPress={() => {
+                            HapticService.selection();
+                            navigation.navigate('BandRoom');
+                        }}
                     >
                         <LinearGradient
                             colors={['rgba(74, 158, 255, 0.15)', 'rgba(3, 218, 198, 0.05)']}

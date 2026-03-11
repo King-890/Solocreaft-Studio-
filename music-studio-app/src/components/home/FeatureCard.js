@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { HOME_THEMES, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants/HomeScreenThemes';
+import HapticService from '../../services/HapticService';
 
 /**
  * FeatureCard Component
@@ -18,6 +19,7 @@ export default function FeatureCard({
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
     const handlePressIn = () => {
+        HapticService.selection();
         Animated.spring(scaleAnim, {
             toValue: 0.95,
             useNativeDriver: Platform.OS !== 'web',

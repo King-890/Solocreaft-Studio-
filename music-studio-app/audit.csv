@@ -1,0 +1,2 @@
+"auditReportVersion","vulnerabilities","metadata"
+"2","@{@expo/cli=; expo=; minimatch=; tar=}","@{vulnerabilities=; dependencies=}"

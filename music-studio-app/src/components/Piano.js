@@ -5,38 +5,38 @@ import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
 
 import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+
+import InstrumentContainer from './InstrumentContainer';
+
+const WHITE_KEYS = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
 
 export default function Piano({ instrument = 'piano' }) {
     const { isPhone, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM, isLandscape } = useResponsive();
 
     // [REFINEMENT] Auto-calculate key dimensions based on screen height
-    // Reducing from 0.5 to 0.45 to save more vertical space for the toolbar
     const whiteKeyHeight = Math.min(SCREEN_HEIGHT * 0.45, sc(180));
     const whiteKeyWidth = (whiteKeyHeight / 180) * 55;
     const blackKeyHeight = whiteKeyHeight * 0.6;
     const blackKeyWidth = whiteKeyWidth * 0.6;
 
-    const [zoomLevel, setZoomLevel] = useState(isPhone ? 0.75 : 1.0); // Slightly more zoomed out on phones
+    const [zoomLevel, setZoomLevel] = useState(isPhone ? 0.75 : 1.0);
     const [pressedKeys, setPressedKeys] = useState(new Set());
     const [sustain, setSustain] = useState(false);
     const pedalAnim = useRef(new Animated.Value(0)).current;
 
-    // Use fewer octaves on very small screens to maintain touchability
     const octavesToRender = isPhone && !isLandscape ? 2 : (SCREEN_WIDTH > 800 ? 4 : 3);
     const startOctave = 3;
 
     const handleNotePress = useCallback((note, evt) => {
         UnifiedAudioEngine.activateAudio();
         const { locationY } = evt.nativeEvent;
-        
-        // [REFINEMENT] Adjust for zoom scale to get accurate local position for velocity
         const adjustedY = locationY / zoomLevel;
-        
-        // Velocity based on vertical position (lower part of key is louder)
         const velocity = Math.min(Math.max((adjustedY / whiteKeyHeight) + 0.3, 0.6), 1.0);
         
         setPressedKeys(prev => new Set(prev).add(note));
         UnifiedAudioEngine.playSound(note, instrument, 0, velocity);
+        HapticService.light();
     }, [instrument, whiteKeyHeight, zoomLevel]);
 
     const handleNoteRelease = useCallback((note) => {
@@ -52,6 +52,7 @@ export default function Piano({ instrument = 'piano' }) {
         const newState = !sustain;
         setSustain(newState);
         UnifiedAudioEngine.setSustain(newState);
+        HapticService.medium(); // Added haptic feedback for sustain toggle
         
         Animated.spring(pedalAnim, {
             toValue: newState ? 1 : 0,
@@ -78,22 +79,17 @@ export default function Piano({ instrument = 'piano' }) {
                             delayPressIn={0}
                             activeOpacity={1}
                         >
-                            {/* Ivory Textured Base */}
                             <LinearGradient
                                 colors={isPressed ? ['#e5e7eb', '#d1d5db', '#cbd5e1'] : ['#fffff8', '#fffdf0', '#fcfaf0', '#f3f1e5']}
                                 style={styles.whiteKeyGradient}
                             />
-                            
                             <View style={styles.ivoryGrainEffect} />
-
-                            {/* High-Gloss Surface Reflection */}
                             <LinearGradient
                                 colors={['rgba(255,255,255,0.7)', 'rgba(255,255,255,0)']}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0.15 }}
                                 style={styles.keyGloss}
                             />
-                            
                             <View style={styles.keyBackShadow} />
                             <Text style={styles.keyLabelText}>{note}{octave}</Text>
                         </TouchableOpacity>
@@ -120,7 +116,6 @@ export default function Piano({ instrument = 'piano' }) {
 
             blackNotes.forEach(({ note, offset }) => {
                 const noteName = `${note}${octave}`;
-                // Recalculate black key offset based on dynamic whiteKeyWidth
                 const ratio = whiteKeyWidth / sc(55);
                 const left = octaveOffset + (sc(offset) * ratio) - (blackKeyWidth / 2);
                 const isPressed = pressedKeys.has(noteName);
@@ -138,7 +133,6 @@ export default function Piano({ instrument = 'piano' }) {
                             colors={isPressed ? ['#050505', '#1a1a1a', '#222'] : ['#222', '#0a0a0a', '#050505']}
                             style={styles.blackKeyGradient}
                         />
-                        {/* Polished Lacquer Highlight */}
                         <LinearGradient
                             colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0)']}
                             start={{ x: 0, y: 0 }}
@@ -154,78 +148,80 @@ export default function Piano({ instrument = 'piano' }) {
     }, [handleNotePress, handleNoteRelease, pressedKeys, whiteKeyWidth, blackKeyWidth, blackKeyHeight, octavesToRender, startOctave]);
 
     return (
-        <View style={[styles.container, { paddingTop: SAFE_TOP }]}>
-            {/* Ultra-Premium Ebony Top Panel */}
-            <View style={[styles.topPanel, isPhone && { height: sc(70) }]}>
-                <LinearGradient
-                    colors={['#0a121e', '#1e293b', '#0a121e']}
-                    style={StyleSheet.absoluteFill}
-                    start={{x: 0, y: 0}}
-                    end={{x: 1, y: 0}}
-                />
-                <View style={styles.goldTrim} />
-                <View style={styles.panelContent}>
-                    <View style={styles.branding}>
-                        {!isPhone && <Text style={styles.brandTitle}>SOLOCRAFT MASTERPIECE</Text>}
-                        <Text style={[styles.modelTitle, isPhone && { fontSize: normalize(14) }]}>EBONY CONCERT GRAND</Text>
-                    </View>
-
-                    <View style={[styles.controls, isPhone && { marginRight: sc(20) }]}>
-                        <View style={styles.zoomUnitWrapper}>
-                            <TouchableOpacity onPress={() => setZoomLevel(Math.max(0.4, zoomLevel - 0.1))} style={styles.zoomBtn}>
-                                <Text style={styles.zoomText}>-</Text>
-                            </TouchableOpacity>
-                            <Text style={styles.zoomValue}>{Math.round(zoomLevel * 100)}%</Text>
-                            <TouchableOpacity onPress={() => setZoomLevel(Math.min(1.8, zoomLevel + 0.1))} style={styles.zoomBtn}>
-                                <Text style={styles.zoomText}>+</Text>
-                            </TouchableOpacity>
+        <InstrumentContainer>
+            <View style={[styles.container, { paddingTop: SAFE_TOP }]}>
+                {/* Ultra-Premium Ebony Top Panel */}
+                <View style={[styles.topPanel, isPhone && { height: sc(70) }]}>
+                    <LinearGradient
+                        colors={['#0a121e', '#1e293b', '#0a121e']}
+                        style={StyleSheet.absoluteFill}
+                        start={{x: 0, y: 0}}
+                        end={{x: 1, y: 0}}
+                    />
+                    <View style={styles.goldTrim} />
+                    <View style={styles.panelContent}>
+                        <View style={styles.branding}>
+                            {!isPhone && <Text style={styles.brandTitle}>SOLOCRAFT MASTERPIECE</Text>}
+                            <Text style={[styles.modelTitle, isPhone && { fontSize: normalize(14) }]}>EBONY CONCERT GRAND</Text>
                         </View>
 
-                        <TouchableOpacity 
-                            onPress={toggleSustain} 
-                            style={[styles.pedalBtn, sustain && styles.pedalBtnActive, isPhone && { minWidth: sc(100), paddingHorizontal: sc(10) }]}
-                            activeOpacity={0.8}
-                        >
-                            <Animated.View style={[styles.ledIndicator, { opacity: pedalAnim }]} />
-                            <Text style={[styles.pedalLabel, sustain && styles.pedalLabelActive, isPhone && { fontSize: normalize(7) }]}>SUSTAIN</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </View>
+                        <View style={[styles.controls, isPhone && { marginRight: sc(20) }]}>
+                            <View style={styles.zoomUnitWrapper}>
+                                <TouchableOpacity onPress={() => setZoomLevel(Math.max(0.4, zoomLevel - 0.1))} style={styles.zoomBtn}>
+                                    <Text style={styles.zoomText}>-</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.zoomValue}>{Math.round(zoomLevel * 100)}%</Text>
+                                <TouchableOpacity onPress={() => setZoomLevel(Math.min(1.8, zoomLevel + 0.1))} style={styles.zoomBtn}>
+                                    <Text style={styles.zoomText}>+</Text>
+                                </TouchableOpacity>
+                            </View>
 
-            <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[styles.pianoScroll, { paddingBottom: SAFE_BOTTOM + sc(20) }]}
-            >
-                <View style={[styles.pianoEngine, { transform: [{ scale: zoomLevel }] }]}>
-                    <View style={styles.keysBed}>
-                        {whiteKeys}
-                    </View>
-                    <View style={styles.sharpsBed}>
-                        {blackKeys}
+                            <TouchableOpacity 
+                                onPress={toggleSustain} 
+                                style={[styles.pedalBtn, sustain && styles.pedalBtnActive, isPhone && { minWidth: sc(100), paddingHorizontal: sc(10) }]}
+                                activeOpacity={0.8}
+                            >
+                                <Animated.View style={[styles.ledIndicator, { opacity: pedalAnim }]} />
+                                <Text style={[styles.pedalLabel, sustain && styles.pedalLabelActive, isPhone && { fontSize: normalize(7) }]}>SUSTAIN</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
-            </ScrollView>
-            
-            {/* Premium Status Bar */}
-            <View style={styles.footerPanel}>
-                <Text style={styles.statusText}>ULTRA-LOW LATENCY ENGINE • 32-BIT FLOATING POINT AUDIO</Text>
+
+                {/* Piano Bed with horizontal scroll - instrument content itself */}
+                <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={[styles.pianoScroll, { paddingBottom: SAFE_BOTTOM + sc(20) }]}
+                >
+                    <View style={[styles.pianoEngine, { transform: [{ scale: zoomLevel }] }]}>
+                        <View style={styles.keysBed}>
+                            {whiteKeys}
+                        </View>
+                        <View style={styles.sharpsBed}>
+                            {blackKeys}
+                        </View>
+                    </View>
+                </ScrollView>
+                
+                <View style={styles.footerPanel}>
+                    <Text style={styles.statusText}>ULTRA-LOW LATENCY ENGINE • 32-BIT FLOATING POINT AUDIO</Text>
+                </View>
             </View>
-        </View>
+        </InstrumentContainer>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        borderRadius: 40,
-        margin: 5,
+        borderRadius: sc(40),
+        margin: sc(5),
         backgroundColor: '#050505',
         borderWidth: 2,
         borderColor: '#1a1a1a',
         overflow: 'hidden',
-        ...createShadow({ color: '#000', radius: 45, opacity: 0.9 }),
+        ...createShadow({ color: '#000', radius: sc(45), opacity: 0.9 }),
     },
     topPanel: {
         height: sc(100),

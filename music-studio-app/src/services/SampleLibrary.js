@@ -54,9 +54,28 @@ export const VELOCITY_LAYERS = {
  * @returns {string} URL to the MP3 sample
  */
 export const getSampleUrl = (instrumentKey, noteName, velocity = 0.8) => {
-  // Validate instrumentKey
-  const validKeys = Object.values(INSTRUMENTS);
-  const safeInstrument = validKeys.includes(instrumentKey) ? instrumentKey : INSTRUMENTS.PIANO;
+  // Normalize instrumentKey locally
+  const normalizedKey = String(instrumentKey).toLowerCase();
+  
+  // Custom Mappings for SoloCraft aliases
+  const ALIAS_MAP = {
+    'brass': INSTRUMENTS.TRUMPET,
+    'brass_ensemble': INSTRUMENTS.TUBA,
+    'synth': INSTRUMENTS.SYNTH,
+    'strings': INSTRUMENTS.STRINGS,
+    'orchestral_strings': INSTRUMENTS.STRINGS,
+    'ethnic_strings': INSTRUMENTS.SITAR,
+    'world': INSTRUMENTS.BANJO, // Banjo is a good acoustic-world fallback
+    'guitar': INSTRUMENTS.GUITAR,
+    'acoustic_guitar': INSTRUMENTS.GUITAR,
+    'electric_guitar': INSTRUMENTS.GUITAR,
+    'bass': INSTRUMENTS.BASS,
+    'bass_guitar': INSTRUMENTS.BASS,
+  };
+
+  const internalKey = ALIAS_MAP[normalizedKey] || INSTRUMENTS[normalizedKey.toUpperCase()] || instrumentKey;
+  const validValues = Object.values(INSTRUMENTS);
+  const safeInstrument = validValues.includes(internalKey) ? internalKey : INSTRUMENTS.PIANO;
 
   // Normalize 's' to '#' first (e.g. 'Fs4' -> 'F#4')
   let normalizedNote = noteName.replace('s', '#');
@@ -95,17 +114,27 @@ export const getSampleUrl = (instrumentKey, noteName, velocity = 0.8) => {
   }
 
   // [NATURAL SOUND] Determine velocity layer suffix if multisampling is available
-  // Note: FluidR3_GM doesn't natively have _soft/_hard in the public URL provided,
-  // but we can map them if we switch to a more advanced library like WebAudioFont.
-  // For now, we'll keep the structure ready for high-fidelity sources.
   let velocitySuffix = '';
-  /* 
-  if (velocity <= VELOCITY_LAYERS.SOFT.max) velocitySuffix = VELOCITY_LAYERS.SOFT.suffix;
-  else if (velocity >= VELOCITY_LAYERS.HARD.max) velocitySuffix = VELOCITY_LAYERS.HARD.suffix;
-  */
 
   const finalNote = note + octaveNum + velocitySuffix;
-  return `${BASE_URL}/${safeInstrument}-mp3/${finalNote}.mp3`;
+  const finalUrl = `${BASE_URL}/${safeInstrument}-mp3/${finalNote}.mp3`;
+  
+  // Debug Logging for Resolution
+  console.log(`🔍 [SampleLibrary] Resolved: ${instrumentKey} -> ${finalNote} @ ${finalUrl}`);
+  
+  return finalUrl;
+};
+
+/**
+ * Fallback URL Helper
+ */
+export const getSafeSampleUrl = (instrumentKey, noteName, velocity = 0.8) => {
+  try {
+    return getSampleUrl(instrumentKey, noteName, velocity);
+  } catch (err) {
+    console.warn(`⚠️ [SampleLibrary] Fallback triggered for ${instrumentKey} ${noteName}`);
+    return getSampleUrl('PIANO', 'C4', 0.8);
+  }
 };
 
 /**

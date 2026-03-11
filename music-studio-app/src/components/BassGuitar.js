@@ -5,6 +5,7 @@ import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
 import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
 import GuitarString from './GuitarString';
+import HapticService from '../services/HapticService';
 
 const width = SCREEN_WIDTH;
 
@@ -20,7 +21,11 @@ const NOTE_MAP = {
     'G': ['G2', 'G#2', 'A2', 'A#2', 'B2', 'C3'],
 };
 
+import InstrumentContainer from './InstrumentContainer';
+import { useResponsive } from '../utils/responsive';
+
 export default function BassGuitar() {
+    const { isPhone, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [frettedIndex, setFrettedIndex] = useState([0, 0, 0, 0]);
     const frettedIndexRef = useRef([0, 0, 0, 0]); // Ref to track latest frets
     const [activeStrings, setActiveStrings] = useState([false, false, false, false]);
@@ -46,6 +51,7 @@ export default function BassGuitar() {
         
         if (note) {
             UnifiedAudioEngine.playSound(note, 'bass', 0, velocity);
+            HapticService.medium();
             setActiveStrings(prev => {
                 const next = [...prev];
                 next[index] = true;
@@ -105,100 +111,103 @@ export default function BassGuitar() {
     ).current;
 
     return (
-        <LinearGradient colors={['#0a0a0a', '#1e293b', '#0a0a0a']} style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.brandTitle}>SOLOCRAFT INDUSTRIAL • PRECISION BASS</Text>
-                <Text style={styles.modelTitle}>SUB-BASS MK-II • SLATE & CHROME EDITION</Text>
-            </View>
+        <InstrumentContainer>
+            <LinearGradient colors={['#0a0a0a', '#1e293b', '#0a0a0a']} style={[styles.container, { paddingTop: SAFE_TOP + sc(10) }]}>
+                <View style={styles.header}>
+                    <Text style={styles.brandTitle}>SOLOCRAFT INDUSTRIAL • PRECISION BASS</Text>
+                    <Text style={styles.modelTitle}>SUB-BASS MK-II • SLATE & CHROME EDITION</Text>
+                </View>
 
-            <View style={styles.bassFrame}>
-                {/* 1. MASTER NECK SYSTEM */}
-                <View style={styles.masterNeck}>
-                    <View style={styles.headstock}>
-                        <LinearGradient colors={['#1e293b', '#0f172a']} style={styles.slateHead}>
-                            <View style={styles.chromeLogo}>
-                                <Text style={styles.logoText}>SLATE</Text>
+                <View style={styles.bassFrame}>
+                    {/* 1. MASTER NECK SYSTEM */}
+                    <View style={styles.masterNeck}>
+                        <View style={styles.headstock}>
+                            <LinearGradient colors={['#1e293b', '#0f172a']} style={styles.slateHead}>
+                                <View style={styles.chromeLogo}>
+                                    <Text style={styles.logoText}>SLATE</Text>
+                                </View>
+                            </LinearGradient>
+                            <View style={styles.tunersRow}>
+                                {[1, 2, 3, 4].map(i => <View key={i} style={styles.chromeTuner} />)}
+                            </View>
+                        </View>
+                        <LinearGradient colors={['#050505', '#1a1a1a', '#050505']} style={styles.ebonyFretboard}>
+                            {[...Array(FRETS)].map((_, i) => (
+                                <View key={i} style={styles.fretAssembly}>
+                                    <View style={styles.fretWire} />
+                                    <View style={styles.fretDotsRow}>
+                                        {STRINGS.map((_, sIdx) => (
+                                            <TouchableOpacity
+                                                key={sIdx}
+                                                style={[styles.fretZone, frettedIndex[sIdx] === (i+1) && styles.activeFretZone]}
+                                                    onPress={() => {
+                                                        const next = [...frettedIndex];
+                                                        // Toggle: if currently set to this fret, reset to 0 (open), otherwise set to i+1
+                                                        if (next[sIdx] === i + 1) {
+                                                            next[sIdx] = 0;
+                                                        } else {
+                                                            next[sIdx] = i + 1;
+                                                        }
+                                                        setFrettedIndex(next);
+                                                        HapticService.light();
+                                                    }}
+                                            >
+                                                {frettedIndex[sIdx] === (i+1) && <View style={styles.neonDot} />}
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+                            ))}
+                        </LinearGradient>
+                    </View>
+
+                    {/* 2. INDUSTRIAL HIGH-MASS BODY */}
+                    <View style={styles.bodyResonator}>
+                        <LinearGradient
+                            colors={['#1e293b', '#334155', '#1e293b']}
+                            style={styles.slateBody}
+                        >
+                            <View style={styles.industrialShine} />
+                            
+                            {/* High-Mass Pickups */}
+                            <View style={styles.pickupBank}>
+                                <View style={styles.jPickup}>
+                                    <View style={styles.poleSet}>
+                                        {[1, 2, 3, 4].map(p => <View key={p} style={styles.chromePole} />)}
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* Chrome High-Mass Bridge */}
+                            <View style={styles.chromeBridge}>
+                                <View style={styles.saddlesRow}>
+                                    {[1, 2, 3, 4].map(i => <View key={i} style={styles.chromeSaddle} />)}
+                                </View>
                             </View>
                         </LinearGradient>
-                        <View style={styles.tunersRow}>
-                            {[1, 2, 3, 4].map(i => <View key={i} style={styles.chromeTuner} />)}
-                        </View>
                     </View>
-                    <LinearGradient colors={['#050505', '#1a1a1a', '#050505']} style={styles.ebonyFretboard}>
-                        {[...Array(FRETS)].map((_, i) => (
-                            <View key={i} style={styles.fretAssembly}>
-                                <View style={styles.fretWire} />
-                                <View style={styles.fretDotsRow}>
-                                    {STRINGS.map((_, sIdx) => (
-                                        <TouchableOpacity
-                                            key={sIdx}
-                                            style={[styles.fretZone, frettedIndex[sIdx] === (i+1) && styles.activeFretZone]}
-                                                onPress={() => {
-                                                    const next = [...frettedIndex];
-                                                    // Toggle: if currently set to this fret, reset to 0 (open), otherwise set to i+1
-                                                    if (next[sIdx] === i + 1) {
-                                                        next[sIdx] = 0;
-                                                    } else {
-                                                        next[sIdx] = i + 1;
-                                                    }
-                                                    setFrettedIndex(next);
-                                                }}
-                                        >
-                                            {frettedIndex[sIdx] === (i+1) && <View style={styles.neonDot} />}
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </View>
+
+                    {/* 3. SYNCHRONIZED BASS STRINGS */}
+                    <View style={styles.stringsOverlay} {...panResponder.panHandlers}>
+                        {STRINGS.map((_, i) => (
+                            <GuitarString
+                                key={i}
+                                thickness={STRING_THICKNESS[i]}
+                                color={STRING_COLORS[i]}
+                                active={activeStrings[i]}
+                                vibrationScale={3.5}
+                            />
                         ))}
-                    </LinearGradient>
+                    </View>
                 </View>
 
-                {/* 2. INDUSTRIAL HIGH-MASS BODY */}
-                <View style={styles.bodyResonator}>
-                    <LinearGradient
-                        colors={['#1e293b', '#334155', '#1e293b']}
-                        style={styles.slateBody}
-                    >
-                        <View style={styles.industrialShine} />
-                        
-                        {/* High-Mass Pickups */}
-                        <View style={styles.pickupBank}>
-                            <View style={styles.jPickup}>
-                                <View style={styles.poleSet}>
-                                    {[1, 2, 3, 4].map(p => <View key={p} style={styles.chromePole} />)}
-                                </View>
-                            </View>
-                        </View>
-
-                        {/* Chrome High-Mass Bridge */}
-                        <View style={styles.chromeBridge}>
-                            <View style={styles.saddlesRow}>
-                                {[1, 2, 3, 4].map(i => <View key={i} style={styles.chromeSaddle} />)}
-                            </View>
-                        </View>
-                    </LinearGradient>
+                <View style={styles.footer}>
+                    <View style={styles.statusPanel}>
+                        <Text style={styles.indicatorText}>HIGH-MASS SUSTAIN ACTIVE • INDUSTRIAL DRIVE</Text>
+                    </View>
                 </View>
-
-                {/* 3. SYNCHRONIZED BASS STRINGS */}
-                <View style={styles.stringsOverlay} {...panResponder.panHandlers}>
-                    {STRINGS.map((_, i) => (
-                        <GuitarString
-                            key={i}
-                            thickness={STRING_THICKNESS[i]}
-                            color={STRING_COLORS[i]}
-                            active={activeStrings[i]}
-                            vibrationScale={3.5}
-                        />
-                    ))}
-                </View>
-            </View>
-
-            <View style={styles.footer}>
-                <View style={styles.statusPanel}>
-                    <Text style={styles.indicatorText}>HIGH-MASS SUSTAIN ACTIVE • INDUSTRIAL DRIVE</Text>
-                </View>
-            </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -293,7 +302,7 @@ const styles = StyleSheet.create({
     },
     fretAssembly: {
         flex: 1,
-        borderRightWidth: 3,
+        borderRightWidth: sc(3),
         borderColor: '#334155',
         position: 'relative',
     },
@@ -398,7 +407,7 @@ const styles = StyleSheet.create({
         height: sc(12),
         backgroundColor: '#cbd5e1',
         borderRadius: sc(3),
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: '#f1f5f9',
     },
     stringsOverlay: {

@@ -1,22 +1,25 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, StatusBar, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import RecordingsLibrary from '../components/RecordingsLibrary';
 import ProjectsLibrary from '../components/ProjectsLibrary';
 import { COLORS, SPACING } from '../constants/UIConfig';
+import HapticService from '../services/HapticService';
 
 export default function LibraryScreen() {
     const navigation = useNavigation();
     const [activeTab, setActiveTab] = useState('recordings'); // 'recordings' or 'projects'
 
     const handleNewProject = () => {
+        HapticService.selection();
         navigation.navigate('Studio', { projectId: 'new' });
     };
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar style="light" />
 
             {/* Header with music theme */}
             <View style={styles.header}>
@@ -47,7 +50,10 @@ export default function LibraryScreen() {
             <View style={styles.tabContainer}>
                 <TouchableOpacity
                     style={[styles.tab, activeTab === 'recordings' && styles.activeTab]}
-                    onPress={() => setActiveTab('recordings')}
+                    onPress={() => {
+                        HapticService.selection();
+                        setActiveTab('recordings');
+                    }}
                 >
                     <Text style={[styles.tabText, activeTab === 'recordings' && styles.activeTabText]}>
                         🎙️ Recordings
@@ -55,7 +61,10 @@ export default function LibraryScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.tab, activeTab === 'projects' && styles.activeTab]}
-                    onPress={() => setActiveTab('projects')}
+                    onPress={() => {
+                        HapticService.selection();
+                        setActiveTab('projects');
+                    }}
                 >
                     <Text style={[styles.tabText, activeTab === 'projects' && styles.activeTabText]}>
                         📁 Projects

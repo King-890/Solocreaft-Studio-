@@ -3,7 +3,9 @@ import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimension
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
-import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+import InstrumentContainer from './InstrumentContainer';
 
 const STRINGS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII'];
 const NOTES = ['G3', 'A3', 'C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5', 'E5', 'G5', 'A5', 'C6'];
@@ -51,6 +53,7 @@ const StringStation = React.memo(({ index, label, instrument, isShamisen, isActi
 });
 
 export default function EthnicStrings({ instrument = 'koto' }) {
+    const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [activeStrings, setActiveStrings] = useState(new Set());
     const lastStrummedIndex = useRef(-1);
     const stringAnims = useRef(STRINGS.map(() => new Animated.Value(0))).current;
@@ -67,6 +70,7 @@ export default function EthnicStrings({ instrument = 'koto' }) {
         UnifiedAudioEngine.activateAudio();
         const note = NOTES[index];
         UnifiedAudioEngine.playSound(note, instrument, 0, velocity);
+        HapticService.light();
         
         setActiveStrings(prev => {
             const next = new Set(prev);
@@ -146,7 +150,8 @@ export default function EthnicStrings({ instrument = 'koto' }) {
     const isShamisen = instrument === 'shamisen';
 
     return (
-        <LinearGradient colors={['#1a1005', '#2c1e0a', '#1a1005']} style={styles.container}>
+        <InstrumentContainer>
+            <LinearGradient colors={['#1a1005', '#2c1e0a', '#1a1005']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
             <View style={styles.header}>
                 <Text style={styles.title}>EASTERN SERENITY</Text>
                 <Text style={styles.subtitle}>MASTERCLASS {instrument.toUpperCase()} • {isShamisen ? 'SATIN WOOD' : 'IMPERIAL ROSEWOOD'}</Text>
@@ -209,7 +214,8 @@ export default function EthnicStrings({ instrument = 'koto' }) {
                     <Text style={styles.harmonicMode}>AUTHENTIC HARMONIC SCALE ACTIVE • GLISSANDO SUPPORTED</Text>
                 </View>
             </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -221,7 +227,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: sc(35),
         ...createShadow({ color: '#000', radius: sc(45), opacity: 0.95 }),
-        borderWidth: 1.5,
+        borderWidth: sc(1.5),
         borderColor: 'rgba(251, 191, 36, 0.1)',
     },
     header: { alignItems: 'center', marginBottom: sc(25) },
@@ -242,7 +248,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#1a0d06',
         borderRadius: sc(6),
         zIndex: 20,
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: '#451a03',
         ...createShadow({ color: '#000', radius: sc(10) }),
     },
@@ -255,7 +261,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#1a0d06',
         borderRadius: sc(6),
         zIndex: 20,
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: '#451a03',
         ...createShadow({ color: '#000', radius: sc(10) }),
     },
@@ -266,12 +272,12 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         zIndex: 1,
-        ...createShadow({ color: '#000', radius: sc(40), offsetY: 10 }),
+        ...createShadow({ color: '#000', radius: sc(40), offsetY: sc(10) }),
     },
     grainBase: { 
         flex: 1, 
         borderRadius: sc(30), 
-        borderWidth: 4, 
+        borderWidth: sc(4), 
         borderColor: '#2d1b10', 
         overflow: 'hidden',
     },
@@ -285,7 +291,7 @@ const styles = StyleSheet.create({
         top: sc(20),
         left: '5%',
         right: '5%',
-        height: 1,
+        height: sc(1),
         backgroundColor: 'rgba(251, 191, 36, 0.1)',
         zIndex: 3,
     },
@@ -294,7 +300,7 @@ const styles = StyleSheet.create({
         bottom: sc(20),
         left: '5%',
         right: '5%',
-        height: 1,
+        height: sc(1),
         backgroundColor: 'rgba(251, 191, 36, 0.1)',
         zIndex: 3,
     },
@@ -330,7 +336,7 @@ const styles = StyleSheet.create({
     ivoryFinish: { 
         flex: 1, 
         borderRadius: sc(5), 
-        borderWidth: 1.5, 
+        borderWidth: sc(1.5), 
         borderColor: '#e5e7eb', 
         ...createShadow({ color: '#000', radius: sc(6), opacity: 0.5 }),
     },
@@ -360,7 +366,7 @@ const styles = StyleSheet.create({
         height: sc(12), 
         borderRadius: sc(6), 
         backgroundColor: '#1a0d06', 
-        borderWidth: 1.5, 
+        borderWidth: sc(1.5), 
         borderColor: '#fbbf24',
         zIndex: 40,
     },
@@ -384,7 +390,7 @@ const styles = StyleSheet.create({
         height: sc(12), 
         borderRadius: sc(6), 
         backgroundColor: '#1a0d06', 
-        borderWidth: 1.5, 
+        borderWidth: sc(1.5), 
         borderColor: '#fbbf24',
         zIndex: 40,
     },
@@ -401,7 +407,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: sc(8),
         paddingVertical: sc(2),
         borderRadius: sc(10),
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: 'rgba(251, 191, 36, 0.1)',
     },
     activeIndexPill: {
@@ -420,7 +426,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: sc(30), 
         paddingVertical: sc(12), 
         borderRadius: sc(25), 
-        borderWidth: 1, 
+        borderWidth: sc(1), 
         borderColor: 'rgba(255,255,255,0.1)',
     },
     harmonicMode: { color: '#94a3b8', fontSize: normalize(10), fontWeight: '900', letterSpacing: 2 },

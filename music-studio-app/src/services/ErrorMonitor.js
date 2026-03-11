@@ -22,7 +22,7 @@ class ErrorMonitor {
             this.errors = this.errors.slice(0, this.maxErrors);
         }
 
-        console.error('🚨 ERROR REPORTED:', {
+        console.info('🚨 ERROR REPORTED:', {
             message: errorInfo.message,
             context: errorInfo.context,
             timestamp: errorInfo.timestamp

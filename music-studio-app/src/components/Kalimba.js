@@ -3,11 +3,14 @@ import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimension
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
-import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+import InstrumentContainer from './InstrumentContainer';
 
 const TINES = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5'];
 
 export default function Kalimba() {
+    const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [activeTine, setActiveTine] = useState(null);
     const vibrationAnims = useRef(TINES.reduce((acc, note) => {
         acc[note] = new Animated.Value(0);
@@ -26,6 +29,7 @@ export default function Kalimba() {
     const playTine = useCallback((note) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(note, 'kalimba', 0, 0.75);
+        HapticService.light();
         setActiveTine(note);
 
         vibrationAnims[note].setValue(1.5);
@@ -44,7 +48,8 @@ export default function Kalimba() {
     }, []);
 
     return (
-        <LinearGradient colors={['#1a0d06', '#2d1b10', '#1a0d06']} style={styles.container}>
+        <InstrumentContainer>
+            <LinearGradient colors={['#1a0d06', '#2d1b10', '#1a0d06']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
             <View style={styles.header}>
                 <Text style={styles.title}>CHIMING RESONANCE</Text>
                 <Text style={styles.subtitle}>MASTERCLASS KALIMBA • HAND-POLISHED MAHOGANY</Text>
@@ -96,7 +101,8 @@ export default function Kalimba() {
                     <Text style={styles.sonicText}>STEEL-HARMONIC RESONANCE SYNC • MASTER POLISH</Text>
                 </View>
             </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -128,7 +134,7 @@ const styles = StyleSheet.create({
     bodyWood: {
         flex: 1,
         borderRadius: sc(35),
-        borderWidth: 3,
+        borderWidth: sc(3),
         borderColor: '#2d1b10',
         justifyContent: 'flex-end',
         alignItems: 'center',
@@ -140,20 +146,20 @@ const styles = StyleSheet.create({
         height: sc(140),
         borderRadius: sc(70),
         backgroundColor: '#000',
-        borderWidth: 5,
+        borderWidth: sc(5),
         borderColor: '#1a0d06',
         justifyContent: 'center',
         alignItems: 'center',
     },
     portDepth: { width: '100%', height: '100%', borderRadius: sc(70) },
-    portRim: { position: 'absolute', width: '110%', height: '110%', borderRadius: sc(80), borderWidth: 2, borderColor: 'rgba(251,191,36,0.08)' },
+    portRim: { position: 'absolute', width: '110%', height: '110%', borderRadius: sc(80), borderWidth: sc(2), borderColor: 'rgba(251,191,36,0.08)' },
     tineAssembly: { position: 'absolute', top: 0, width: '100%', height: '100%', alignItems: 'center', zIndex: 10 },
     pressureHardware: {
         width: '92%',
         height: sc(16),
         marginTop: sc(40),
         borderRadius: sc(8),
-        borderWidth: 2,
+        borderWidth: sc(2),
         borderColor: '#475569',
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -166,11 +172,11 @@ const styles = StyleSheet.create({
     tinesArray: { flexDirection: 'row', justifyContent: 'space-around', width: '96%', marginTop: sc(-16) },
     tineStation: { alignItems: 'center' },
     tineTouch: { zIndex: 5 },
-    pistonTine: { width: sc(42), borderRadius: sc(21), borderBottomLeftRadius: sc(21), borderBottomRightRadius: sc(21), ...createShadow({ color: '#000', radius: sc(12), offsetY: 10 }) },
-    metalLuster: { flex: 1, borderRadius: sc(21), borderWidth: 2, borderColor: '#64748b', justifyContent: 'flex-end', alignItems: 'center', paddingBottom: sc(30) },
+    pistonTine: { width: sc(42), borderRadius: sc(21), borderBottomLeftRadius: sc(21), borderBottomRightRadius: sc(21), ...createShadow({ color: '#000', radius: sc(12), offsetY: sc(10) }) },
+    metalLuster: { flex: 1, borderRadius: sc(21), borderWidth: sc(2), borderColor: '#64748b', justifyContent: 'flex-end', alignItems: 'center', paddingBottom: sc(30) },
     tineReflection: { position: 'absolute', top: sc(25), width: sc(14), height: '45%', backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: sc(7) },
     pistonLabel: { color: 'rgba(0,0,0,0.4)', fontSize: normalize(11), fontWeight: '900' },
     footer: { marginTop: sc(30), width: '100%', alignItems: 'center' },
-    sonicIndicator: { backgroundColor: 'rgba(255,255,255,0.04)', paddingHorizontal: sc(25), paddingVertical: sc(10), borderRadius: sc(20), borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    sonicIndicator: { backgroundColor: 'rgba(255,255,255,0.04)', paddingHorizontal: sc(25), paddingVertical: sc(10), borderRadius: sc(20), borderWidth: sc(1), borderColor: 'rgba(255,255,255,0.1)' },
     sonicText: { color: '#64748b', fontSize: normalize(10), fontWeight: '900', letterSpacing: 2.5 },
 });

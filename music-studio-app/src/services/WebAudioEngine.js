@@ -68,7 +68,7 @@ class WebAudioEngine {
                 }
 
                 this.initialized = true;
-                console.log('✅ WebAudioEngine Initialized (Connected to Master Bus)');
+                // console.log('✅ WebAudioEngine Initialized (Connected to Master Bus)');
                 return true;
             } catch (error) {
                 console.error('❌ Failed to initialize WebAudioEngine:', error);
@@ -186,7 +186,7 @@ class WebAudioEngine {
 
         // PHYSICAL ACCURACY: Wait for real sample if it's not loaded
         if (!buffer) {
-            console.log(`📥 Real-time loading sample for ${cacheKey}...`);
+            // console.log(`📥 Real-time loading sample for ${cacheKey}...`);
             buffer = await this.loadSample(instrumentKey, noteName, false, velocity);
             
             // If still no buffer (network fail), use High-Fidelity physical fallback
@@ -579,7 +579,7 @@ class WebAudioEngine {
         gain.gain.setValueAtTime(0.5, this.audioContext.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 1);
         osc.stop(this.audioContext.currentTime + 1);
-        console.log('🎵 Web Test Tone Played');
+        // console.log('🎵 Web Test Tone Played');
     }
 
     preload() {

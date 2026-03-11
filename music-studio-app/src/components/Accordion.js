@@ -3,11 +3,14 @@ import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, ScrollVie
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
+import HapticService from '../services/HapticService';
 
 import { sc, normalize, useResponsive } from '../utils/responsive';
 
 const RIGHT_KEYS = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5'];
 const LEFT_CHORDS = ['C', 'G', 'D', 'A', 'F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'B', 'E'];
+
+import InstrumentContainer from './InstrumentContainer';
 
 export default function Accordion() {
     const { isPhone, SCREEN_HEIGHT, SCREEN_WIDTH, sc, normalize, contain, isLandscape, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
@@ -41,6 +44,7 @@ export default function Accordion() {
     const playRightKey = useCallback((note) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(note, 'accordion', 0, 0.75);
+        HapticService.light();
         setActiveRight(prev => ({ ...prev, [note]: true }));
         animateBellows('squeeze');
         
@@ -54,6 +58,7 @@ export default function Accordion() {
     const playLeftChord = useCallback((chord) => {
         UnifiedAudioEngine.activateAudio();
         UnifiedAudioEngine.playSound(`${chord}3`, 'accordion', 0, 0.65);
+        HapticService.medium();
         setActiveLeft(prev => ({ ...prev, [chord]: true }));
         animateBellows('expand');
 
@@ -65,77 +70,79 @@ export default function Accordion() {
     }, []);
 
     return (
-        <LinearGradient colors={['#1e1b4b', '#312e81', '#1e1b4b']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
-            <View style={styles.header}>
-                <Text style={[styles.title, isPhone && { fontSize: normalize(16) }]}>ALPINE RESONANCE</Text>
-                <Text style={[styles.subtitle, isPhone && { fontSize: normalize(8) }]}>MASTERCLASS CONCERT ACCORDION • PEARLOID MAHOGANY</Text>
-            </View>
-
-            <View style={styles.accordionFrame}>
-                {/* 1. LEFT BUTTON BOARD (Bass) */}
-                <View style={[styles.bassBoard, { width: bassWidth, height: boardHeight }]}>
-                    <LinearGradient colors={['#3e2723', '#5d4037', '#3e2723']} style={styles.mahoganyFrame}>
-                        <View style={styles.pearloidInlay} />
-                        <View style={styles.buttonsPanel}>
-                            {LEFT_CHORDS.map((chord) => (
-                                <TouchableOpacity key={chord} style={[styles.bassAnchor, { width: sc(32), height: sc(32) }, activeLeft[chord] && styles.activeBass]} onPressIn={() => playLeftChord(chord)}>
-                                    <LinearGradient colors={activeLeft[chord] ? ['#3b82f6', '#1d4ed8'] : ['#f8fafc', '#cbd5e1']} style={styles.bassKey}>
-                                        <Text style={[styles.chordText, activeLeft[chord] && { color: '#fff' }]}>{chord}</Text>
-                                    </LinearGradient>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </LinearGradient>
+        <InstrumentContainer>
+            <LinearGradient colors={['#1e1b4b', '#312e81', '#1e1b4b']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
+                <View style={styles.header}>
+                    <Text style={[styles.title, isPhone && { fontSize: normalize(16) }]}>ALPINE RESONANCE</Text>
+                    <Text style={[styles.subtitle, isPhone && { fontSize: normalize(8) }]}>MASTERCLASS CONCERT ACCORDION • PEARLOID MAHOGANY</Text>
                 </View>
 
-                {/* 2. CONCERT BELLOWS (Central) */}
-                <Animated.View style={[styles.bellowsChain, { transform: [{ scaleX: bellowsScale }] }]}>
-                    {Array.from({ length: isPhone ? 8 : 12 }).map((_, i) => (
-                        <View key={i} style={styles.bellowFold}>
-                            <LinearGradient colors={['#7f1d1d', '#991b1b', '#7f1d1d']} style={styles.leatherFold}>
-                                <View style={styles.foldSteel} />
-                            </LinearGradient>
-                        </View>
-                    ))}
-                </Animated.View>
+                <View style={styles.accordionFrame}>
+                    {/* 1. LEFT BUTTON BOARD (Bass) */}
+                    <View style={[styles.bassBoard, { width: bassWidth, height: boardHeight }]}>
+                        <LinearGradient colors={['#3e2723', '#5d4037', '#3e2723']} style={styles.mahoganyFrame}>
+                            <View style={styles.pearloidInlay} />
+                            <View style={styles.buttonsPanel}>
+                                {LEFT_CHORDS.map((chord) => (
+                                    <TouchableOpacity key={chord} style={[styles.bassAnchor, { width: sc(32), height: sc(32) }, activeLeft[chord] && styles.activeBass]} onPressIn={() => playLeftChord(chord)}>
+                                        <LinearGradient colors={activeLeft[chord] ? ['#3b82f6', '#1d4ed8'] : ['#f8fafc', '#cbd5e1']} style={styles.bassKey}>
+                                            <Text style={[styles.chordText, activeLeft[chord] && { color: '#fff' }]}>{chord}</Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </LinearGradient>
+                    </View>
 
-                {/* 3. RIGHT KEYBOARD (Treble) */}
-                <View style={[styles.trebleBoard, { width: trebleWidth, height: boardHeight }]}>
-                    <LinearGradient colors={['#3e2723', '#5d4037', '#3e2723']} style={styles.mahoganyFrame}>
-                        <View style={styles.pearloidInlay} />
-                        <View style={styles.keysPanel}>
-                            {RIGHT_KEYS.map((note) => (
-                                <TouchableOpacity key={note} style={[styles.pianoKeyLink, activeRight[note] && styles.activePiano]} onPressIn={() => playRightKey(note)}>
-                                    <LinearGradient colors={activeRight[note] ? ['#3b82f6', '#1d4ed8'] : ['#fffaf0', '#f8fafc']} style={styles.ivoryKey}>
-                                        <View style={styles.ivoryShine} />
-                                    </LinearGradient>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </LinearGradient>
-                </View>
-            </View>
+                    {/* 2. CONCERT BELLOWS (Central) */}
+                    <Animated.View style={[styles.bellowsChain, { transform: [{ scaleX: bellowsScale }] }]}>
+                        {Array.from({ length: isPhone ? 8 : 12 }).map((_, i) => (
+                            <View key={i} style={styles.bellowFold}>
+                                <LinearGradient colors={['#7f1d1d', '#991b1b', '#7f1d1d']} style={styles.leatherFold}>
+                                    <View style={styles.foldSteel} />
+                                </LinearGradient>
+                            </View>
+                        ))}
+                    </Animated.View>
 
-            <View style={[styles.footer, { marginBottom: SAFE_BOTTOM }]}>
-                <View style={styles.airflowMonitor}>
-                    <Text style={styles.airflowText}>CONCERT-PITCH REED ARRAY ACTIVE • BELLOWS PRESSURE SYNCED</Text>
+                    {/* 3. RIGHT KEYBOARD (Treble) */}
+                    <View style={[styles.trebleBoard, { width: trebleWidth, height: boardHeight }]}>
+                        <LinearGradient colors={['#3e2723', '#5d4037', '#3e2723']} style={styles.mahoganyFrame}>
+                            <View style={styles.pearloidInlay} />
+                            <View style={styles.keysPanel}>
+                                {RIGHT_KEYS.map((note) => (
+                                    <TouchableOpacity key={note} style={[styles.pianoKeyLink, activeRight[note] && styles.activePiano]} onPressIn={() => playRightKey(note)}>
+                                        <LinearGradient colors={activeRight[note] ? ['#3b82f6', '#1d4ed8'] : ['#fffaf0', '#f8fafc']} style={styles.ivoryKey}>
+                                            <View style={styles.ivoryShine} />
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </LinearGradient>
+                    </View>
                 </View>
-            </View>
-        </LinearGradient>
+
+                <View style={[styles.footer, { marginBottom: SAFE_BOTTOM }]}>
+                    <View style={styles.airflowMonitor}>
+                        <Text style={styles.airflowText}>CONCERT-PITCH REED ARRAY ACTIVE • BELLOWS PRESSURE SYNCED</Text>
+                    </View>
+                </View>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        borderRadius: 40,
-        margin: 5,
+        borderRadius: sc(40),
+        margin: sc(5),
         alignItems: 'center',
-        ...createShadow({ color: '#000', radius: 45, opacity: 0.95 }),
+        ...createShadow({ color: '#000', radius: sc(45), opacity: 0.95 }),
     },
     header: { alignItems: 'center', marginVertical: sc(10) },
-    title: { color: '#fff', fontSize: normalize(20), fontWeight: '900', letterSpacing: 6, ...createTextShadow({ color: 'rgba(0,0,0,0.8)', radius: 10 }) },
-    subtitle: { color: '#fbbf24', fontSize: normalize(9), fontWeight: '900', letterSpacing: 2, marginTop: 4, opacity: 0.7 },
+    title: { color: '#fff', fontSize: normalize(20), fontWeight: '900', letterSpacing: 6, ...createTextShadow({ color: 'rgba(0,0,0,0.8)', radius: sc(10) }) },
+    subtitle: { color: '#fbbf24', fontSize: normalize(9), fontWeight: '900', letterSpacing: 2, marginTop: sc(4), opacity: 0.7 },
     accordionFrame: {
         flex: 1,
         width: '100%',
@@ -148,28 +155,28 @@ const styles = StyleSheet.create({
     trebleBoard: { zIndex: 10 },
     mahoganyFrame: {
         flex: 1,
-        borderRadius: 15,
-        borderWidth: 4,
+        borderRadius: sc(15),
+        borderWidth: sc(4),
         borderColor: '#1a0d06',
         overflow: 'hidden',
-        ...createShadow({ color: '#000', radius: 15 }),
+        ...createShadow({ color: '#000', radius: sc(15) }),
     },
     pearloidInlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.05)', opacity: 0.1, zIndex: 1 },
     buttonsPanel: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: sc(5), padding: sc(5), zIndex: 5 },
-    bassAnchor: { borderRadius: 100, backgroundColor: '#000', padding: 2, ...createShadow({ color: '#000', radius: 6, offsetY: 3 }) },
+    bassAnchor: { borderRadius: sc(100), backgroundColor: '#000', padding: sc(2), ...createShadow({ color: '#000', radius: sc(6), offsetY: sc(3) }) },
     activeBass: { transform: [{ scale: 0.9 }] },
-    bassKey: { flex: 1, borderRadius: 100, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.1)' },
+    bassKey: { flex: 1, borderRadius: sc(100), justifyContent: 'center', alignItems: 'center', borderWidth: sc(1.5), borderColor: 'rgba(255,255,255,0.1)' },
     chordText: { fontSize: normalize(10), fontWeight: '900', color: '#1e293b' },
-    bellowsChain: { flex: 1, height: '80%', flexDirection: 'row', zIndex: 5, marginHorizontal: sc(-8), ...createShadow({ color: '#000', radius: 25 }) },
-    bellowFold: { flex: 1, borderLeftWidth: 1.5, borderRightWidth: 1.5, borderColor: 'rgba(0,0,0,0.9)' },
+    bellowsChain: { flex: 1, height: '80%', flexDirection: 'row', zIndex: 5, marginHorizontal: sc(-8), ...createShadow({ color: '#000', radius: sc(25) }) },
+    bellowFold: { flex: 1, borderLeftWidth: sc(1.5), borderRightWidth: sc(1.5), borderColor: 'rgba(0,0,0,0.9)' },
     leatherFold: { flex: 1, alignItems: 'center' },
-    foldSteel: { width: 3, height: '85%', backgroundColor: 'rgba(255,255,255,0.1)', marginTop: '7%', borderRadius: 2 },
+    foldSteel: { width: sc(3), height: '85%', backgroundColor: 'rgba(255,255,255,0.1)', marginTop: '7%', borderRadius: sc(2) },
     keysPanel: { flex: 1, paddingVertical: sc(10), paddingHorizontal: sc(10), justifyContent: 'space-around', zIndex: 5 },
-    pianoKeyLink: { height: sc(18), backgroundColor: '#000', borderRadius: 4, padding: 1 },
+    pianoKeyLink: { height: sc(18), backgroundColor: '#000', borderRadius: sc(4), padding: sc(1) },
     activePiano: { transform: [{ scale: 0.96 }] },
-    ivoryKey: { flex: 1, borderRadius: 3, borderWidth: 1, borderColor: '#fff' },
+    ivoryKey: { flex: 1, borderRadius: sc(3), borderWidth: sc(1), borderColor: '#fff' },
     ivoryShine: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.05)' },
     footer: { marginTop: sc(10), width: '100%', alignItems: 'center' },
-    airflowMonitor: { backgroundColor: 'rgba(255,255,255,0.04)', paddingHorizontal: sc(20), paddingVertical: sc(6), borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    airflowMonitor: { backgroundColor: 'rgba(255,255,255,0.04)', paddingHorizontal: sc(20), paddingVertical: sc(6), borderRadius: sc(20), borderWidth: sc(1), borderColor: 'rgba(255,255,255,0.1)' },
     airflowText: { color: '#64748b', fontSize: normalize(9), fontWeight: '900', letterSpacing: 2 },
 });

@@ -4,6 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
 import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+import InstrumentContainer from './InstrumentContainer';
 
 const WAVEFORMS = ['sine', 'square', 'sawtooth', 'triangle'];
 
@@ -25,6 +27,7 @@ export default function SynthPad() {
         
         // Note: Waveform is managed by the internal synth state when instrument='synth' is used
         UnifiedAudioEngine.playSound('C4', 'synth'); 
+        HapticService.heavy();
     }, []);
 
     const handlePressOut = useCallback(() => {
@@ -41,10 +44,12 @@ export default function SynthPad() {
             ...prev,
             [param]: (prev[param] + 25) % 100
         }));
+        HapticService.selection();
     }, []);
 
     return (
-        <LinearGradient colors={['#020617', '#0f172a']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
+        <InstrumentContainer>
+            <LinearGradient colors={['#020617', '#0f172a']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
             <View style={[styles.header, isPhone && { marginBottom: sc(20) }]}>
                 <View>
                     <Text style={styles.brandTitle}>NEURAL SYNTHETICS</Text>
@@ -121,7 +126,8 @@ export default function SynthPad() {
             <View style={[styles.footer, { paddingBottom: SAFE_BOTTOM + sc(10) }]}>
                 <Text style={styles.versionLabel}>V.2.0.4 • ANALOG CORE</Text>
             </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -131,7 +137,7 @@ const styles = StyleSheet.create({
         borderRadius: sc(40),
         margin: sc(5),
         padding: sc(30),
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: 'rgba(255,255,255,0.05)',
         ...createShadow({ color: '#000', radius: sc(25), opacity: 0.6 }),
     },
@@ -161,14 +167,14 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.3)',
         padding: sc(8),
         borderRadius: sc(12),
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: 'rgba(255,255,255,0.05)',
     },
     ledRing: {
         width: sc(12),
         height: sc(12),
         borderRadius: sc(6),
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: '#03dac6',
         justifyContent: 'center',
         alignItems: 'center',
@@ -192,7 +198,7 @@ const styles = StyleSheet.create({
         borderRadius: sc(15),
         padding: sc(4),
         marginBottom: sc(30),
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: 'rgba(255,255,255,0.05)',
     },
     waveformBtn: {
@@ -230,7 +236,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.2)',
         borderRadius: sc(25),
         overflow: 'hidden',
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: 'rgba(98, 0, 238, 0.3)',
     },
     padGradient: {
@@ -270,7 +276,7 @@ const styles = StyleSheet.create({
         padding: sc(15),
         borderRadius: sc(20),
         alignItems: 'center',
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: 'rgba(255,255,255,0.05)',
     },
     dialContainer: {
@@ -284,7 +290,7 @@ const styles = StyleSheet.create({
         width: sc(44),
         height: sc(44),
         borderRadius: sc(22),
-        borderWidth: 2,
+        borderWidth: sc(2),
         borderColor: 'rgba(255,255,255,0.05)',
         justifyContent: 'center',
         alignItems: 'center',
@@ -308,6 +314,6 @@ const styles = StyleSheet.create({
         color: '#1e293b',
         fontSize: normalize(9),
         fontWeight: '900',
-        letterSpacing: 2,
+        letterSpacing: sc(2),
     },
 });

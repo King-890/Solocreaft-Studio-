@@ -4,26 +4,27 @@ import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
 import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
 import GuitarString from './GuitarString';
 import { GUITAR_CHORDS, STRING_COLORS, STRING_THICKNESS } from '../utils/GuitarVoicings';
 
 const CHORDS = ['C', 'G', 'D', 'A', 'E', 'Am', 'Em', 'Dm'];
 
+import InstrumentContainer from './InstrumentContainer';
+
 export default function AcousticGuitar({ instrument = 'guitar' }) {
     const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     
     const [selectedChord, setSelectedChord] = useState('C');
-    const selectedChordRef = useRef('C'); // Ref to keep track of latest chord for PanResponder
+    const selectedChordRef = useRef('C');
     const [activeStrings, setActiveStrings] = useState(new Array(6).fill(false));
     const touchedStrings = useRef(new Set());
-    const timeoutsRef = useRef({}); // Store timeout IDs by index
+    const timeoutsRef = useRef({});
 
-    // Keep selectedChordRef in sync
     useEffect(() => {
         selectedChordRef.current = selectedChord;
     }, [selectedChord]);
 
-    // Cleanup timeouts on unmount
     useEffect(() => {
         return () => {
             Object.values(timeoutsRef.current).forEach(id => clearTimeout(id));
@@ -33,22 +34,22 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
     // Adaptive dimensioning
     const bodyWidth = Math.min(width * 0.6, sc(400));
     const bodyHeight = Math.min(SCREEN_HEIGHT * 0.8, sc(320));
-    const stringHeight = bodyHeight / 6.4; // Proportional string spacing
+    const stringHeight = bodyHeight / 6.4;
 
     const playString = useCallback((index, velocity = 0.5) => {
-        const currentChord = selectedChordRef.current; // Use ref for latest value
+        const currentChord = selectedChordRef.current;
         const notes = GUITAR_CHORDS[currentChord];
         const note = notes[index];
         
         if (note) {
             UnifiedAudioEngine.playSound(note, instrument, 0, velocity);
+            HapticService.light();
             setActiveStrings(prev => {
                 const next = [...prev];
                 next[index] = true;
                 return next;
             });
             
-            // Clear existing timeout for this string if any
             if (timeoutsRef.current[index]) {
                 clearTimeout(timeoutsRef.current[index]);
             }
@@ -62,7 +63,7 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
                 delete timeoutsRef.current[index];
             }, 150);
         }
-    }, [instrument]); // Removed selectedChord dependency as we use ref
+    }, [instrument]);
 
     const processTouch = useCallback((y, velocity = 0.5) => {
         const stringIndex = Math.floor(y / stringHeight);
@@ -94,98 +95,98 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
     const isStackView = isPhone && !isLandscape;
 
     return (
-        <LinearGradient 
-            colors={['#1a0f0a', '#2d1b10', '#0a0a0a']} 
-            style={[styles.container, isStackView && { flexDirection: 'column' }, { paddingTop: SAFE_TOP }]}
-        >
-            {/* Chord Selection Bar */}
-            <View style={[styles.sidebar, isStackView && { width: '100%', height: sc(80), borderRightWidth: 0, borderBottomWidth: 2, borderBottomColor: '#2d1b10' }]}>
-                {!isPhone && <Text style={styles.sidebarHeader}>CHORD BANK</Text>}
-                <View style={[styles.chordGrid, isStackView && { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }]}>
-                    {CHORDS.map((chord) => (
-                        <TouchableOpacity
-                            key={chord}
-                            style={[styles.chordButton, selectedChord === chord && styles.chordButtonActive, isStackView && { width: sc(60), height: sc(32) }]}
-                            onPress={() => setSelectedChord(chord)}
-                            activeOpacity={0.8}
-                        >
-                            <LinearGradient
-                                colors={selectedChord === chord ? ['#fef3c7', '#fbbf24', '#f59e0b'] : ['#451a03', '#2d1b10']}
-                                style={styles.chordGradient}
-                            />
-                            <Text style={[styles.chordText, selectedChord === chord && styles.chordTextActive, isStackView && { fontSize: normalize(12), lineHeight: sc(28) }]}>{chord}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </View>
-
-            <View style={styles.guitarFrame}>
-                {/* 1. MASTER NECK SYSTEM */}
-                {!isPhone && (
-                    <View style={styles.masterNeck}>
-                        <View style={styles.headstock}>
-                            <LinearGradient colors={['#3e2723', '#1a0f0a']} style={styles.headstockMaterial}>
-                                <Text style={styles.brandInlay}>SOLOCRAFT</Text>
-                            </LinearGradient>
-                            <View style={styles.tuningPegs}>
-                                {[1, 2, 3, 4, 5, 6].map(i => <View key={i} style={styles.peg} />)}
-                            </View>
-                        </View>
-                        <LinearGradient colors={['#2d1b10', '#3e2723', '#2d1b10']} style={styles.rosewoodFretboard}>
-                            {[...Array(5)].map((_, i) => <View key={i} style={styles.fretMark} />)}
-                        </LinearGradient>
+        <InstrumentContainer>
+            <LinearGradient 
+                colors={['#1a0f0a', '#2d1b10', '#0a0a0a']} 
+                style={[styles.container, isStackView && { flexDirection: 'column' }, { paddingTop: SAFE_TOP }]}
+            >
+                {/* Chord Selection Bar */}
+                <View style={[styles.sidebar, isStackView && { width: '100%', height: sc(80), borderRightWidth: 0, borderBottomWidth: 2, borderBottomColor: '#2d1b10' }]}>
+                    {!isPhone && <Text style={styles.sidebarHeader}>CHORD BANK</Text>}
+                    <View style={[styles.chordGrid, isStackView && { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }]}>
+                        {CHORDS.map((chord) => (
+                            <TouchableOpacity
+                                key={chord}
+                                style={[styles.chordButton, selectedChord === chord && styles.chordButtonActive, isStackView && { width: sc(60), height: sc(32) }]}
+                                onPress={() => {
+                                    setSelectedChord(chord);
+                                    HapticService.selection();
+                                }}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={selectedChord === chord ? ['#fef3c7', '#fbbf24', '#f59e0b'] : ['#451a03', '#2d1b10']}
+                                    style={styles.chordGradient}
+                                />
+                                <Text style={[styles.chordText, selectedChord === chord && styles.chordTextActive, isStackView && { fontSize: normalize(12), lineHeight: sc(28) }]}>{chord}</Text>
+                            </TouchableOpacity>
+                        ))}
                     </View>
-                )}
+                </View>
 
-                {/* 2. PREMIUM RESONATOR BODY */}
-                <View style={styles.bodyWrapper}>
-                    <LinearGradient 
-                        colors={['#8d6e63', '#a1887f', '#d7ccc8', '#a1887f', '#8d6e63']} 
-                        style={[styles.spruceBody, { width: bodyWidth, height: bodyHeight, borderRadius: bodyHeight / 2 }]} 
-                    >
-                        <View style={styles.spruceGrain} />
-                        <View style={styles.glossShine} />
-
-                        {/* Artisan Rosette & Soundhole */}
-                        <View style={styles.soundHoleCenter}>
-                            <View style={[styles.rosette, { width: bodyHeight * 0.6, height: bodyHeight * 0.6, borderRadius: (bodyHeight * 0.6) / 2 }]}>
-                                <View style={[styles.rosettePattern, { width: bodyHeight * 0.55, height: bodyHeight * 0.55, borderRadius: (bodyHeight * 0.55) / 2 }]} />
-                                <View style={[styles.actualHole, { width: bodyHeight * 0.4, height: bodyHeight * 0.4, borderRadius: (bodyHeight * 0.4) / 2 }]}>
-                                    <View style={styles.holeDepth} />
+                <View style={styles.guitarFrame}>
+                    {!isPhone && (
+                        <View style={styles.masterNeck}>
+                            <View style={styles.headstock}>
+                                <LinearGradient colors={['#3e2723', '#1a0f0a']} style={styles.headstockMaterial}>
+                                    <Text style={styles.brandInlay}>SOLOCRAFT</Text>
+                                </LinearGradient>
+                                <View style={styles.tuningPegs}>
+                                    {[1, 2, 3, 4, 5, 6].map(i => <View key={i} style={styles.peg} />)}
                                 </View>
                             </View>
+                            <LinearGradient colors={['#2d1b10', '#3e2723', '#2d1b10']} style={styles.rosewoodFretboard}>
+                                {[...Array(5)].map((_, i) => <View key={i} style={styles.fretMark} />)}
+                            </LinearGradient>
                         </View>
+                    )}
 
-                        {/* Ebony Bridge */}
-                        <View style={[styles.ebonyBridge, { height: bodyHeight * 0.5 }]}>
-                            <View style={styles.bridgePinsRow}>
-                                {[1, 2, 3, 4, 5, 6].map(i => <View key={i} style={styles.ivoryPin} />)}
+                    <View style={styles.bodyWrapper}>
+                        <LinearGradient 
+                            colors={['#8d6e63', '#a1887f', '#d7ccc8', '#a1887f', '#8d6e63']} 
+                            style={[styles.spruceBody, { width: bodyWidth, height: bodyHeight, borderRadius: bodyHeight / 2 }]} 
+                        >
+                            <View style={styles.spruceGrain} />
+                            <View style={styles.glossShine} />
+
+                            <View style={styles.soundHoleCenter}>
+                                <View style={[styles.rosette, { width: bodyHeight * 0.6, height: bodyHeight * 0.6, borderRadius: (bodyHeight * 0.6) / 2 }]}>
+                                    <View style={[styles.rosettePattern, { width: bodyHeight * 0.55, height: bodyHeight * 0.55, borderRadius: (bodyHeight * 0.55) / 2 }]} />
+                                    <View style={[styles.actualHole, { width: bodyHeight * 0.4, height: bodyHeight * 0.4, borderRadius: (bodyHeight * 0.4) / 2 }]}>
+                                        <View style={styles.holeDepth} />
+                                    </View>
+                                </View>
                             </View>
-                        </View>
-                    </LinearGradient>
+
+                            <View style={[styles.ebonyBridge, { height: bodyHeight * 0.5 }]}>
+                                <View style={styles.bridgePinsRow}>
+                                    {[1, 2, 3, 4, 5, 6].map(i => <View key={i} style={styles.ivoryPin} />)}
+                                </View>
+                            </View>
+                        </LinearGradient>
+                    </View>
+
+                    <View 
+                        style={[styles.stringsOverlay, { paddingVertical: bodyHeight * 0.125, paddingLeft: width * 0.05 }]} 
+                        {...panResponder.panHandlers}
+                    >
+                        {[0, 1, 2, 3, 4, 5].map((i) => (
+                            <GuitarString
+                                key={i}
+                                thickness={STRING_THICKNESS[i]}
+                                color={STRING_COLORS[i]}
+                                active={activeStrings[i]}
+                                vibrationScale={2.5}
+                            />
+                        ))}
+                    </View>
                 </View>
 
-                {/* 3. SYNCHRONIZED GUITAR STRINGS */}
-                <View 
-                    style={[styles.stringsOverlay, { paddingVertical: bodyHeight * 0.125, paddingLeft: width * 0.05 }]} 
-                    {...panResponder.panHandlers}
-                >
-                    {[0, 1, 2, 3, 4, 5].map((i) => (
-                        <GuitarString
-                            key={i}
-                            thickness={STRING_THICKNESS[i]}
-                            color={STRING_COLORS[i]}
-                            active={activeStrings[i]}
-                            vibrationScale={2.5}
-                        />
-                    ))}
+                <View style={[styles.footer, { bottom: SAFE_BOTTOM + sc(15) }]}>
+                    <Text style={styles.footerLabel}>SWIPE THE STRINGS • CONCERT SPRUCE EDITION</Text>
                 </View>
-            </View>
-
-            <View style={[styles.footer, { bottom: SAFE_BOTTOM + sc(15) }]}>
-                <Text style={styles.footerLabel}>SWIPE THE STRINGS • CONCERT SPRUCE EDITION</Text>
-            </View>
-        </LinearGradient>
+            </LinearGradient>
+        </InstrumentContainer>
     );
 }
 
@@ -193,9 +194,9 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         flex: 1,
-        borderRadius: 40,
-        margin: 5,
-        ...createShadow({ color: '#000', radius: 40, opacity: 0.8 }),
+        borderRadius: sc(40),
+        margin: sc(5),
+        ...createShadow({ color: '#000', radius: sc(40), opacity: 0.8 }),
     },
     sidebar: {
         width: sc(120),
@@ -218,14 +219,14 @@ const styles = StyleSheet.create({
     },
     chordButton: {
         height: sc(38),
-        borderRadius: 10,
+        borderRadius: sc(10),
         overflow: 'hidden',
         borderWidth: 1.5,
         borderColor: 'rgba(255,255,255,0.05)',
     },
     chordButtonActive: {
         borderColor: '#fbbf24',
-        ...createShadow({ color: '#fbbf24', radius: 8 }),
+        ...createShadow({ color: '#fbbf24', radius: sc(8) }),
     },
     chordGradient: { ...StyleSheet.absoluteFillObject },
     chordText: {
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
     headstockMaterial: {
         width: sc(45),
         height: '90%',
-        borderRadius: 10,
+        borderRadius: sc(10),
         borderWidth: 2,
         borderColor: '#1a0f0a',
         justifyContent: 'center',
@@ -277,13 +278,13 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     peg: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
+        width: sc(10),
+        height: sc(10),
+        borderRadius: sc(5),
         backgroundColor: '#9ca3af',
         borderWidth: 1.5,
         borderColor: '#4b5563',
-        ...createShadow({ color: '#000', radius: 4 }),
+        ...createShadow({ color: '#000', radius: sc(4) }),
     },
     rosewoodFretboard: {
         flex: 1,
@@ -293,7 +294,7 @@ const styles = StyleSheet.create({
     },
     fretMark: {
         width: '100%',
-        height: 2,
+        height: sc(2),
         backgroundColor: 'rgba(255,255,255,0.1)',
     },
     bodyWrapper: {
@@ -308,7 +309,7 @@ const styles = StyleSheet.create({
         borderColor: '#3e2723',
         overflow: 'hidden',
         position: 'relative',
-        ...createShadow({ color: '#000', radius: 30, offsetY: 15 }),
+        ...createShadow({ color: '#000', radius: sc(30), offsetY: sc(15) }),
     },
     spruceGrain: {
         ...StyleSheet.absoluteFillObject,
@@ -328,15 +329,15 @@ const styles = StyleSheet.create({
         paddingLeft: sc(50),
     },
     rosette: {
-        borderWidth: 10,
+        borderWidth: sc(10),
         borderColor: '#3e2723',
         justifyContent: 'center',
         alignItems: 'center',
-        ...createShadow({ color: '#000', radius: 20 }),
+        ...createShadow({ color: '#000', radius: sc(20) }),
     },
     rosettePattern: {
         position: 'absolute',
-        borderWidth: 2,
+        borderWidth: sc(2),
         borderColor: '#fbbf24',
         opacity: 0.3,
     },
@@ -346,7 +347,7 @@ const styles = StyleSheet.create({
     },
     holeDepth: {
         ...StyleSheet.absoluteFillObject,
-        borderWidth: 15,
+        borderWidth: sc(15),
         borderColor: 'rgba(0,0,0,0.5)',
     },
     ebonyBridge: {
@@ -354,7 +355,7 @@ const styles = StyleSheet.create({
         right: sc(30),
         width: sc(36),
         backgroundColor: '#1a0f0a',
-        borderRadius: 10,
+        borderRadius: sc(10),
         borderWidth: 2,
         borderColor: '#000',
         justifyContent: 'center',
@@ -365,11 +366,11 @@ const styles = StyleSheet.create({
         justifyContent: 'space-around',
     },
     ivoryPin: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
+        width: sc(6),
+        height: sc(6),
+        borderRadius: sc(3),
         backgroundColor: '#fff',
-        ...createShadow({ color: '#000', radius: 2 }),
+        ...createShadow({ color: '#000', radius: sc(2) }),
     },
     stringsOverlay: {
         ...StyleSheet.absoluteFillObject,

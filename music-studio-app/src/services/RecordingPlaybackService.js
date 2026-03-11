@@ -1,8 +1,5 @@
-// Simple recording playback service that handles idb:// URIs
-// Uses HTML5 Audio on web, expo-audio on native
 import { Platform } from 'react-native';
-// import * as Audio from 'expo-audio'; // Standardizing on expo-av for stability
-import { Audio } from 'expo-av';
+import * as Audio from 'expo-audio';
 import { initDB, STORE_NAME } from '../utils/webStorage';
 
 class RecordingPlaybackService {
@@ -93,26 +90,11 @@ class RecordingPlaybackService {
                 }
             });
         } else {
-            // Native: Use expo-av
+            // Native: Use expo-audio
             try {
-                const { sound } = await Audio.Sound.createAsync(
-                    { uri: playableUri },
-                    { shouldPlay: true }
-                );
+                const sound = Audio.createAudioPlayer(playableUri);
+                sound.play();
                 this.currentPlayer = sound;
-
-                sound.setOnPlaybackStatusUpdate(async (status) => {
-                    if (status.didJustFinish) {
-                        try {
-                            sound.setOnPlaybackStatusUpdate(null);
-                            await sound.stopAsync();
-                            await sound.unloadAsync();
-                        } catch (e) {}
-                        if (this.currentPlayer === sound) {
-                            this.currentPlayer = null;
-                        }
-                    }
-                });
             } catch (error) {
                 console.error('Native audio playback error:', error);
                 throw error;
@@ -155,14 +137,12 @@ class RecordingPlaybackService {
                 this.currentPlayer.pause();
                 this.currentPlayer.currentTime = 0;
             } else {
-                this.currentPlayer.setOnPlaybackStatusUpdate(null);
                 try {
-                    await this.currentPlayer.stopAsync();
-                    await this.currentPlayer.setPositionAsync(0);
+                    this.currentPlayer.stop();
+                    this.currentPlayer.seekTo(0);
                 } catch (e) {
                     console.log('Error during native stop/rewind:', e);
                 }
-                await this.currentPlayer.unloadAsync();
             }
         } catch (error) {
             console.log('Error stopping sound:', error);
@@ -180,8 +160,7 @@ class RecordingPlaybackService {
         }
         
         try {
-            const status = await this.currentPlayer.getStatusAsync();
-            return status.isPlaying;
+            return this.currentPlayer.playing;
         } catch (e) {
             return false;
         }

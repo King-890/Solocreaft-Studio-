@@ -3,12 +3,16 @@ import { View, TouchableOpacity, Text, StyleSheet, Animated, Platform, Dimension
 import { LinearGradient } from 'expo-linear-gradient';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
-import { sc, normalize, SCREEN_WIDTH } from '../utils/responsive';
+import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import HapticService from '../services/HapticService';
+
+import InstrumentContainer from './InstrumentContainer';
 
 const STRINGS = ['G', 'D', 'G', 'B', 'D_high'];
 const NOTE_MAP = ['G3', 'D3', 'G2', 'B2', 'D4'];
 
 export default function Banjo() {
+    const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [activeStrings, setActiveStrings] = useState([false, false, false, false, false]);
     const stringAnims = useRef(STRINGS.map(() => new Animated.Value(0))).current;
     const timeoutRefs = useRef({});
@@ -24,6 +28,7 @@ export default function Banjo() {
         UnifiedAudioEngine.activateAudio();
         const note = NOTE_MAP[index];
         UnifiedAudioEngine.playSound(note, 'banjo', 0, 0.8);
+        HapticService.light();
         
         setActiveStrings(prev => {
             const next = [...prev];
@@ -51,14 +56,15 @@ export default function Banjo() {
     }, []);
 
     return (
-        <LinearGradient
-            colors={['#1e1b4b', '#312e81', '#1a1842']}
-            style={styles.container}
-        >
-            <View style={styles.header}>
-                <Text style={styles.title}>BLUEGRASS RESONANCE</Text>
-                <Text style={styles.subtitle}>PREMIUM CONCERT BANJO • CHROME & PARCHMENT</Text>
-            </View>
+        <InstrumentContainer>
+            <LinearGradient
+                colors={['#1e1b4b', '#312e81', '#1a1842']}
+                style={[styles.container, { paddingTop: SAFE_TOP }]}
+            >
+                <View style={styles.header}>
+                    <Text style={styles.title}>BLUEGRASS RESONANCE</Text>
+                    <Text style={styles.subtitle}>PREMIUM CONCERT BANJO • CHROME & PARCHMENT</Text>
+                </View>
 
             <View style={styles.banjoFrame}>
                 {/* 1. MASTER NECK & HEADSTOCK SYSTEM */}
@@ -71,7 +77,7 @@ export default function Banjo() {
                         {/* Tuning Pegs */}
                         <View style={styles.tuningPegs}>
                             {[0, 1, 2, 3, 4].map(idx => (
-                                <View key={idx} style={[styles.pegContainer, { top: 10 + idx * 15, left: idx % 2 === 0 ? -12 : 52 }]}>
+                                <View key={idx} style={[styles.pegContainer, { top: sc(10 + idx * 15), left: idx % 2 === 0 ? sc(-12) : sc(52) }]}>
                                     <View style={styles.pegWasher} />
                                     <View style={styles.pegHandle} />
                                 </View>
@@ -84,7 +90,7 @@ export default function Banjo() {
                         <View style={styles.neckShine} />
                         {/* Fret Markers */}
                         <View style={styles.fretMarkers}>
-                            {[3, 5, 7, 10, 12].map(f => <View key={f} style={[styles.dotMarker, { marginTop: f * 20 }]} />)}
+                            {[3, 5, 7, 10, 12].map(f => <View key={f} style={[styles.dotMarker, { marginTop: sc(f * 20) }]} />)}
                         </View>
                     </LinearGradient>
                 </View>
@@ -116,7 +122,7 @@ export default function Banjo() {
                                     key={i} 
                                     style={[
                                         styles.hook, 
-                                        { transform: [{ rotate: `${i * 22.5}deg` }, { translateY: -155 }] }
+                                        { transform: [{ rotate: `${i * 22.5}deg` }, { translateY: sc(-155) }] }
                                     ]} 
                                 >
                                     <LinearGradient colors={['#f3f4f6', '#9ca3af']} style={styles.hookInner} />
@@ -136,7 +142,7 @@ export default function Banjo() {
                                             transform: [{ translateX: stringAnims[i] }],
                                             backgroundColor: activeStrings[i] ? '#fff' : '#94a3b8',
                                             opacity: activeStrings[i] ? 1 : 0.6,
-                                            width: 1.2 + (i * 0.3)
+                                            width: sc(1.2 + (i * 0.3))
                                         }
                                     ]}
                                 >
@@ -168,7 +174,8 @@ export default function Banjo() {
                 </View>
             </View>
         </LinearGradient>
-    );
+    </InstrumentContainer>
+);
 }
 
 const styles = StyleSheet.create({
@@ -222,7 +229,7 @@ const styles = StyleSheet.create({
     headstockWood: {
         flex: 1,
         borderRadius: sc(8),
-        borderWidth: 1.5,
+        borderWidth: sc(1.5),
         borderColor: '#0a0a0a',
         justifyContent: 'center',
         alignItems: 'center',
@@ -247,7 +254,7 @@ const styles = StyleSheet.create({
         height: sc(6),
         borderRadius: sc(3),
         backgroundColor: '#9ca3af',
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: '#6b7280',
     },
     pegHandle: {
@@ -255,16 +262,16 @@ const styles = StyleSheet.create({
         height: sc(4),
         borderRadius: sc(2),
         backgroundColor: '#f3f4f6',
-        marginTop: -1,
-        marginLeft: -3,
-        borderWidth: 0.5,
+        marginTop: sc(-1),
+        marginLeft: sc(-3),
+        borderWidth: sc(0.5),
         borderColor: '#9ca3af',
     },
     neckLong: {
         width: sc(45),
         flex: 1,
-        borderLeftWidth: 1.5,
-        borderRightWidth: 1.5,
+        borderLeftWidth: sc(1.5),
+        borderRightWidth: sc(1.5),
         borderColor: '#0a0a0a',
         overflow: 'hidden',
     },
@@ -297,7 +304,7 @@ const styles = StyleSheet.create({
         borderRadius: sc(160),
         backgroundColor: '#0a0a0a',
         padding: sc(4),
-        ...createShadow({ color: '#000', radius: sc(40), offsetY: 20, opacity: 0.9 }),
+        ...createShadow({ color: '#000', radius: sc(40), offsetY: sc(20), opacity: 0.9 }),
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -317,7 +324,7 @@ const styles = StyleSheet.create({
         position: 'relative',
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
+        borderWidth: sc(1),
         borderColor: 'rgba(0,0,0,0.1)',
     },
     skinGrain: {
@@ -341,9 +348,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     stringLine: {
-        borderRadius: 1,
+        borderRadius: sc(1),
         height: '100%',
-        ...createShadow({ color: '#000', radius: 2, opacity: 0.5 }),
+        ...createShadow({ color: '#000', radius: sc(2), opacity: 0.5 }),
     },
     pluckZone: {
         position: 'absolute',
@@ -356,16 +363,16 @@ const styles = StyleSheet.create({
         width: sc(150),
         height: sc(14),
         backgroundColor: '#171717',
-        borderRadius: 2,
-        ...createShadow({ color: '#000', radius: sc(10), offsetY: 5, opacity: 0.7 }),
+        borderRadius: sc(2),
+        ...createShadow({ color: '#000', radius: sc(10), offsetY: sc(5), opacity: 0.7 }),
         justifyContent: 'center',
         alignItems: 'center',
     },
     bridgeDetail: {
         width: '94%',
-        height: 2,
+        height: sc(2),
         backgroundColor: 'rgba(255,255,255,0.08)',
-        borderRadius: 1,
+        borderRadius: sc(1),
     },
     tensionHooks: {
         ...StyleSheet.absoluteFillObject,
@@ -379,8 +386,8 @@ const styles = StyleSheet.create({
     },
     hookInner: {
         flex: 1,
-        borderRadius: 2.5,
-        borderWidth: 1,
+        borderRadius: sc(2.5),
+        borderWidth: sc(1),
         borderColor: 'rgba(0,0,0,0.1)',
     },
     footer: {
@@ -394,7 +401,7 @@ const styles = StyleSheet.create({
     },
     indicatorLine: {
         width: '60%',
-        height: 2,
+        height: sc(2),
         marginBottom: sc(10),
     },
     instruction: {

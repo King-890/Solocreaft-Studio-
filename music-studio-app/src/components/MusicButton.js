@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { COLORS, SHADOWS, SPACING } from '../constants/UIConfig';
+import HapticService from '../services/HapticService';
 
 /**
  * Beautiful Music-Themed Button Component
@@ -14,10 +15,15 @@ export default function MusicButton({
     color = COLORS.primary,
     style
 }) {
+    const handlePress = () => {
+        HapticService.selection();
+        if (onPress) onPress();
+    };
+
     return (
         <TouchableOpacity
             style={[styles.button, style]}
-            onPress={onPress}
+            onPress={handlePress}
             activeOpacity={0.8}
         >
             {/* Outer glow layer */}

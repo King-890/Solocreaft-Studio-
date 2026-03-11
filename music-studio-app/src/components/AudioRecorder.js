@@ -64,14 +64,13 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
             }
 
             await Audio.setAudioModeAsync({
-                allowsRecordingIOS: true,
-                playsInSilentModeIOS: true,
-                shouldDuckAndroid: true,
-                playThroughEarpieceAndroid: false,
+                allowsRecording: true,
+                playsInSilentMode: true,
+                interruptionMode: 'duckOthers',
+                shouldRouteThroughEarpiece: false,
                 staysActiveInBackground: true,
             });
 
-            console.log('Starting count-in...');
             setIsCountingIn(true);
             setCountInRemaining(4);
 
@@ -98,7 +97,6 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
                             }
                         }, 1000);
                     }
-                    console.log('Recording started after count-in');
                 } catch (recError) {
                     console.error('Recording start failed:', recError);
                     if (isMountedRef.current) {
@@ -124,10 +122,10 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
             };
 
             await Audio.setAudioModeAsync({
-                allowsRecordingIOS: true,
-                playsInSilentModeIOS: true,
-                shouldDuckAndroid: true,
-                playThroughEarpieceAndroid: false,
+                allowsRecording: true,
+                playsInSilentMode: true,
+                interruptionMode: 'duckOthers',
+                shouldRouteThroughEarpiece: false,
                 staysActiveInBackground: true,
             });
 
@@ -172,15 +170,12 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
             setUploading(true);
             clearInterval(durationIntervalRef.current);
 
-            console.log('Stopping recording...');
             await recorder.stop();
             const uri = recorder.uri;
 
             if (!uri) {
                 throw new Error('No URI returned from recording');
             }
-
-            console.log('Recording stopped. URI:', uri);
 
             // Save locally
             const recordingId = `recording_${Date.now()}`;
@@ -193,8 +188,7 @@ export default function AudioRecorder({ onRecordingSaved, tracks }) {
             // Add to library with source metadata
             try {
                 const savedRecording = await addRecording(savedUri, duration, 'voice', null);
-                console.log('✅ Recording saved:', savedRecording.name);
-
+                
                 // Add to timeline if vocals track exists
                 const vocalsTrack = tracks?.find(t => t.name === 'Lead Vocals' || t.name === 'Vocals');
                 if (vocalsTrack && duration > 0) {
@@ -404,4 +398,3 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
     },
 });
-

@@ -319,8 +319,10 @@ export default function InstrumentRoomScreen() {
             const permission = await Audio.requestPermissionsAsync();
             if (permission.status === 'granted') {
                 await Audio.setAudioModeAsync({
-                    allowsRecordingIOS: true,
-                    playsInSilentModeIOS: true,
+                    allowsRecording: true,
+                    playsInSilentMode: true,
+                    interruptionMode: 'mixWithOthers',
+                    interruptionModeAndroid: 'mixWithOthers',
                 });
 
                 console.log('Starting recording..');
