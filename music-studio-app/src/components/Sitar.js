@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
         width: sc(110),
         height: sc(8),
         borderRadius: sc(4),
-        borderWidth: sc(1.5),
+        borderWidth: 1,
         borderColor: '#f3f4f6',
     },
     pardaShadow: {
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
         width: sc(70),
         height: sc(70),
         borderRadius: sc(35),
-        borderWidth: sc(2),
+        borderWidth: 2,
         borderColor: 'rgba(255,255,200,0.2)',
         justifyContent: 'center',
         alignItems: 'center',
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
         height: sc(20),
         backgroundColor: 'rgba(255,255,240,0.1)',
         transform: [{ rotate: '45deg' }],
-        borderWidth: sc(1),
+        borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.15)',
     },
     tabkhiBridge: {
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
         width: sc(90),
         height: sc(22),
         borderRadius: sc(6),
-        borderWidth: sc(2),
+        borderWidth: 2,
         borderColor: '#f1f5f9',
     },
     bridgeShadow: {

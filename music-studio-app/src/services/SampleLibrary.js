@@ -5,6 +5,7 @@
  */
 
 const BASE_URL = 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM';
+const DEBUG = __DEV__ || process.env.NODE_ENV === 'development';
 
 export const INSTRUMENTS = {
   PIANO: 'acoustic_grand_piano',
@@ -120,7 +121,9 @@ export const getSampleUrl = (instrumentKey, noteName, velocity = 0.8) => {
   const finalUrl = `${BASE_URL}/${safeInstrument}-mp3/${finalNote}.mp3`;
   
   // Debug Logging for Resolution
-  console.log(`🔍 [SampleLibrary] Resolved: ${instrumentKey} -> ${finalNote} @ ${finalUrl}`);
+  if (DEBUG) {
+    console.log(`🔍 [SampleLibrary] Resolved: ${instrumentKey} -> ${finalNote} @ ${finalUrl}`);
+  }
   
   return finalUrl;
 };

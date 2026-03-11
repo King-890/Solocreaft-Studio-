@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { saveFileToLocal, getFileFromLocal } from '../utils/webStorage';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
+import HapticService from '../services/HapticService';
 
 const SettingsContext = createContext();
 
@@ -17,6 +18,7 @@ export const useSettings = () => {
 export const SettingsProvider = ({ children }) => {
     const [ambienceEnabled, setAmbienceEnabled] = useState(true);
     const [animationsEnabled, setAnimationsEnabled] = useState(true);
+    const [hapticsEnabled, setHapticsEnabled] = useState(true);
     const [currentTheme, setCurrentTheme] = useState('default');
     const [customVideoUri, setCustomVideoUri] = useState(null);
     const [instrumentSettings, setInstrumentSettings] = useState({});
@@ -30,6 +32,7 @@ export const SettingsProvider = ({ children }) => {
         try {
             const audio = await AsyncStorage.getItem('audioEnabled');
             const animations = await AsyncStorage.getItem('animationsEnabled');
+            const haptics = await AsyncStorage.getItem('hapticsEnabled');
             const theme = await AsyncStorage.getItem('currentTheme');
             let videoUri = await AsyncStorage.getItem('customVideoUri');
             const instruments = await AsyncStorage.getItem('instrumentSettings');
@@ -48,6 +51,11 @@ export const SettingsProvider = ({ children }) => {
                 UnifiedAudioEngine.setMasterMute(!isEnabled);
             }
             if (animations !== null) setAnimationsEnabled(JSON.parse(animations));
+            if (haptics !== null) {
+                const isEnabled = JSON.parse(haptics);
+                setHapticsEnabled(isEnabled);
+                HapticService.setHapticsEnabled(isEnabled);
+            }
             if (theme !== null) setCurrentTheme(theme);
             if (videoUri !== null) setCustomVideoUri(videoUri);
             if (instruments !== null) setInstrumentSettings(JSON.parse(instruments));
@@ -76,6 +84,16 @@ export const SettingsProvider = ({ children }) => {
             await AsyncStorage.setItem('animationsEnabled', JSON.stringify(value));
         } catch (error) {
             console.log('Error saving animations setting:', error);
+        }
+    };
+    
+    const toggleHaptics = async (value) => {
+        setHapticsEnabled(value);
+        HapticService.setHapticsEnabled(value);
+        try {
+            await AsyncStorage.setItem('hapticsEnabled', JSON.stringify(value));
+        } catch (error) {
+            console.log('Error saving haptics setting:', error);
         }
     };
 
@@ -132,9 +150,11 @@ export const SettingsProvider = ({ children }) => {
             value={{
                 ambienceEnabled,
                 animationsEnabled,
+                hapticsEnabled,
                 currentTheme,
                 toggleAmbience,
                 toggleAnimations,
+                toggleHaptics,
                 setTheme,
                 stopAllAudio,
                 customVideoUri,

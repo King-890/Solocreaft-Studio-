@@ -16,7 +16,11 @@ export default function MusicButton({
     style
 }) {
     const handlePress = () => {
-        HapticService.selection();
+        try {
+            HapticService.selection();
+        } catch (e) {
+            // Silently swallow haptic errors to prevent blocking the main action
+        }
         if (onPress) onPress();
     };
 

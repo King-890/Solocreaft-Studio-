@@ -22,7 +22,7 @@ export default function NowPlayingMiniPlayer({
             style={[styles.container, { backgroundColor: theme.secondary }, theme.shadow]}
             onPress={() => {
                 HapticService.selection();
-                onPress();
+                if (onPress) onPress();
             }}
             activeOpacity={0.9}
         >
@@ -58,7 +58,7 @@ export default function NowPlayingMiniPlayer({
                     style={styles.playButton}
                     onPress={() => {
                         HapticService.selection();
-                        onPlayPause();
+                        if (onPlayPause) onPlayPause();
                     }}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >

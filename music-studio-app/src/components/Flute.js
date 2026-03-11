@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     },
     keyCenter: { width: sc(30), height: sc(30), borderRadius: sc(15), backgroundColor: 'rgba(255,255,255,0.2)', borderWidth: sc(1), borderColor: 'rgba(0,0,0,0.1)' },
     resonantGlow: { position: 'absolute', width: sc(60), height: sc(60), borderRadius: sc(30), backgroundColor: 'rgba(56,189,248,0.1)', zIndex: -1 },
-    keyText: { color: '#64748b', fontSize: normalize(10), fontWeight: '900', letterSpacing: sc(1) },
+    keyText: { color: '#64748b', fontSize: normalize(10), fontWeight: '900', letterSpacing: 2 },
     headJoint: { position: 'absolute', left: sc(20), top: sc(-20) },
     lipPlate: {
         width: sc(70),

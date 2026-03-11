@@ -113,7 +113,6 @@ const InstrumentSelector = React.memo(({ instruments, activeInstrument, onSelect
                         activeInstrument === inst.id && styles.activeSelector
                     ]}
                     onPress={() => {
-                        HapticService.selection();
                         onSelect(inst.id);
                     }}
                 >

@@ -314,6 +314,6 @@ const styles = StyleSheet.create({
         color: '#1e293b',
         fontSize: normalize(9),
         fontWeight: '900',
-        letterSpacing: sc(2),
+        letterSpacing: 2,
     },
 });

@@ -86,7 +86,7 @@ export default function BandRoomScreen() {
                     <TouchableOpacity 
                         style={styles.libraryBtn}
                         onPress={() => {
-                            HapticService.selection();
+                            try { HapticService.selection(); } catch (e) {}
                             navigation.navigate('InstrumentsLibrary');
                         }}
                     >
@@ -138,7 +138,13 @@ export default function BandRoomScreen() {
                     <Text style={styles.tipText}>
                         Fine-tune your groove by layering different instruments. The Grand Piano and Acoustic Guitar now support velocity sensitivity—swipe or tap harder for more presence!
                     </Text>
-                    <TouchableOpacity style={styles.exploreBtn} onPress={() => navigation.navigate('InstrumentsLibrary')}>
+                    <TouchableOpacity 
+                        style={styles.exploreBtn} 
+                        onPress={() => {
+                            try { HapticService.selection(); } catch (e) {}
+                            navigation.navigate('InstrumentsLibrary');
+                        }}
+                    >
                         <Text style={styles.exploreBtnText}>Explore Instruments</Text>
                     </TouchableOpacity>
                 </LinearGradient>

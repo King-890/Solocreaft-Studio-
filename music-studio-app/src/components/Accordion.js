@@ -13,7 +13,7 @@ const LEFT_CHORDS = ['C', 'G', 'D', 'A', 'F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'B',
 import InstrumentContainer from './InstrumentContainer';
 
 export default function Accordion() {
-    const { isPhone, SCREEN_HEIGHT, SCREEN_WIDTH, sc, normalize, contain, isLandscape, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
+    const { isPhone, SCREEN_HEIGHT, SCREEN_WIDTH, contain, isLandscape, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     const [activeRight, setActiveRight] = useState({});
     const [activeLeft, setActiveLeft] = useState({});
     const bellowsScale = useRef(new Animated.Value(1)).current;

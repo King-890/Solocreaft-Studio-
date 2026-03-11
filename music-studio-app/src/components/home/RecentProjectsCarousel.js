@@ -35,7 +35,9 @@ export default function RecentProjectsCarousel({
                     <ProjectCard
                         key={project.id || index}
                         project={project}
-                        onPress={() => onProjectPress(project)}
+                        onPress={() => {
+                            if (typeof onProjectPress === 'function') onProjectPress(project);
+                        }}
                         theme={theme}
                     />
                 ))}
@@ -49,8 +51,12 @@ function ProjectCard({ project, onPress, theme }) {
         <TouchableOpacity
             style={[styles.card, { backgroundColor: theme.secondary }, theme.shadowSmall]}
             onPress={() => {
-                HapticService.selection();
-                onPress();
+                try {
+                    HapticService.selection();
+                } catch (e) {
+                    // Ignore haptic failures
+                }
+                if (typeof onPress === 'function') onPress();
             }}
             activeOpacity={0.8}
         >

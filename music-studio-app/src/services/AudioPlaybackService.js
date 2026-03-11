@@ -192,10 +192,15 @@ class AudioPlaybackService {
             const Audio = require('expo-audio');
 
             if (this.nativePlayers.has(clip.id)) {
+                const oldPlayer = this.nativePlayers.get(clip.id);
                 try {
-                    const oldPlayer = this.nativePlayers.get(clip.id);
                     oldPlayer.stop();
-                } catch (e) {}
+                    if (typeof oldPlayer.release === 'function') {
+                        oldPlayer.release();
+                    }
+                } catch (e) {
+                    console.error('Error releasing native player:', e);
+                }
                 this.nativePlayers.delete(clip.id);
                 this.nativePlayerTrackIds.delete(clip.id);
             }
@@ -210,8 +215,8 @@ class AudioPlaybackService {
             const currentPlaybackTime = startOffset;
 
             if (currentPlaybackTime >= clipStartTime) {
-                const offsetIntoClip = currentPlaybackTime - clipStartTime;
-                player.seekTo(offsetIntoClip);
+                const offsetIntoClip = (currentPlaybackTime - clipStartTime) / 1000;
+                await player.seekTo(offsetIntoClip);
                 player.play();
             } else {
                 const delay = clipStartTime - currentPlaybackTime;
@@ -254,7 +259,12 @@ class AudioPlaybackService {
             this.nativePlayers.forEach(player => {
                 try {
                     player.stop();
-                } catch (e) { }
+                    if (typeof player.release === 'function') {
+                        player.release();
+                    }
+                } catch (e) {
+                    console.error('Error stopping/releasing native player:', e);
+                }
             });
             this.nativePlayers.clear();
             this.nativePlayerTrackIds.clear();

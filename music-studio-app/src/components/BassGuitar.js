@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
         height: sc(12),
         backgroundColor: '#cbd5e1',
         borderRadius: sc(3),
-        borderWidth: sc(1),
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: '#f1f5f9',
     },
     stringsOverlay: {

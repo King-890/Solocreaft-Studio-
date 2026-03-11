@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, StatusBar as RNStatusBar, TouchableOpacity, Platform, Alert, TextInput, Image, Animated } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Alert, TextInput, Image, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -13,7 +14,13 @@ import HapticService from '../services/HapticService';
 
 export default function ProfileScreen() {
     const { projects = [], tracks = [], clips = [], clearAllData } = useProject() || {};
-    const { ambienceEnabled, toggleAmbience, stopAllAudio } = useSettings();
+    const { 
+        ambienceEnabled, 
+        toggleAmbience, 
+        hapticsEnabled, 
+        toggleHaptics, 
+        stopAllAudio 
+    } = useSettings();
 
     // Calculate stats
     const projectCount = projects.length || 0;
@@ -292,6 +299,26 @@ export default function ProfileScreen() {
                                 }}
                             >
                                 <View style={[styles.toggleHandle, ambienceEnabled ? styles.handleOn : styles.handleOff]} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.settingRow}>
+                            <View style={styles.settingInfo}>
+                                <Text style={styles.settingLabel}>Haptic Feedback</Text>
+                                <Text style={styles.settingSublabel}>Enable vibrations for button presses and actions</Text>
+                            </View>
+                            <TouchableOpacity 
+                                style={[styles.toggleBase, hapticsEnabled ? styles.toggleOn : styles.toggleOff]}
+                                onPress={() => {
+                                    const nextState = !hapticsEnabled;
+                                    toggleHaptics(nextState);
+                                    if (nextState) {
+                                        // Trigger a vibration immediately to confirm it's now back on
+                                        HapticService.selection();
+                                    }
+                                }}
+                            >
+                                <View style={[styles.toggleHandle, hapticsEnabled ? styles.handleOn : styles.handleOff]} />
                             </TouchableOpacity>
                         </View>
 
