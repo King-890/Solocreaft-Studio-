@@ -20,6 +20,7 @@ class NativeAudioEngine {
         // Track playing oscillators for stopping
         this.playingNodes = new Map();
         this.playerPool = new Map();
+        this.drumPlayerPool = new Map(); // Pool for transient drum sounds
     }
 
     async init() {
@@ -186,13 +187,55 @@ class NativeAudioEngine {
         const asset = getLocalPercussionAsset(instrument, id);
         if (!asset) return;
         
+        const assetId = typeof asset === 'number' ? asset : (asset.uri || JSON.stringify(asset));
+        const poolKey = `${instrument}-${id}-${assetId}`;
+        
         try {
-            const player = Audio.createAudioPlayer(asset);
+            // 1. Try to find an idle player in the pool
+            let player = this.drumPlayerPool.get(poolKey);
+            
+            if (!player) {
+                // Check pool size limit (prevent resource exhaustion)
+                if (this.drumPlayerPool.size > 24) {
+                    // Dispose of the oldest/unused player if needed, but for drums we usually key by sound
+                    // Just create and manage if not too many unique sounds
+                }
+                
+                player = Audio.createAudioPlayer(asset);
+                player.isBusy = false;
+                this.drumPlayerPool.set(poolKey, player);
+            }
+
+            // 2. Setup and Play
             player.volume = volume * this.masterVolume;
+            
+            // Re-trigger playback if already initialized
+            if (player.isBusy) {
+                player.stop();
+                player.seekTo(0);
+            }
+
+            player.isBusy = true;
+            
+            // 3. Listen for completion to mark as idle or release if needed
+            // Note: subscribing every time might be heavy if not removed, 
+            // but expo-audio subscriptions are manageable.
+            const subscription = player.addListener('statusChange', (status) => {
+                if (status.status === 'finished' || status.status === 'error') {
+                    player.isBusy = false;
+                    subscription.remove();
+                }
+            });
+
             player.play();
-            // In expo-audio, we don't necessarily need to unload immediately for fire-and-forget
         } catch (e) {
-            console.warn('⚠️ Native drum playback failed', e.message);
+            if (__DEV__) console.warn('⚠️ Native drum playback failed', e.message);
+            // Cleanup references on error
+            if (this.drumPlayerPool.has(poolKey)) {
+                const p = this.drumPlayerPool.get(poolKey);
+                if (p && p.remove) p.remove();
+                this.drumPlayerPool.delete(poolKey);
+            }
         }
     }
 
