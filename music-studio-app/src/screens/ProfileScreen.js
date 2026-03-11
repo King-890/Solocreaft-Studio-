@@ -323,8 +323,8 @@ export default function ProfileScreen() {
                         <TouchableOpacity 
                             style={styles.legalButton}
                             onPress={() => Platform.OS === 'web' 
-                                ? window.open('https://King-890.github.io/Solocreaft-Studio-/docs/privacy_policy.html', '_blank')
-                                : Alert.alert('Privacy Policy', 'Please visit: https://King-890.github.io/Solocreaft-Studio-/docs/privacy_policy.html')
+                                ? window.open('https://solocreaft-studio.ujstudio.workers.dev/privacy_policy.html', '_blank')
+                                : Alert.alert('Privacy Policy', 'Please visit: https://solocreaft-studio.ujstudio.workers.dev/privacy_policy.html')
                             }
                         >
                             <Text style={styles.legalButtonText}>🔒 Privacy Policy</Text>
@@ -333,8 +333,8 @@ export default function ProfileScreen() {
                         <TouchableOpacity 
                             style={styles.legalButton}
                             onPress={() => Platform.OS === 'web' 
-                                ? window.open('https://King-890.github.io/Solocreaft-Studio-/docs/terms_of_service.html', '_blank')
-                                : Alert.alert('Terms of Service', 'Please visit: https://King-890.github.io/Solocreaft-Studio-/docs/terms_of_service.html')
+                                ? window.open('https://solocreaft-studio.ujstudio.workers.dev/terms_of_service.html', '_blank')
+                                : Alert.alert('Terms of Service', 'Please visit: https://solocreaft-studio.ujstudio.workers.dev/terms_of_service.html')
                             }
                         >
                             <Text style={styles.legalButtonText}>📄 Terms of Service</Text>
@@ -343,8 +343,8 @@ export default function ProfileScreen() {
                         <TouchableOpacity 
                             style={styles.legalButton}
                             onPress={() => Platform.OS === 'web' 
-                                ? window.open('https://King-890.github.io/Solocreaft-Studio-/docs/delete_account.html', '_blank')
-                                : Alert.alert('Request Data Deletion', 'Please visit: https://King-890.github.io/Solocreaft-Studio-/docs/delete_account.html')
+                                ? window.open('https://solocreaft-studio.ujstudio.workers.dev/delete_account.html', '_blank')
+                                : Alert.alert('Request Data Deletion', 'Please visit: https://solocreaft-studio.ujstudio.workers.dev/delete_account.html')
                             }
                         >
                             <Text style={styles.legalButtonText}>🗑️ Data Deletion Request</Text>
@@ -394,7 +394,7 @@ export default function ProfileScreen() {
                         </LinearGradient>
                         <View style={styles.versionContainer}>
                             <Text style={styles.versionLabel}>Version</Text>
-                            <Text style={styles.versionValue}>1.0.3 (Build 4)</Text>
+                            <Text style={styles.versionValue}>1.0.8 (Build 8)</Text>
                         </View>
                         <Text style={styles.rightsText}>© 2026 UJ Studios. All Rights Reserved.</Text>
                     </View>
