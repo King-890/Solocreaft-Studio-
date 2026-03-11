@@ -127,24 +127,40 @@ class NativeAudioEngine {
             let oldestKey = null;
             let oldestTime = Date.now();
 
+            // Find oldest candidate that is NOT currently playing
             for (const [k, p] of this.playerPool.entries()) {
-                if (p._lastPlayed < oldestTime) {
+                const isPlaying = p.status === 'playing' || p.isPlaying; // Native expo-audio status check
+                if (!isPlaying && p._lastPlayed < oldestTime) {
                     oldestTime = p._lastPlayed;
                     oldestKey = k;
                 }
             }
 
+            // If no non-playing candidate found, we might skip eviction or increase limit
             if (oldestKey) {
                 const oldestPlayer = this.playerPool.get(oldestKey);
                 try {
                     oldestPlayer.stop();
-                    // [CRITICAL] In expo-audio SDK 54, players must be explicitly removed 
-                    // to free native resources and avoid "no sound" errors after multiple notes.
                     if (oldestPlayer.remove) oldestPlayer.remove();
                 } catch (e) {
                     console.debug('Failed to remove player from native side', e.message);
                 }
                 this.playerPool.delete(oldestKey);
+            } else if (this.playerPool.size >= MAX_POOL_SIZE + 8) {
+                // Hard limit reached even for playing sounds - force eviction of the absolute oldest
+                let absoluteOldestKey = null;
+                let absoluteOldestTime = Date.now();
+                for (const [k, p] of this.playerPool.entries()) {
+                    if (p._lastPlayed < absoluteOldestTime) {
+                        absoluteOldestTime = p._lastPlayed;
+                        absoluteOldestKey = k;
+                    }
+                }
+                if (absoluteOldestKey) {
+                    const p = this.playerPool.get(absoluteOldestKey);
+                    try { p.stop(); if (p.remove) p.remove(); } catch(e){}
+                    this.playerPool.delete(absoluteOldestKey);
+                }
             }
         }
 
@@ -156,8 +172,10 @@ class NativeAudioEngine {
                 if (player) this.playerPool.set(key, player);
             } else {
                 // Ensure player is stopped before seeking/restarting
-                try { player.stop(); } catch (e) {}
-                player.seekTo(0);
+                try { 
+                    player.stop(); 
+                    player.seekTo(0); 
+                } catch (e) {}
                 player.volume = volume * this.masterVolume;
                 player._lastPlayed = Date.now();
             }
@@ -211,8 +229,10 @@ class NativeAudioEngine {
             
             // Re-trigger playback if already initialized
             if (player.isBusy) {
-                player.stop();
-                player.seekTo(0);
+                try {
+                    player.stop();
+                    player.seekTo(0);
+                } catch (e) {}
             }
 
             player.isBusy = true;
@@ -331,11 +351,23 @@ class NativeAudioEngine {
 
     async unloadAll() {
         this.stopAll();
-        if (this.playerPool) {
-            // In expo-audio, we don't have an explicit unloadAsync per player the same way,
-            // but we can release references.
-            this.playerPool.clear();
-        }
+        
+        // Release all players in the pool
+        const releasePool = async (pool) => {
+            for (const player of pool.values()) {
+                try {
+                    player.stop();
+                    if (player.remove) await player.remove();
+                } catch (e) {
+                    console.debug('Error releasing player during unload:', e.message);
+                }
+            }
+            pool.clear();
+        };
+
+        if (this.playerPool) await releasePool(this.playerPool);
+        if (this.drumPlayerPool) await releasePool(this.drumPlayerPool);
+
         // console.log('🧹 Native Audio Engine: Resources Unloaded');
     }
 
