@@ -25,7 +25,6 @@ export default function ProfileScreen() {
     const [avatarUri, setAvatarUri] = useState(null);
     const [profileData, setProfileData] = useState({
         name: '',
-        email: 'guest@solocraft.studio',
         bio: '',
         role: 'Music Producer',
     });
@@ -201,13 +200,6 @@ export default function ProfileScreen() {
                                     onChangeText={(text) => setProfileData({ ...profileData, name: text })}
                                 />
                                 <TextInput
-                                    style={[styles.input, styles.inputDisabled]}
-                                    placeholder="Email"
-                                    placeholderTextColor="#999"
-                                    value={profileData.email}
-                                    editable={false}
-                                />
-                                <TextInput
                                     style={styles.input}
                                     placeholder="Role (e.g., Music Producer)"
                                     placeholderTextColor="#999"
@@ -247,7 +239,6 @@ export default function ProfileScreen() {
                                 <Text style={styles.profileName}>
                                     {profileData.name || 'Set your name'}
                                 </Text>
-                                <Text style={styles.profileEmail}>{profileData.email}</Text>
                                 <View style={styles.roleBadge}>
                                     <Text style={styles.profileLabel}>{profileData.role}</Text>
                                 </View>

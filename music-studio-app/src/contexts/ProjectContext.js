@@ -360,9 +360,6 @@ export const ProjectProvider = ({ children }) => {
             setCurrentProjectName(projectName);
             console.log('Project saved:', projectName);
 
-            // If user is authenticated, we could sync to Supabase JSONB here
-            // (Decision 5 implementation would go here)
-
             return projectData;
         } catch (error) {
             console.error('Failed to save project:', error);

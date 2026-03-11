@@ -2,7 +2,7 @@
   "expo": {
     "name": "SoloCraft Studio",
     "slug": "solocraft-studio",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ujstudios.solocraft",
-      "buildNumber": "1.0.7",
+      "buildNumber": "1.0.8",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "This app needs access to your microphone to record audio and create music.",
         "NSCameraUsageDescription": "This app needs access to your camera to capture photos for themes.",
@@ -32,7 +32,7 @@
         "backgroundColor": "#1a0a33"
       },
       "package": "com.ujstudios.solocraft",
-      "versionCode": 7,
+      "versionCode": 8,
       "edgeToEdgeEnabled": true,
       "permissions": [
         "android.permission.RECORD_AUDIO",
@@ -43,7 +43,8 @@
       ]
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "single"
     },
     "plugins": [
       "expo-video",
@@ -67,6 +68,12 @@
       "eas": {
         "projectId": "714f93f7-be90-4ecd-961a-94d1de628f5e"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/714f93f7-be90-4ecd-961a-94d1de628f5e"
     }
   }
 }
