@@ -25,7 +25,7 @@ We adhere to the principle of **Data Minimization**. We only collect information
 
 ### B. Device Permissions
 
-- **Microphone**: Required to record audio for music creation. Recorded audio stays on your device unless you choose to share or sync them.
+- **Microphone**: Required to record audio for music creation. Recorded audio stays on your device unless you choose to share or export it.
 - **Camera**: Used only for a specific feature where you take a photo to customize your workspace theme.
 - **Storage**: Required to save your music files and projects to your device.
 
@@ -72,5 +72,5 @@ You can delete your account and all associated data at any time from within the 
 
 For any privacy-related questions or to exercise your data rights, contact us at:
 **Email**: support@ujstudios.com
-**Website**: [https://ujstudios.com](https://ujstudios.com)
+**Website**: [https://ujstudios.com](https://ujstudios.com/)
 **Mailing Address**: [PLEASE INSERT FULL ADDRESS HERE: Street, City, State/Province, Postal Code, Country], ATTN: Privacy Officer (Global Compliance).
