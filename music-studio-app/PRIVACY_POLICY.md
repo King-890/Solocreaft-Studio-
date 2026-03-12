@@ -73,4 +73,4 @@ You can delete your account and all associated data at any time from within the 
 For any privacy-related questions or to exercise your data rights, contact us at:
 **Email**: support@ujstudios.com
 **Website**: [https://ujstudios.com](https://ujstudios.com/)
-**Mailing Address**: UJ Studios, ATTN: Privacy Officer (Global Compliance).
+**Mailing Address**: Street Bodhgaya, City Gaya, Bihar (824231), India, ATTN: Privacy Officer (Global Compliance).
