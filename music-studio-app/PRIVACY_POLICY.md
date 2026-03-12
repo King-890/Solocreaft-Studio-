@@ -1,6 +1,6 @@
 # Privacy Policy for SoloCraft Studio
 
-**Last Updated**: March 10, 2026
+**Last Updated**: March 11, 2026
 **Effective Date for Brazil (Digital ECA)**: March 17, 2026
 
 ## 1. Introduction
@@ -73,4 +73,4 @@ You can delete your account and all associated data at any time from within the 
 For any privacy-related questions or to exercise your data rights, contact us at:
 **Email**: support@ujstudios.com
 **Website**: [https://ujstudios.com](https://ujstudios.com/)
-**Mailing Address**: [PLEASE INSERT FULL ADDRESS HERE: Street, City, State/Province, Postal Code, Country], ATTN: Privacy Officer (Global Compliance).
+**Mailing Address**: UJ Studios, ATTN: Privacy Officer (Global Compliance).

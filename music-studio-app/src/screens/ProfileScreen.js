@@ -421,7 +421,7 @@ export default function ProfileScreen() {
                         </LinearGradient>
                         <View style={styles.versionContainer}>
                             <Text style={styles.versionLabel}>Version</Text>
-                            <Text style={styles.versionValue}>1.0.8 (Build 8)</Text>
+                            <Text style={styles.versionValue}>1.0.9 (Build 9)</Text>
                         </View>
                         <Text style={styles.rightsText}>© 2026 UJ Studios. All Rights Reserved.</Text>
                     </View>
