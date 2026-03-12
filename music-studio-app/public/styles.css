@@ -193,6 +193,23 @@ header {
     transform: translateY(-5px);
 }
 
+.btn:focus,
+.btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(255, 69, 0, 0.4);
+    transform: translateY(-3px);
+}
+
+.btn-primary:focus,
+.btn-primary:focus-visible {
+    box-shadow: 0 0 0 4px rgba(255, 69, 0, 0.6);
+}
+
+.btn-secondary:focus,
+.btn-secondary:focus-visible {
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.3);
+}
+
 /* Feature Grid */
 .features-section {
     padding: 100px 0;
@@ -314,6 +331,14 @@ header {
 }
 
 .footer-links a:hover {
+    color: var(--primary);
+}
+
+.footer-links a:focus,
+.footer-links a:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+    border-radius: 4px;
     color: var(--primary);
 }
 
