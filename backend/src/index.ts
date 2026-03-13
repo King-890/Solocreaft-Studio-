@@ -12,7 +12,6 @@ interface Env {
     MY_DB: D1Database;
     AI: any;
     MYBROWSER: any;
-    HYPERDRIVE: { connectionString: string };
     STUDIO_SESSION: DurableObjectNamespace<StudioSession>;
     MY_WORKFLOW: Workflow<AudioWorkflow>;
     ASSETS: Fetcher;
@@ -70,17 +69,6 @@ export default {
             });
         }
 
-        // 5. Hyperdrive / PostgreSQL Integration
-        if (url.pathname === "/api/external-db") {
-            const client = new Client({ connectionString: env.HYPERDRIVE.connectionString });
-            await client.connect();
-            try {
-                const result = await client.query("SELECT * FROM studio_metadata LIMIT 5");
-                return Response.json({ rows: result.rows });
-            } finally {
-                ctx.waitUntil(client.end());
-            }
-        }
 
         // 6. Durable Object Routing
         if (url.pathname.startsWith("/api/studio/")) {

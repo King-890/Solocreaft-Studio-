@@ -37,15 +37,6 @@ binding = "AI"
 [browser]
 binding = "MYBROWSER"
 
-# Hyperdrive (PostgreSQL)
-[[hyperdrive]]
-binding = "HYPERDRIVE"
-id = "your-hyperdrive-id-here" # To be filled after creation
-
-# R2 Bucket (for audio/images)
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "solocraft-assets"
 
 # Workflows
 [[workflows]]
