@@ -1,0 +1,58 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "solocraft-backend"
+main = "src/index.ts"
+compatibility_date = "2024-02-22"
+compatibility_flags = ["nodejs_compat"]
+
+# Asset Serving
+[assets]
+directory = "../music-studio-app/web-build" # Expo web export default
+binding = "ASSETS"
+
+# Analytics Engine dataset binding
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "solocraft_usage"
+
+# D1 Database
+[[d1_databases]]
+binding = "MY_DB"
+database_name = "solocraft-db"
+database_id = "cb840dfb-3535-49a3-bb5a-cfee56b36a0a"
+
+# Durable Objects
+[[durable_objects.bindings]]
+name = "STUDIO_SESSION"
+class_name = "StudioSession"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["StudioSession"]
+
+# Workers AI
+[ai]
+binding = "AI"
+
+# Browser Rendering
+[browser]
+binding = "MYBROWSER"
+
+# Hyperdrive (PostgreSQL)
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "your-hyperdrive-id-here" # To be filled after creation
+
+# R2 Bucket (for audio/images)
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "solocraft-assets"
+
+# Workflows
+[[workflows]]
+name = "audio-processing"
+binding = "MY_WORKFLOW"
+class_name = "AudioWorkflow"
+
+# Secrets Store (Mocked for now, managed via wrangler secret put)
+# [vars]
+# API_SECRET = "MANAGED_VIA_WRANGLER"

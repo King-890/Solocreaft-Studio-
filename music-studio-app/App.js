@@ -18,6 +18,7 @@ import DebugScreen from './src/screens/DebugScreen';
 import { View, Text, ActivityIndicator, LogBox, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { errorMonitor, setupGlobalErrorHandler } from './src/services/ErrorMonitor';
+import BackendService from './src/services/BackendService';
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
@@ -276,9 +277,15 @@ function AppContent() {
 
 export default function App() {
   // Set up global error handler on app startup
-  useEffect(() => {
+    useEffect(() => {
     console.log('🚀 Music Studio App Starting...');
     setupGlobalErrorHandler();
+
+    // Log app start for analytics
+    BackendService.logEvent('app_start', {
+        platform: Platform.OS,
+        isWeb: Platform.OS === 'web'
+    });
 
     // Preload audio engine - Non-blocking
     const initAudio = () => {
