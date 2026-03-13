@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Launch | SoloCraft Studio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background-color: #1a0a33; /* Matches SoloCraft Studio theme */
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            z-index: 10;
+        }
+
+        /* Loading UI */
+        .loading-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            color: white;
+            text-align: center;
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #FFF;
+            border-bottom-color: #ff4d4d; /* Brand color hint */
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+            margin-bottom: 1.5rem;
+        }
+
+        .logo-box {
+            background: linear-gradient(135deg, #ff4c4c, #ff9068);
+            color: white;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 24px;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 20px rgba(255, 76, 76, 0.3);
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Loading State (hidden behind iframe once loaded) -->
+        <div class="loading-screen">
+            <div class="logo-box">UJ</div>
+            <span class="loader"></span>
+            <h2>Initializing SoloCraft Studio...</h2>
+        </div>
+
+        <!-- The Expo App -->
+        <iframe 
+            src="https://solocraft-studio--5r1yewa80t.expo.app/" 
+            title="SoloCraft Studio Web App"
+            allow="autoplay; microphone; camera; midi; encrypted-media; clipboard-write; display-capture"
+            allowfullscreen
+        ></iframe>
+    </div>
+
+    <script>
+        // Optional: Monitor iframe load state
+        const frame = document.querySelector('iframe');
+        frame.addEventListener('load', () => {
+             console.log('SoloCraft Studio loaded.');
+             // The iframe will overlap the loading screen naturally due to z-index
+        });
+    </script>
+</body>
+</html>
