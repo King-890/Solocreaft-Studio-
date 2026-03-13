@@ -19,6 +19,14 @@ export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
 
+        // 0. Legal Pretty URLs (Redirect or Rewrite to .html)
+        if (url.pathname === "/privacy_policy") {
+            return env.ASSETS.fetch(new Request(`${url.origin}/privacy_policy.html`, request));
+        }
+        if (url.pathname === "/terms_of_service") {
+            return env.ASSETS.fetch(new Request(`${url.origin}/terms_of_service.html`, request));
+        }
+
         // 1. Analytics Engine Tracking
         if (url.pathname === "/api/analytics/log") {
             const data = await request.json() as any;
@@ -83,7 +91,27 @@ export default {
             return Response.json({ id: instance.id });
         }
 
-        // 7. Static Asset Serving (Fallback)
-        return env.ASSETS.fetch(request);
+        // 7. Static Asset Serving (Fallback with CORS support)
+        try {
+            const assetResponse = await env.ASSETS.fetch(request);
+            
+            // Add CORS context if it's an API request or fallback
+            if (url.pathname.startsWith("/api/")) {
+                const corsHeaders = new Headers(assetResponse.headers);
+                corsHeaders.set("Access-Control-Allow-Origin", "*");
+                corsHeaders.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                corsHeaders.set("Access-Control-Allow-Headers", "Content-Type");
+                
+                return new Response(assetResponse.body, {
+                    status: assetResponse.status,
+                    statusText: assetResponse.statusText,
+                    headers: corsHeaders
+                });
+            }
+            
+            return assetResponse;
+        } catch (e) {
+            return new Response("Resource Not Found", { status: 404 });
+        }
     }
 };
