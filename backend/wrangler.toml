@@ -9,6 +9,10 @@ compatibility_flags = ["nodejs_compat"]
 directory = "../music-studio-app/dist" # Expo web export default folder
 binding = "ASSETS"
 
+# Analytics Engine dataset binding
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "solocraft_usage"
 
 # D1 Database
 [[d1_databases]]
