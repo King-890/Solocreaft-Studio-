@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 
 # Asset Serving
 [assets]
-directory = "../music-studio-app/web-build" # Expo web export default
+directory = "../music-studio-app/dist" # Expo web export default folder
 binding = "ASSETS"
 
 # Analytics Engine dataset binding

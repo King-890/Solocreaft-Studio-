@@ -17,7 +17,7 @@ jobs:
       - name: ⚙️ Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
           cache-dependency-path: music-studio-app/package.json
 
@@ -29,14 +29,8 @@ jobs:
       - name: 🚀 Export Expo Web
         run: |
           cd music-studio-app
-          npx expo export
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO || secrets.EXPO_TOKEN }}
-
-      - name: 🌐 Deploy to Expo Hosting
-        run: |
-          cd music-studio-app
-          npx expo deploy:web --no-interactive
+          npm install -g expo-cli
+          npx expo export --platform web
         env:
           EXPO_TOKEN: ${{ secrets.EXPO || secrets.EXPO_TOKEN }}
 
@@ -51,7 +45,7 @@ jobs:
       - name: ⚙️ Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: 📦 Install Backend dependencies
         run: |

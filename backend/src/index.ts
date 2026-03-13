@@ -98,8 +98,15 @@ export default {
             return Response.json({ id: instance.id });
         }
 
-        // 8. Static Asset Serving (Fallback)
-        // If the path doesn't match an API, serve the web app or landing page
+        // 8. Pretty URLs for Legal Pages
+        if (url.pathname === "/privacy_policy") {
+            return env.ASSETS.fetch(new Request(new URL("/privacy_policy.html", request.url), request));
+        }
+        if (url.pathname === "/terms_of_service") {
+            return env.ASSETS.fetch(new Request(new URL("/terms_of_service.html", request.url), request));
+        }
+
+        // 9. Static Asset Serving (Fallback)
         return env.ASSETS.fetch(request);
     }
 };
