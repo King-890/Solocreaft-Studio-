@@ -8,7 +8,6 @@ export { StudioSession, AudioWorkflow };
 // Define types locally if global types are not being picked up correctly by the IDE
 // These should ideally come from @cloudflare/workers-types
 interface Env {
-    ANALYTICS: AnalyticsEngineDataset;
     MY_DB: D1Database;
     AI: any;
     MYBROWSER: any;
@@ -21,15 +20,9 @@ export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
 
-        // 1. Analytics Engine Tracking
+        // 1. Analytics Engine Tracking (Disabled - Requires Cloudflare Analytics Engine)
         if (url.pathname === "/api/analytics/log") {
-            const data = await request.json() as any;
-            env.ANALYTICS.writeDataPoint({
-                'blobs': [data.city || "Unknown", data.os || "Unknown", "SoloCraft-Web"],
-                'doubles': [data.sessionDuration || 0, 1.0], // Duration, Count
-                'indexes': [data.userId || "anonymous"]
-            });
-            return new Response("Data logged", { status: 200 });
+            return new Response("Analytics disabled", { status: 200 });
         }
 
         // 2. Workers AI Integration
