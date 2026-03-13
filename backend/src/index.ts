@@ -1,14 +1,11 @@
 import { StudioSession } from "./StudioSession";
 import { AudioWorkflow } from "./AudioWorkflow";
 import puppeteer from "@cloudflare/puppeteer";
-import { Client } from "pg";
 
 export { StudioSession, AudioWorkflow };
 
 // Define types locally if global types are not being picked up correctly by the IDE
-// These should ideally come from @cloudflare/workers-types
 interface Env {
-    ANALYTICS: AnalyticsEngineDataset;
     MY_DB: D1Database;
     AI: any;
     MYBROWSER: any;
@@ -21,15 +18,9 @@ export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
 
-        // 1. Analytics Engine Tracking
+        // 1. Analytics Engine Tracking (Temporarily Disabled)
         if (url.pathname === "/api/analytics/log") {
-            const data = await request.json() as any;
-            env.ANALYTICS.writeDataPoint({
-                'blobs': [data.city || "Unknown", data.os || "Unknown", "SoloCraft-Web"],
-                'doubles': [data.sessionDuration || 0, 1.0], // Duration, Count
-                'indexes': [data.userId || "anonymous"]
-            });
-            return new Response("Data logged", { status: 200 });
+            return new Response("Analytics disabled", { status: 200 });
         }
 
         // 2. Workers AI Integration
@@ -69,15 +60,14 @@ export default {
             });
         }
 
-
-        // 6. Durable Object Routing
+        // 5. Durable Object Routing
         if (url.pathname.startsWith("/api/studio/")) {
             const id = env.STUDIO_SESSION.idFromName(url.pathname);
             const stub = env.STUDIO_SESSION.get(id);
             return stub.fetch(request);
         }
 
-        // 7. Workflow Management
+        // 6. Workflow Management
         if (url.pathname === "/api/workflow/start" && request.method === "POST") {
             const payload = await request.json() as any;
             const instance = await (env.MY_WORKFLOW as any).create({
@@ -86,15 +76,7 @@ export default {
             return Response.json({ id: instance.id });
         }
 
-        // 8. Pretty URLs for Legal Pages
-        if (url.pathname === "/privacy_policy") {
-            return env.ASSETS.fetch(new Request(new URL("/privacy_policy.html", request.url), request));
-        }
-        if (url.pathname === "/terms_of_service") {
-            return env.ASSETS.fetch(new Request(new URL("/terms_of_service.html", request.url), request));
-        }
-
-        // 9. Static Asset Serving (Fallback)
+        // 7. Static Asset Serving (Fallback)
         return env.ASSETS.fetch(request);
     }
 };

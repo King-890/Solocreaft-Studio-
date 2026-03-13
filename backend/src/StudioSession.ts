@@ -31,12 +31,9 @@ export class StudioSession extends DurableObject<Env> {
             return new Response("Updated", { status: 200 });
         }
 
-        // Real-time coordination logic using SQL
+        // Real-time coordination logic (SQL feature removed to ensure Free plan compatibility)
         if (url.pathname === "/hello") {
-            let result = this.ctx.storage.sql
-                .exec("SELECT 'Hello from SoloCraft Studio DO!' as greeting")
-                .one() as { greeting: string };
-            return new Response(result.greeting);
+            return new Response("Hello from SoloCraft Studio DO!");
         }
 
         return new Response("Not Found", { status: 404 });
