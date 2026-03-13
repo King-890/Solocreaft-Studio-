@@ -9,6 +9,11 @@ compatibility_flags = ["nodejs_compat"]
 directory = "../music-studio-app/dist" # Expo web export default folder
 binding = "ASSETS"
 
+# Analytics Engine dataset binding
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "solocraft_usage"
+
 
 # D1 Database
 [[d1_databases]]
@@ -22,8 +27,8 @@ name = "STUDIO_SESSION"
 class_name = "StudioSession"
 
 [[migrations]]
-tag = "v1"
-new_classes = ["StudioSession"]
+tag = "v2"
+new_sqlite_classes = ["StudioSession"]
 
 # Workers AI
 [ai]
