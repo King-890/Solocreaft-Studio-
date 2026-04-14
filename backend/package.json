@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --remote",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
@@ -15,5 +15,10 @@
   "dependencies": {
     "@cloudflare/puppeteer": "^0.0.8",
     "pg": "^8.11.3"
+  },
+  "overrides": {
+    "esbuild": "^0.25.0",
+    "undici": ">=7.24.0",
+    "defu": "^6.1.5"
   }
 }

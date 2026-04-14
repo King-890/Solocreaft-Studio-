@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import WebAudioEngine from './WebAudioEngine';
 import * as Audio from 'expo-audio';
 import { Asset } from 'expo-asset';
-import { INSTRUMENTS, getSafeSampleUrl, getLocalPercussionAsset } from './SampleLibrary';
+import { INSTRUMENTS, getSafeSampleData, getLocalPercussionAsset } from './SampleLibrary';
 import AudioPlaybackService from './AudioPlaybackService';
 import AudioManager from '../utils/AudioManager';
 import { INSTRUMENT_TRACK_MAP } from '../constants/AudioConstants';
@@ -76,18 +76,25 @@ class NativeAudioEngine {
         await this.init();
     }
 
-    playSound(noteName, instrument = 'piano', delay = 0, velocity = 1.0) {
+    playSound(noteName, instrument = 'piano', delay = 0, velocity = 1.0, waveform = null, params = null) {
         const lowerInst = String(instrument).toLowerCase();
         
         if (!this.initialized && !this.initFailed) {
-            this.init().then(() => {
-                if (this.ctx) {
-                    this.playSynthesizedSound(noteName, lowerInst, delay, velocity).catch(err => {
-                        console.debug('playSynthesizedSound error', err);
-                    });
-                } else {
-                    this.playSampleSound(noteName, lowerInst, velocity);
-                }
+            this.init().then(() => this.playSound(noteName, instrument, delay, velocity, waveform, params));
+            return;
+        }
+
+        // [TRUE SYNTHESIS] The Synth Lab uses live programmatic oscillators!
+        if (lowerInst === 'synth' || lowerInst === 'synthesizer') {
+            if (this.ctx) {
+                this.playSynthesizedSound(noteName, lowerInst, delay, velocity, waveform, params).catch(() => {});
+                return;
+            }
+        }
+
+        if (Platform.OS === 'web') {
+            WebAudioEngine.playSound(noteName, lowerInst, delay, velocity).catch(err => {
+                console.debug('WebAudioEngine play error', err);
             });
             return;
         }
@@ -103,8 +110,8 @@ class NativeAudioEngine {
 
     async playSampleSound(noteName, instrument, volume = 1.0) {
         const instrumentKey = INSTRUMENTS[instrument.toUpperCase()] || instrument;
-        const url = getSafeSampleUrl(instrumentKey, noteName);
-        const key = `${instrumentKey}-${noteName}`;
+        const { url, playbackRate, cacheKey } = getSafeSampleData(instrumentKey, noteName, volume);
+        const key = `${instrumentKey}-${noteName}`; // Keep unique per requested note for polyphony
         
         // console.log(`🎵 [AudioEngine] Playing ${key} - URL: ${url}`);
         
@@ -114,6 +121,7 @@ class NativeAudioEngine {
             try {
                 const player = Audio.createAudioPlayer(url);
                 player.volume = volume * this.masterVolume;
+                player.playbackRate = playbackRate;
                 player._lastPlayed = Date.now();
                 return player;
             } catch (e) {
@@ -177,6 +185,7 @@ class NativeAudioEngine {
                     player.seekTo(0); 
                 } catch (e) {}
                 player.volume = volume * this.masterVolume;
+                player.playbackRate = playbackRate;
                 player._lastPlayed = Date.now();
             }
 
@@ -259,7 +268,7 @@ class NativeAudioEngine {
         }
     }
 
-    async playSynthesizedSound(noteName, instrument, delay = 0, velocity = 1.0) {
+    async playSynthesizedSound(noteName, instrument, delay = 0, velocity = 1.0, waveform = null, params = null) {
         if (!this.ctx) return;
 
         const freq = this.getFrequency(noteName);
@@ -268,19 +277,47 @@ class NativeAudioEngine {
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
+        
+        // 1. Programmatic Waveform Selection
+        if (waveform && ['sine', 'square', 'sawtooth', 'triangle'].includes(waveform)) {
+            osc.type = waveform;
+        } else {
+            osc.type = instrument === 'synth' ? 'square' : 'triangle';
+        }
 
-        osc.type = instrument === 'piano' ? 'triangle' : 'sawtooth';
+        // 2. Synthesizer Filter Envelope (Cutoff / Res)
+        let connectionSource = osc;
+        if (params && params.cutoff !== undefined) {
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            
+            // Map 0-100 to 200Hz - 12000Hz logarithmically
+            const minFreq = 200;
+            const maxFreq = 12000;
+            const cutoffFreq = minFreq * Math.pow(maxFreq / minFreq, params.cutoff / 100);
+            
+            filter.frequency.setValueAtTime(cutoffFreq, startTime);
+            
+            // Map resonance 0-100 to Q 0-20
+            if (params.res !== undefined) {
+                filter.Q.setValueAtTime((params.res / 100) * 20, startTime);
+            }
+            
+            osc.connect(filter);
+            connectionSource = filter;
+        }
+
         osc.frequency.setValueAtTime(freq, startTime);
         
         gain.gain.setValueAtTime(0, startTime);
-        gain.gain.linearRampToValueAtTime(velocity * 0.7, startTime + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 1.2);
+        gain.gain.linearRampToValueAtTime(velocity * 0.8, startTime + 0.05); // slightly punchier attack
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 1.8); // longer decay
 
-        osc.connect(gain);
+        connectionSource.connect(gain);
         gain.connect(this.masterGain);
 
         osc.start(startTime);
-        osc.stop(startTime + 1.6);
+        osc.stop(startTime + 2.0);
 
         const key = `${instrument}-${noteName}`;
         if (!this.playingNodes.has(key)) this.playingNodes.set(key, []);

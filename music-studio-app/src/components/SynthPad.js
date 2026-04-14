@@ -11,8 +11,18 @@ const WAVEFORMS = ['sine', 'square', 'sawtooth', 'triangle'];
 
 export default function SynthPad() {
     const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
+    
+    // Desktop scaling clamp
+    const s = (val) => (Platform.OS === 'web' || !isPhone) ? Math.min(sc(val), val * 2) : sc(val);
+    const n = (val) => (Platform.OS === 'web' || !isPhone) ? Math.min(normalize(val), val * 1.5) : normalize(val);
+
     const [waveform, setWaveform] = useState('sine');
     const [params, setParams] = useState({ cutoff: 50, res: 20, lfo: 0 });
+    const [octave, setOctave] = useState(4);
+    const [noteIndex, setNoteIndex] = useState(0); // 0 = C
+
+    const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const currentPitch = `${NOTES[noteIndex]}${octave}`;
 
     // Animation values
     const padScale = useRef(new Animated.Value(1)).current;
@@ -25,19 +35,40 @@ export default function SynthPad() {
             Animated.timing(padGlow, { toValue: 1, duration: 100, useNativeDriver: Platform.OS !== 'web' })
         ]).start();
         
-        // Note: Waveform is managed by the internal synth state when instrument='synth' is used
-        UnifiedAudioEngine.playSound('C4', 'synth'); 
+        // The unified engine now parses these for true mathematical synthesis
+        UnifiedAudioEngine.playSound(currentPitch, 'synth', 0, 0.85, waveform, params); 
         HapticService.heavy();
-    }, []);
+    }, [currentPitch, waveform, params]);
 
     const handlePressOut = useCallback(() => {
         Animated.parallel([
             Animated.spring(padScale, { toValue: 1, useNativeDriver: Platform.OS !== 'web' }),
             Animated.timing(padGlow, { toValue: 0, duration: 200, useNativeDriver: Platform.OS !== 'web' })
         ]).start();
-        
-        UnifiedAudioEngine.stopSound('C4', 'synth');
-    }, []);
+        UnifiedAudioEngine.stopSound(currentPitch, 'synth');
+    }, [currentPitch]);
+
+    const decreaseTune = useCallback(() => {
+        setNoteIndex(prev => {
+            if (prev === 0) {
+                if (octave > 1) setOctave(o => o - 1);
+                return 11;
+            }
+            return prev - 1;
+        });
+        HapticService.selection();
+    }, [octave]);
+
+    const increaseTune = useCallback(() => {
+        setNoteIndex(prev => {
+            if (prev === 11) {
+                if (octave < 7) setOctave(o => o + 1);
+                return 0;
+            }
+            return prev + 1;
+        });
+        HapticService.selection();
+    }, [octave]);
 
     const toggleParam = useCallback((param) => {
         setParams(prev => ({
@@ -49,8 +80,9 @@ export default function SynthPad() {
 
     return (
         <InstrumentContainer>
-            <LinearGradient colors={['#020617', '#0f172a']} style={[styles.container, { paddingTop: SAFE_TOP }]}>
-            <View style={[styles.header, isPhone && { marginBottom: sc(20) }]}>
+            <View style={{ flex: 1, width: '100%', maxWidth: 1000, alignSelf: 'center' }}>
+            <LinearGradient colors={['#050508', '#0a0b12']} style={styles.container}>
+            <View style={[styles.header, isPhone && { marginBottom: 20 }]}>
                 <View>
                     <Text style={styles.brandTitle}>NEURAL SYNTHETICS</Text>
                     <Text style={[styles.modelTitle, isPhone && { fontSize: normalize(16) }]}>CYBER-PAD X1</Text>
@@ -86,7 +118,19 @@ export default function SynthPad() {
                 ))}
             </View>
 
-            <Animated.View style={[styles.mainPadContainer, { transform: [{ scale: padScale }], height: isPhone ? sc(160) : sc(200) }]}>
+            <Animated.View style={[styles.mainPadContainer, { transform: [{ scale: padScale }], height: isPhone ? sc(100) : sc(120) }]}>
+                <View style={styles.tuneHUD}>
+                    <TouchableOpacity style={styles.tuneBtn} onPress={decreaseTune}>
+                        <Text style={styles.tuneBtnText}>- TUNE</Text>
+                    </TouchableOpacity>
+                    <View style={styles.tuneDisplay}>
+                        <Text style={styles.tuneDisplayText}>{currentPitch}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.tuneBtn} onPress={increaseTune}>
+                        <Text style={styles.tuneBtnText}>TUNE +</Text>
+                    </TouchableOpacity>
+                </View>
+
                 <TouchableOpacity
                     style={styles.pad}
                     activeOpacity={1}
@@ -95,13 +139,13 @@ export default function SynthPad() {
                     delayPressIn={0}
                 >
                     <LinearGradient
-                        colors={['rgba(98, 0, 238, 0.4)', 'rgba(3, 218, 198, 0.1)']}
+                        colors={['#1e114f', '#10132b']}
                         style={styles.padGradient}
                     />
                     <Animated.View style={[styles.padPulse, { opacity: padGlow }]} />
                     <View style={styles.padContent}>
-                        <Text style={[styles.padMainText, isPhone && { fontSize: normalize(18) }]}>NEURAL TRIGGER</Text>
-                        <Text style={styles.padSubText}>{waveform.toUpperCase()} MODE active</Text>
+                        <Text style={[styles.padMainText, isPhone && { fontSize: normalize(20) }]}>NEURAL TRIGGER</Text>
+                        <Text style={styles.padSubText}>{waveform.toUpperCase()} MODE ACTIVE • {currentPitch}</Text>
                     </View>
                 </TouchableOpacity>
             </Animated.View>
@@ -123,128 +167,176 @@ export default function SynthPad() {
                 ))}
             </View>
 
-            <View style={[styles.footer, { paddingBottom: SAFE_BOTTOM + sc(10) }]}>
+                <View style={[styles.footer, { paddingBottom: 20 }]}>
                 <Text style={styles.versionLabel}>V.2.0.4 • ANALOG CORE</Text>
             </View>
             </LinearGradient>
+            </View>
         </InstrumentContainer>
     );
 }
 
+// Bounded responsive sizing to prevent desktop bloat
+const r = (val) => Platform.OS === 'web' ? Math.min(val * 1.5, val) : val;
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        borderRadius: sc(40),
-        margin: sc(5),
-        padding: sc(30),
-        borderWidth: sc(1),
-        borderColor: 'rgba(255,255,255,0.05)',
-        ...createShadow({ color: '#000', radius: sc(25), opacity: 0.6 }),
+        borderRadius: 24,
+        margin: 10,
+        padding: 30,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.03)',
+        ...createShadow({ color: '#000', radius: 40, opacity: 0.9 }),
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: sc(35),
+        marginBottom: sc(12),
+        paddingHorizontal: sc(10),
     },
     brandTitle: {
-        color: '#6200ee',
-        fontSize: normalize(10),
+        color: '#7c3aed',
+        fontSize: normalize(6),
         fontWeight: '900',
         letterSpacing: 2,
+        marginBottom: sc(2)
     },
     modelTitle: {
-        color: '#fff',
-        fontSize: normalize(20),
+        color: '#ffffff',
+        fontSize: normalize(12),
         fontWeight: '900',
-        letterSpacing: 1,
-        ...createTextShadow({ color: 'rgba(0,0,0,0.5)', radius: 5 }),
+        letterSpacing: 2,
+        ...createTextShadow({ color: 'rgba(124, 58, 237, 0.4)', radius: 8 }),
     },
     statusLed: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: sc(8),
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        padding: sc(8),
-        borderRadius: sc(12),
+        gap: sc(4),
+        backgroundColor: '#050a10',
+        paddingVertical: sc(4),
+        paddingHorizontal: sc(8),
+        borderRadius: sc(8),
         borderWidth: sc(1),
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: '#064e3b',
     },
     ledRing: {
-        width: sc(12),
-        height: sc(12),
-        borderRadius: sc(6),
+        width: sc(8),
+        height: sc(8),
+        borderRadius: sc(4),
         borderWidth: sc(1),
-        borderColor: '#03dac6',
+        borderColor: 'rgba(16, 185, 129, 0.3)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     ledCore: {
-        width: sc(4),
-        height: sc(4),
-        borderRadius: sc(2),
-        backgroundColor: '#03dac6',
-        ...createShadow({ color: '#03dac6', radius: sc(5) }),
+        width: sc(3),
+        height: sc(3),
+        borderRadius: sc(1.5),
+        backgroundColor: '#10b981',
+        ...createShadow({ color: '#10b981', radius: sc(4) }),
     },
     statusText: {
-        color: '#03dac6',
-        fontSize: normalize(8),
+        color: '#10b981',
+        fontSize: normalize(6),
         fontWeight: '900',
         letterSpacing: 1,
     },
     waveformHUD: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        borderRadius: sc(15),
-        padding: sc(4),
-        marginBottom: sc(30),
+        backgroundColor: '#0a0b10',
+        borderRadius: sc(8),
+        padding: sc(1),
+        marginBottom: sc(8),
         borderWidth: sc(1),
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: 'rgba(255,255,255,0.04)',
     },
     waveformBtn: {
         flex: 1,
-        paddingVertical: sc(12),
+        paddingVertical: sc(8),
         alignItems: 'center',
-        borderRadius: sc(12),
+        borderRadius: sc(6),
+        marginHorizontal: sc(2),
     },
     waveformBtnActive: {
-        backgroundColor: 'rgba(98, 0, 238, 0.2)',
+        backgroundColor: '#1b0e40',
+        ...createShadow({ color: '#7c3aed', radius: 8, opacity: 0.3 }),
     },
     waveformText: {
-        color: '#64748b',
-        fontSize: normalize(10),
+        color: '#475569',
+        fontSize: 12,
         fontWeight: '900',
-        letterSpacing: 1,
+        letterSpacing: 2,
     },
     waveformTextActive: {
-        color: '#fff',
+        color: '#ffffff',
     },
     activeDot: {
-        width: sc(4),
-        height: sc(4),
-        borderRadius: sc(2),
-        backgroundColor: '#6200ee',
-        marginTop: sc(4),
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#c084fc',
+        marginTop: 6,
+        ...createShadow({ color: '#c084fc', radius: 4, opacity: 0.8 }),
     },
     mainPadContainer: {
         width: '100%',
-        marginBottom: sc(40),
-        ...createShadow({ color: '#6200ee', radius: sc(15), opacity: 0.3 }),
+        marginBottom: 20,
+        ...createShadow({ color: '#7c3aed', radius: 25, opacity: 0.2 }),
+    },
+    tuneHUD: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#050a10',
+        borderRadius: 12,
+        padding: 6,
+        marginBottom: 15,
+        borderWidth: 1,
+        borderColor: 'rgba(124, 58, 237, 0.3)',
+    },
+    tuneBtn: {
+        backgroundColor: '#1b0e40',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(192, 132, 252, 0.4)',
+    },
+    tuneBtnText: {
+        color: '#c084fc',
+        fontSize: 12,
+        fontWeight: '900',
+        letterSpacing: 1,
+    },
+    tuneDisplay: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    tuneDisplayText: {
+        color: '#ffffff',
+        fontSize: 18,
+        fontWeight: '900',
+        letterSpacing: 2,
+        ...createTextShadow({ color: '#c084fc', radius: 10 }),
     },
     pad: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        borderRadius: sc(25),
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        borderRadius: 24,
         overflow: 'hidden',
-        borderWidth: sc(1),
-        borderColor: 'rgba(98, 0, 238, 0.3)',
+        borderWidth: 1,
+        borderColor: 'rgba(124, 58, 237, 0.15)',
+        borderTopColor: 'rgba(124, 58, 237, 0.5)',
     },
     padGradient: {
         ...StyleSheet.absoluteFillObject,
+        opacity: 0.95,
     },
     padPulse: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(98, 0, 238, 0.2)',
+        backgroundColor: 'rgba(124, 58, 237, 0.15)',
     },
     padContent: {
         flex: 1,
@@ -252,67 +344,68 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     padMainText: {
-        color: '#fff',
-        fontSize: normalize(22),
+        color: '#ffffff',
+        fontSize: 32,
         fontWeight: '900',
-        letterSpacing: 2,
-        ...createTextShadow({ color: '#6200ee', radius: 10 }),
+        letterSpacing: 5,
+        ...createTextShadow({ color: 'rgba(192, 132, 252, 1)', radius: 30 }),
     },
     padSubText: {
-        color: '#94a3b8',
-        fontSize: normalize(10),
+        color: '#a5a6cd',
+        fontSize: 10,
         fontWeight: 'bold',
-        marginTop: sc(8),
-        textTransform: 'uppercase',
+        marginTop: 12,
+        letterSpacing: 1.5,
     },
     controlsGrid: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        gap: sc(20),
+        gap: 15,
     },
     paramCard: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        padding: sc(15),
-        borderRadius: sc(20),
+        backgroundColor: '#0a0b10',
+        padding: 12,
+        borderRadius: 14,
         alignItems: 'center',
-        borderWidth: sc(1),
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.04)',
+        ...createShadow({ color: '#000', radius: 10, opacity: 0.5 }),
     },
     dialContainer: {
-        width: sc(50),
-        height: sc(50),
+        width: 44,
+        height: 44,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: sc(10),
+        marginBottom: 8,
     },
     dialTrack: {
-        width: sc(44),
-        height: sc(44),
-        borderRadius: sc(22),
-        borderWidth: sc(2),
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        borderWidth: 3,
         borderColor: 'rgba(255,255,255,0.05)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     dialValue: {
         color: '#fff',
-        fontSize: normalize(11),
+        fontSize: 10,
         fontWeight: 'bold',
     },
     paramLabel: {
         color: '#475569',
-        fontSize: normalize(9),
+        fontSize: 8,
         fontWeight: '900',
-        letterSpacing: 1,
+        letterSpacing: 1.5,
     },
     footer: {
-        marginTop: sc(40),
+        marginTop: 40,
         alignItems: 'center',
     },
     versionLabel: {
         color: '#1e293b',
-        fontSize: normalize(9),
+        fontSize: 12,
         fontWeight: '900',
         letterSpacing: 2,
     },

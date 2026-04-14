@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
-import { getSampleUrl, INSTRUMENTS, getLocalPercussionAsset } from './SampleLibrary';
+import { Asset } from 'expo-asset';
+import { getSampleData, INSTRUMENTS, getLocalPercussionAsset } from './SampleLibrary';
 import { INSTRUMENT_TRACK_MAP } from '../constants/AudioConstants';
 import UnifiedAudioContext from './UnifiedAudioContext';
 
@@ -115,32 +116,16 @@ class WebAudioEngine {
 
     async preloadInstrument(instrumentName) {
         if (!await this.init()) return;
-        const instrumentKey = INSTRUMENTS[instrumentName.toUpperCase()] || instrumentName;
-        // Preload middle C as a starter
-        await this.loadSample(instrumentKey, 'C4');
+        // Preload middle C using new data structure
+        const { url, cacheKey } = getSampleData(instrumentName, 'C4');
+        if (url) {
+            await this.loadSample(url, cacheKey);
+        }
     }
 
-    async loadSample(instrumentKey, noteName, isPercussion = false, velocity = 0.8) {
-        // Round Robin index for percussion
-        if (isPercussion && !this.percussionIndices[noteName]) {
-            this.percussionIndices[noteName] = 0;
-        }
-        const rrIndex = isPercussion ? this.percussionIndices[noteName] : 0;
-        
-        const url = isPercussion 
-            ? getLocalPercussionAsset(instrumentKey, noteName, rrIndex) 
-            : getSampleUrl(instrumentKey, noteName, velocity);
-            
-        if (isPercussion) {
-            // For now assume 1 variant until assets are expanded, but logic is ready
-            const variantsCount = 1; 
-            this.percussionIndices[noteName] = (rrIndex + 1) % variantsCount;
-        }
-            
+    async loadSample(url, cacheKey) {
         if (!url) return null;
         
-        const cacheKey = isPercussion ? `${instrumentKey}-${noteName}-${rrIndex}` : `${instrumentKey}-${noteName}-${velocity > 0.6 ? 'hard' : 'soft'}`;
-
         if (this.bufferCache[cacheKey]) return this.bufferCache[cacheKey];
         if (this.loadingPromises[cacheKey]) return this.loadingPromises[cacheKey];
 
@@ -175,19 +160,22 @@ class WebAudioEngine {
         
         if (!await this.init()) return;
 
-        const instrumentKey = INSTRUMENTS[instrument.toUpperCase()] || INSTRUMENTS.PIANO;
-        const cacheKey = `${instrumentKey}-${noteName}-${velocity > 0.6 ? 'hard' : 'soft'}`;
-
-        let buffer = this.bufferCache[cacheKey] || this.bufferCache[`${instrumentKey}-${noteName}-med`];
+        const { url, playbackRate, cacheKey } = getSampleData(instrument, noteName, velocity);
+        let buffer = this.bufferCache[cacheKey];
         
         const trackId = INSTRUMENT_TRACK_MAP[instrument.toLowerCase()];
         const AudioPlaybackService = require('./AudioPlaybackService').default;
-        const targetNode = trackId ? AudioPlaybackService.getTrackSignalChain(trackId)?.input : null;
+        
+        let targetNode = null;
+        if (trackId) {
+            const chain = await AudioPlaybackService.getTrackSignalChain(trackId);
+            if (chain) targetNode = chain.input;
+        }
 
         // PHYSICAL ACCURACY: Wait for real sample if it's not loaded
         if (!buffer) {
             // console.log(`📥 Real-time loading sample for ${cacheKey}...`);
-            buffer = await this.loadSample(instrumentKey, noteName, false, velocity);
+            buffer = await this.loadSample(url, cacheKey);
             
             // If still no buffer (network fail), use High-Fidelity physical fallback
             if (!buffer) {
@@ -195,16 +183,17 @@ class WebAudioEngine {
             }
         }
 
-        this.playBuffer(buffer, velocity, instrument, noteName, targetNode, delay);
+        this.playBuffer(buffer, velocity, instrument, noteName, targetNode, delay, 0, playbackRate);
     }
 
-    playBuffer(buffer, volume = 0.5, instrument, noteName, destination = null, delay = 0, pan = 0) {
+    playBuffer(buffer, volume = 0.5, instrument, noteName, destination = null, delay = 0, pan = 0, playbackRate = 1.0) {
         const source = this.audioContext.createBufferSource();
         const gainNode = this.audioContext.createGain();
         const panner = this.audioContext.createStereoPanner();
         const filter = this.audioContext.createBiquadFilter();
 
         source.buffer = buffer;
+        source.playbackRate.value = playbackRate;
         
         // [NATURAL SOUND] VELOCITY-BASED DYNAMIC FILTERING (Simulates physical strike)
         filter.type = 'lowpass';
@@ -218,7 +207,7 @@ class WebAudioEngine {
         gainNode.connect(panner);
         
         // [NATURAL SOUND] Route to Reverb Chain
-        const masterInput = this.masterBus?.input || this.audioContext.destination;
+        const masterInput = destination || this.masterBus?.input || this.audioContext.destination;
         panner.connect(masterInput); // Dry path
         
         if (this.convolverNode && this.reverbWetGain) {
@@ -229,13 +218,20 @@ class WebAudioEngine {
 
         panner.pan.setValueAtTime(pan, this.audioContext.currentTime);
 
-        const startTime = this.audioContext.currentTime + delay;
-        gainNode.gain.setValueAtTime(0, startTime);
-        gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.005);
+        // WEB AUDIO SAFE ENVELOPE SCHEDULING
+        const now = this.audioContext.currentTime;
+        // MUST add small epsilon to prevent scheduling in the past which causes 0-gain lock
+        const startTime = delay > 0 ? now + delay : now + 0.01; 
+        
+        // Use 0.001 instead of 0 to prevent exponentialRamp errors
+        gainNode.gain.setValueAtTime(0.001, startTime);
+        gainNode.gain.linearRampToValueAtTime(Math.max(volume, 0.001), startTime + 0.01);
         
         const duration = buffer.duration;
-        const releaseTime = 0.4; // Slightly longer for more natural tail
-        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration + releaseTime);
+        const releaseTime = 0.4;
+        
+        // Prevent ramping to exact 0
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration + releaseTime);
         
         source.start(startTime);
         source.stop(startTime + duration + releaseTime + 0.1);
@@ -402,16 +398,30 @@ class WebAudioEngine {
 
         const AudioPlaybackService = require('./AudioPlaybackService').default;
         // Map instrument to signal chain (Drums, Tabla, Dholak all use '3' for percussion for now)
-        const targetNode = AudioPlaybackService.getTrackSignalChain('3')?.input; 
+        let targetNode = null;
+        const targetChain = await AudioPlaybackService.getTrackSignalChain('3');
+        if (targetChain) targetNode = targetChain.input;
 
-        // Normalize instrument name
-        const instrumentKey = instrument.toLowerCase();
-        const cacheKey = `${instrumentKey}-${padName}`;
+        let url;
+        let cacheKey;
+        
+        // Handle local percussion assets manually since we replaced loadSample signature
+        const rrIndex = this.percussionIndices[padName] || 0;
+        url = getLocalPercussionAsset(instrumentKey, padName, rrIndex);
+        cacheKey = `${instrumentKey}-${padName}-${rrIndex}`;
+        this.percussionIndices[padName] = (rrIndex + 1) % 1;
+        
+        if (url) {
+            const { Asset } = require('expo-asset');
+            const asset = Asset.fromModule(url);
+            url = asset.uri || url;
+        }
+
         let buffer = this.bufferCache[cacheKey];
 
-        if (!buffer) {
+        if (!buffer && url) {
             // Priority load for percussion
-            buffer = await this.loadSample(instrumentKey, padName, true);
+            buffer = await this.loadSample(url, cacheKey);
         }
 
         if (buffer) {

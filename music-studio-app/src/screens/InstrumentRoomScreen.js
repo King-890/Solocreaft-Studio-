@@ -307,7 +307,7 @@ export default function InstrumentRoomScreen() {
 
     // In SDK 54, we use the useAudioRecorder hook
     const recorder = Audio.useAudioRecorder({
-        extension: '.m4a',
+        extension: Platform.OS === 'web' ? '.webm' : '.m4a',
         sampleRate: 44100,
         numberOfChannels: 2,
         bitRate: 128000,
@@ -462,6 +462,13 @@ export default function InstrumentRoomScreen() {
                     </View>
 
                     <View style={styles.headerRight}>
+                        <PerformanceRecorder
+                            instrumentName={instrumentType}
+                            onStartRecording={handleStartRecording}
+                            onStopRecording={handleStopRecording}
+                            isRecording={isRecording}
+                        />
+                        
                         <TouchableOpacity 
                             style={[styles.playButton, isPlaying && styles.isPlayingButton]}
                             onPress={togglePlayback}
@@ -487,13 +494,6 @@ export default function InstrumentRoomScreen() {
                     {renderInstrument()}
                 </Animated.View>
 
-                {/* Performance Recorder */}
-                <PerformanceRecorder
-                    instrumentName={instrumentType}
-                    onStartRecording={handleStartRecording}
-                    onStopRecording={handleStopRecording}
-                    isRecording={isRecording}
-                />
             </SafeAreaView>
         </View>
     );

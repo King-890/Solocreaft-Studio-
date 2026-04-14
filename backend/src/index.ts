@@ -19,6 +19,16 @@ export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
 
+        const corsHeaders = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        };
+
+        if (request.method === "OPTIONS") {
+            return new Response(null, { headers: corsHeaders });
+        }
+
         // 0. Legal Pretty URLs (Redirect or Rewrite to .html)
         if (url.pathname === "/privacy_policy") {
             return env.ASSETS.fetch(new Request(`${url.origin}/privacy_policy.html`, request));
@@ -35,7 +45,7 @@ export default {
                 'doubles': [data.sessionDuration || 0, 1.0], // Duration, Count
                 'indexes': [data.userId || "anonymous"]
             });
-            return new Response("Data logged", { status: 200 });
+            return new Response("Data logged", { status: 200, headers: corsHeaders });
         }
 
         // 2. Workers AI Integration
@@ -45,7 +55,7 @@ export default {
                 prompt: prompt || "Explain music theory briefly."
             });
             return new Response(JSON.stringify(response), {
-                headers: { "Content-Type": "application/json" }
+                headers: { "Content-Type": "application/json", ...corsHeaders }
             });
         }
 
@@ -55,7 +65,7 @@ export default {
                 "SELECT * FROM Projects ORDER BY CreatedDate DESC LIMIT 10"
             ).all();
             return new Response(JSON.stringify(result), {
-                headers: { "Content-Type": "application/json" }
+                headers: { "Content-Type": "application/json", ...corsHeaders }
             });
         }
 
@@ -71,7 +81,7 @@ export default {
             await browser.close();
             
             return new Response(screenshot, {
-                headers: { "Content-Type": "image/jpeg" }
+                headers: { "Content-Type": "image/jpeg", ...corsHeaders }
             });
         }
 
@@ -88,7 +98,9 @@ export default {
             const instance = await (env.MY_WORKFLOW as any).create({
                 params: { projectId: payload.projectId, audioUrl: payload.audioUrl }
             });
-            return Response.json({ id: instance.id });
+            return new Response(JSON.stringify({ id: instance.id }), {
+                headers: { "Content-Type": "application/json", ...corsHeaders }
+            });
         }
 
         // 7. Static Asset Serving (Fallback with CORS support)

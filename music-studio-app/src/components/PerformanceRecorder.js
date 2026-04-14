@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserProgress } from '../contexts/UserProgressContext';
 import { createShadow } from '../utils/shadows';
@@ -158,8 +158,12 @@ export default function PerformanceRecorder({
 
     return (
         <View style={styles.container}>
-            {/* Count-in Overlay */}
-            {showCountIn && (
+            {/* Count-in Overlay (Fullscreen) */}
+            <Modal
+                transparent={true}
+                visible={showCountIn}
+                animationType="none"
+            >
                 <View 
                     ref={countInRef}
                     style={styles.countInOverlay}
@@ -179,7 +183,7 @@ export default function PerformanceRecorder({
                         </Text>
                     </Animated.View>
                 </View>
-            )}
+            </Modal>
 
             {/* Record Button */}
             <Animated.View 
@@ -237,10 +241,8 @@ export default function PerformanceRecorder({
 
 const styles = StyleSheet.create({
     container: {
-        position: 'absolute',
-        top: sc(15), 
-        right: sc(20),
-        alignItems: 'flex-end',
+        alignItems: 'center',
+        justifyContent: 'center',
         zIndex: 100,
     },
     countInOverlay: {

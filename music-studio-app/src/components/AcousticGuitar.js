@@ -1,25 +1,28 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, PanResponder, useWindowDimensions, Platform } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, TouchableOpacity, Text, StyleSheet, PanResponder } from 'react-native';
+import { LinearGradient as ExpoGradient } from 'expo-linear-gradient';
+import Svg, { Defs, RadialGradient, LinearGradient as SvgLinearGradient, Stop, Path, Circle, Rect, Line, Ellipse } from 'react-native-svg';
 import UnifiedAudioEngine from '../services/UnifiedAudioEngine';
 import { createShadow, createTextShadow } from '../utils/shadows';
-import { sc, normalize, SCREEN_WIDTH, useResponsive } from '../utils/responsive';
+import { sc, normalize, useResponsive } from '../utils/responsive';
 import HapticService from '../services/HapticService';
 import GuitarString from './GuitarString';
 import { GUITAR_CHORDS, STRING_COLORS, STRING_THICKNESS } from '../utils/GuitarVoicings';
-
-const CHORDS = ['C', 'G', 'D', 'A', 'E', 'Am', 'Em', 'Dm'];
-
 import InstrumentContainer from './InstrumentContainer';
 
+const CHORDS = ['C', 'G', 'D', 'A', 'E', 'Am', 'Em', 'Dm'];
+const STRING_Y_POSITIONS = [160, 216, 272, 328, 384, 440];
+
 export default function AcousticGuitar({ instrument = 'guitar' }) {
-    const { isPhone, isLandscape, SCREEN_WIDTH: width, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
+    const { isPhone, isLandscape, SCREEN_HEIGHT, SAFE_TOP, SAFE_BOTTOM } = useResponsive();
     
     const [selectedChord, setSelectedChord] = useState('C');
     const selectedChordRef = useRef('C');
     const [activeStrings, setActiveStrings] = useState(new Array(6).fill(false));
     const touchedStrings = useRef(new Set());
     const timeoutsRef = useRef({});
+    
+    const [frameHeight, setFrameHeight] = useState(SCREEN_HEIGHT * 0.8);
 
     useEffect(() => {
         selectedChordRef.current = selectedChord;
@@ -30,11 +33,6 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
             Object.values(timeoutsRef.current).forEach(id => clearTimeout(id));
         };
     }, []);
-    
-    // Adaptive dimensioning
-    const bodyWidth = Math.min(width * 0.6, sc(400));
-    const bodyHeight = Math.min(SCREEN_HEIGHT * 0.8, sc(320));
-    const stringHeight = bodyHeight / 6.4;
 
     const playString = useCallback((index, velocity = 0.5) => {
         const currentChord = selectedChordRef.current;
@@ -61,18 +59,30 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
                     return next;
                 });
                 delete timeoutsRef.current[index];
-            }, 150);
+            }, 100);
         }
     }, [instrument]);
 
     const processTouch = useCallback((y, velocity = 0.5) => {
-        const stringIndex = Math.floor(y / stringHeight);
-        if (stringIndex >= 0 && stringIndex < 6 && !touchedStrings.current.has(stringIndex)) {
-            touchedStrings.current.add(stringIndex);
+        if (!frameHeight) return;
+        const virtualY = (y / frameHeight) * 600;
+        
+        let closestIndex = -1;
+        let minDistance = 1000;
+        STRING_Y_POSITIONS.forEach((sy, i) => {
+            const dist = Math.abs(virtualY - sy);
+            if (dist < minDistance && dist < 40) {
+                closestIndex = i;
+                minDistance = dist;
+            }
+        });
+
+        if (closestIndex !== -1 && !touchedStrings.current.has(closestIndex)) {
+            touchedStrings.current.add(closestIndex);
             const v = Math.min(Math.max(Math.abs(velocity) * 1.5, 0.4), 1.0);
-            playString(stringIndex, v);
+            playString(closestIndex, v);
         }
-    }, [playString, stringHeight]);
+    }, [playString, frameHeight]);
 
     const panResponder = useRef(
         PanResponder.create({
@@ -96,12 +106,12 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
 
     return (
         <InstrumentContainer>
-            <LinearGradient 
-                colors={['#1a0f0a', '#2d1b10', '#0a0a0a']} 
+            <ExpoGradient 
+                colors={['#050201', '#140804', '#050201']} 
                 style={[styles.container, isStackView && { flexDirection: 'column' }, { paddingTop: SAFE_TOP }]}
             >
                 {/* Chord Selection Bar */}
-                <View style={[styles.sidebar, isStackView && { width: '100%', height: sc(80), borderRightWidth: 0, borderBottomWidth: 2, borderBottomColor: '#2d1b10' }]}>
+                <View style={[styles.sidebar, isStackView && { width: '100%', height: sc(80), borderRightWidth: 0, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }]}>
                     {!isPhone && <Text style={styles.sidebarHeader}>CHORD BANK</Text>}
                     <View style={[styles.chordGrid, isStackView && { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }]}>
                         {CHORDS.map((chord) => (
@@ -114,8 +124,9 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
                                 }}
                                 activeOpacity={0.8}
                             >
-                                <LinearGradient
-                                    colors={selectedChord === chord ? ['#fef3c7', '#fbbf24', '#f59e0b'] : ['#451a03', '#2d1b10']}
+                                <ExpoGradient
+                                    colors={selectedChord === chord ? ['rgba(251, 191, 36, 0.4)', 'rgba(217, 119, 6, 0.1)'] : ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.01)']}
+                                    start={{x: 0, y: 0}} end={{x: 1, y: 1}}
                                     style={styles.chordGradient}
                                 />
                                 <Text style={[styles.chordText, selectedChord === chord && styles.chordTextActive, isStackView && { fontSize: normalize(12), lineHeight: sc(28) }]}>{chord}</Text>
@@ -124,68 +135,160 @@ export default function AcousticGuitar({ instrument = 'guitar' }) {
                     </View>
                 </View>
 
-                <View style={styles.guitarFrame}>
-                    {!isPhone && (
-                        <View style={styles.masterNeck}>
-                            <View style={styles.headstock}>
-                                <LinearGradient colors={['#3e2723', '#1a0f0a']} style={styles.headstockMaterial}>
-                                    <Text style={styles.brandInlay}>SOLOCRAFT</Text>
-                                </LinearGradient>
-                                <View style={styles.tuningPegs}>
-                                    {[1, 2, 3, 4, 5, 6].map(i => <View key={i} style={styles.peg} />)}
-                                </View>
-                            </View>
-                            <LinearGradient colors={['#2d1b10', '#3e2723', '#2d1b10']} style={styles.rosewoodFretboard}>
-                                {[...Array(5)].map((_, i) => <View key={i} style={styles.fretMark} />)}
-                            </LinearGradient>
-                        </View>
-                    )}
+                {/* SVG Photorealistic Guitar Layout */}
+                <View 
+                    style={styles.guitarFrame} 
+                    onLayout={(e) => setFrameHeight(e.nativeEvent.layout.height)}
+                >
+                    <Svg width="100%" height="100%" viewBox="0 0 1000 600" preserveAspectRatio="none">
+                        <Defs>
+                            <RadialGradient id="bodyFinish" cx="55%" cy="50%" rx="55%" ry="50%">
+                                <Stop offset="0%" stopColor="#d97706" />
+                                <Stop offset="30%" stopColor="#b45309" />
+                                <Stop offset="70%" stopColor="#78350f" />
+                                <Stop offset="100%" stopColor="#2e1106" />
+                            </RadialGradient>
 
-                    <View style={styles.bodyWrapper}>
-                        <LinearGradient 
-                            colors={['#8d6e63', '#a1887f', '#d7ccc8', '#a1887f', '#8d6e63']} 
-                            style={[styles.spruceBody, { width: bodyWidth, height: bodyHeight, borderRadius: bodyHeight / 2 }]} 
-                        >
-                            <View style={styles.spruceGrain} />
-                            <View style={styles.glossShine} />
+                            <SvgLinearGradient id="rosewood" x1="0" y1="0" x2="0" y2="1">
+                                <Stop offset="0%" stopColor="#1a0d08" />
+                                <Stop offset="30%" stopColor="#2e160d" />
+                                <Stop offset="70%" stopColor="#241009" />
+                                <Stop offset="100%" stopColor="#140603" />
+                            </SvgLinearGradient>
 
-                            <View style={styles.soundHoleCenter}>
-                                <View style={[styles.rosette, { width: bodyHeight * 0.6, height: bodyHeight * 0.6, borderRadius: (bodyHeight * 0.6) / 2 }]}>
-                                    <View style={[styles.rosettePattern, { width: bodyHeight * 0.55, height: bodyHeight * 0.55, borderRadius: (bodyHeight * 0.55) / 2 }]} />
-                                    <View style={[styles.actualHole, { width: bodyHeight * 0.4, height: bodyHeight * 0.4, borderRadius: (bodyHeight * 0.4) / 2 }]}>
-                                        <View style={styles.holeDepth} />
-                                    </View>
-                                </View>
-                            </View>
+                            <SvgLinearGradient id="ebony" x1="0" y1="0" x2="0" y2="1">
+                                <Stop offset="0%" stopColor="#1f1f1f" />
+                                <Stop offset="100%" stopColor="#050505" />
+                            </SvgLinearGradient>
 
-                            <View style={[styles.ebonyBridge, { height: bodyHeight * 0.5 }]}>
-                                <View style={styles.bridgePinsRow}>
-                                    {[1, 2, 3, 4, 5, 6].map(i => <View key={i} style={styles.ivoryPin} />)}
-                                </View>
-                            </View>
-                        </LinearGradient>
-                    </View>
+                            <SvgLinearGradient id="fretWire" x1="0" y1="0" x2="1" y2="0">
+                                <Stop offset="0%" stopColor="#8c8c8c" />
+                                <Stop offset="40%" stopColor="#ffffff" />
+                                <Stop offset="100%" stopColor="#4d4d4d" />
+                            </SvgLinearGradient>
 
+                            <RadialGradient id="holeDepth" cx="48%" cy="52%" rx="50%" ry="50%">
+                                <Stop offset="75%" stopColor="#000000" />
+                                <Stop offset="95%" stopColor="#1a0802" />
+                                <Stop offset="100%" stopColor="#3d1405" />
+                            </RadialGradient>
+
+                            <SvgLinearGradient id="bone" x1="0" y1="0" x2="0" y2="1">
+                                <Stop offset="0%" stopColor="#ffffff" />
+                                <Stop offset="50%" stopColor="#e5e7eb" />
+                                <Stop offset="100%" stopColor="#d1d5db" />
+                            </SvgLinearGradient>
+
+                            <SvgLinearGradient id="pickguard" x1="0" y1="0" x2="1" y2="1">
+                                <Stop offset="0%" stopColor="#1c0700" />
+                                <Stop offset="50%" stopColor="#3d1406" />
+                                <Stop offset="100%" stopColor="#0f0300" />
+                            </SvgLinearGradient>
+                        </Defs>
+                        
+                        {/* 1. Body */}
+                        <Ellipse cx="750" cy="300" rx="580" ry="430" fill="url(#bodyFinish)" stroke="#1a0500" strokeWidth="8" />
+                        <Ellipse cx="750" cy="300" rx="570" ry="420" fill="none" stroke="#fefce8" strokeWidth="3" opacity="0.8" />
+                        <Ellipse cx="750" cy="300" rx="566" ry="416" fill="none" stroke="#2e1106" strokeWidth="1" opacity="0.6" />
+                        
+                        {/* Body Glare */}
+                        <Path d="M 500 10 C 780 -80 970 20 970 300 C 970 400 900 480 750 500 C 850 400 850 150 600 80 C 450 40 350 150 250 200 C 250 180 300 120 500 10 Z" fill="rgba(255,255,255,0.06)" />
+
+                        {/* Pickguard */}
+                        <Path d="M 550 450 C 650 450 780 480 800 580 C 800 650 750 650 650 650 C 580 650 500 560 550 450 Z" fill="url(#pickguard)" />
+
+                        {/* 2. Soundhole & Rosette */}
+                        <Circle cx="550" cy="300" r="165" fill="none" stroke="#451a03" strokeWidth="2" />
+                        <Circle cx="550" cy="300" r="156" fill="none" stroke="#eab308" strokeWidth="10" strokeDasharray="3 2" />
+                        <Circle cx="550" cy="300" r="156" fill="none" stroke="#b45309" strokeWidth="4" strokeDasharray="1 4" />
+                        <Circle cx="550" cy="300" r="148" fill="none" stroke="#fefce8" strokeWidth="2" opacity="0.6" />
+                        <Circle cx="550" cy="300" r="144" fill="none" stroke="#2e1106" strokeWidth="4" />
+                        <Circle cx="550" cy="300" r="140" fill="url(#holeDepth)" />
+                        <Circle cx="548" cy="302" r="140" fill="none" stroke="#000" strokeWidth="4" />
+
+                        {/* 3. Neck & Fretboard */}
+                        {/* Fretboard Drop shadow */}
+                        <Path d="M -50 142 L 522 142 A 163 163 0 0 0 522 462 L -50 462 Z" fill="rgba(0,0,0,0.6)" />
+                        {/* Wood perfectly gripping the soundhole */}
+                        <Path d="M -50 140 L 520 140 A 163 163 0 0 0 520 460 L -50 460 Z" fill="url(#rosewood)" stroke="#0a0502" strokeWidth="2" />
+
+                        {/* Frets with Pearl Inlays */}
+                        {[40, 160, 260, 340, 410, 465].map((fx, i) => (
+                            <React.Fragment key={`fret-${i}`}>
+                                <Rect x={fx + 2} y="140" width="4" height="320" fill="rgba(0,0,0,0.8)" />
+                                <Rect x={fx} y="140" width="3" height="320" fill="url(#fretWire)" />
+                                {(i === 1 || i === 2 || i === 3) && (
+                                    <Circle cx={fx - 50} cy="300" r="8" fill="url(#bone)" opacity="0.8" />
+                                )}
+                            </React.Fragment>
+                        ))}
+
+                        {/* 4. Bridge */}
+                        <Path d="M 825 105 C 800 200 800 400 825 495 C 850 505 870 475 870 435 C 890 375 890 225 870 165 C 870 125 850 95 825 105 Z" fill="rgba(0,0,0,0.7)" transform="translate(4,4)" />
+                        <Path d="M 825 105 C 800 200 800 400 825 495 C 850 505 870 475 870 435 C 890 375 890 225 870 165 C 870 125 850 95 825 105 Z" fill="url(#ebony)" stroke="#111" strokeWidth="2" />
+                        
+                        {/* Saddle */}
+                        <Rect x="838" y="130" width="6" height="340" rx="3" ry="3" fill="rgba(0,0,0,0.9)" transform="rotate(-1.5, 838, 130)" />
+                        <Rect x="835" y="130" width="6" height="340" rx="3" ry="3" fill="url(#bone)" transform="rotate(-1.5, 835, 130)" />
+
+                        {/* Bridge Pins (Anchoring to exactly STRING_Y_POSITIONS) */}
+                        {STRING_Y_POSITIONS.map((sy, i) => (
+                            <React.Fragment key={`pin-${i}`}>
+                                <Circle cx="866" cy={sy + 2} r="9" fill="rgba(0,0,0,0.8)" />
+                                <Circle cx="865" cy={sy} r="7" fill="#e5e7eb" />
+                                <Circle cx="865" cy={sy} r="6" fill="#fcfcfc" />
+                                <Circle cx="865" cy={sy} r="2.5" fill="#000" />
+                            </React.Fragment>
+                        ))}
+
+                        {/* 5. String Tails (Saddle to Pin) */}
+                        {STRING_Y_POSITIONS.map((sy, i) => {
+                            const saddleSlantX = 835 + (i * 1.5); 
+                            return (
+                                <Line 
+                                    key={`tail-${i}`}
+                                    x1={saddleSlantX} y1={sy} 
+                                    x2="865" y2={sy} 
+                                    stroke={i < 3 ? '#b87333' : '#d1d5db'} 
+                                    strokeWidth={STRING_THICKNESS[i]} 
+                                />
+                            );
+                        })}
+                    </Svg>
+
+                    {/* Interactive overlay for Vibrating Strings */}
                     <View 
-                        style={[styles.stringsOverlay, { paddingVertical: bodyHeight * 0.125, paddingLeft: width * 0.05 }]} 
+                        style={StyleSheet.absoluteFillObject}
                         {...panResponder.panHandlers}
                     >
-                        {[0, 1, 2, 3, 4, 5].map((i) => (
-                            <GuitarString
-                                key={i}
-                                thickness={STRING_THICKNESS[i]}
-                                color={STRING_COLORS[i]}
-                                active={activeStrings[i]}
-                                vibrationScale={2.5}
-                            />
-                        ))}
+                        {STRING_Y_POSITIONS.map((yPos, i) => {
+                            // Calculates exact saddle slant offset dynamically
+                            const saddleSlantXOffset = 83.5 + (i * 0.15); 
+                            return (
+                                <GuitarString
+                                    key={`str-${i}`}
+                                    thickness={STRING_THICKNESS[i]}
+                                    color={STRING_COLORS[i]}
+                                    active={activeStrings[i]}
+                                    vibrationScale={6.0}
+                                    style={{ 
+                                        position: 'absolute', 
+                                        top: `${(yPos / 600) * 100}%`,
+                                        left: '-5%', 
+                                        width: `${saddleSlantXOffset + 5}%`, // Spans exactly from far left up to the slanted saddle
+                                        marginTop: -(STRING_THICKNESS[i] / 2)
+                                    }}
+                                />
+                            );
+                        })}
                     </View>
                 </View>
 
+                {/* Overlaid UI Footer */}
                 <View style={[styles.footer, { bottom: SAFE_BOTTOM + sc(15) }]}>
-                    <Text style={styles.footerLabel}>SWIPE THE STRINGS • CONCERT SPRUCE EDITION</Text>
+                    <Text style={styles.footerLabel}>SWIPE THE STRINGS • ULTRA REALISTIC STUDIO EDITION</Text>
                 </View>
-            </LinearGradient>
+            </ExpoGradient>
         </InstrumentContainer>
     );
 }
@@ -196,199 +299,80 @@ const styles = StyleSheet.create({
         flex: 1,
         borderRadius: sc(40),
         margin: sc(5),
-        ...createShadow({ color: '#000', radius: sc(40), opacity: 0.8 }),
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,255,255,0.1)',
+        ...createShadow({ color: '#000', radius: sc(40), opacity: 0.9, offsetY: sc(20) }),
     },
     sidebar: {
         width: sc(120),
-        backgroundColor: '#1a0f0a',
-        padding: sc(10),
+        backgroundColor: 'rgba(15, 6, 4, 0.7)',
+        padding: sc(15),
         zIndex: 30,
+        borderTopLeftRadius: sc(40),
+        borderBottomLeftRadius: sc(40),
+        borderRightWidth: 1,
+        borderRightColor: 'rgba(255,255,255,0.05)',
     },
     sidebarHeader: {
         color: '#fbbf24',
         fontSize: normalize(8),
         fontWeight: '900',
-        letterSpacing: 2,
-        marginBottom: sc(15),
+        letterSpacing: 2.5,
+        marginBottom: sc(20),
         textAlign: 'center',
-        opacity: 0.6,
+        opacity: 0.8,
+        ...createTextShadow({ color: 'rgba(251, 191, 36, 0.3)', radius: sc(4) }),
     },
     chordGrid: {
         flex: 1,
-        gap: sc(8),
+        gap: sc(12),
     },
     chordButton: {
-        height: sc(38),
-        borderRadius: sc(10),
+        height: sc(42),
+        borderRadius: sc(12),
         overflow: 'hidden',
         borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        ...createShadow({ color: '#000', radius: sc(6), offsetY: sc(3), opacity: 0.6 }),
     },
     chordButtonActive: {
-        borderColor: '#fbbf24',
-        ...createShadow({ color: '#fbbf24', radius: sc(8) }),
+        borderColor: 'rgba(251, 191, 36, 1)',
+        ...createShadow({ color: '#fbbf24', radius: sc(15), opacity: 0.75 }),
+        transform: [{ scale: 1.05 }],
     },
     chordGradient: { ...StyleSheet.absoluteFillObject },
     chordText: {
-        color: '#8d6e63',
-        fontSize: normalize(14),
+        color: '#e5e7eb',
+        fontSize: normalize(15),
         fontWeight: '900',
         textAlign: 'center',
-        lineHeight: sc(34),
+        lineHeight: sc(38),
+        fontFamily: 'Montserrat-Bold',
     },
-    chordTextActive: { color: '#1a0f0a' },
+    chordTextActive: { 
+        color: '#fbbf24',
+        ...createTextShadow({ color: '#fbbf24', radius: sc(10) }),
+    },
     guitarFrame: {
         flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
         position: 'relative',
-    },
-    masterNeck: {
-        width: sc(120),
-        height: '100%',
-        backgroundColor: '#000',
-        flexDirection: 'row',
-    },
-    headstock: {
-        width: sc(60),
-        height: '100%',
-        paddingVertical: sc(15),
-        alignItems: 'center',
-    },
-    headstockMaterial: {
-        width: sc(45),
-        height: '90%',
-        borderRadius: sc(10),
-        borderWidth: 2,
-        borderColor: '#1a0f0a',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    brandInlay: {
-        color: '#fbbf24',
-        fontSize: normalize(7),
-        fontWeight: '900',
-        transform: [{ rotate: '-90deg' }],
-        letterSpacing: 2,
-    },
-    tuningPegs: {
-        position: 'absolute',
-        top: sc(30),
-        bottom: sc(30),
-        justifyContent: 'space-between',
-    },
-    peg: {
-        width: sc(10),
-        height: sc(10),
-        borderRadius: sc(5),
-        backgroundColor: '#9ca3af',
-        borderWidth: 1.5,
-        borderColor: '#4b5563',
-        ...createShadow({ color: '#000', radius: sc(4) }),
-    },
-    rosewoodFretboard: {
-        flex: 1,
-        height: '100%',
-        justifyContent: 'space-around',
-        paddingVertical: sc(40),
-    },
-    fretMark: {
-        width: '100%',
-        height: sc(2),
-        backgroundColor: 'rgba(255,255,255,0.1)',
-    },
-    bodyWrapper: {
-        flex: 1,
-        height: '100%',
-        marginLeft: sc(-30),
-        justifyContent: 'center',
-        zIndex: 1,
-    },
-    spruceBody: {
-        borderWidth: 4,
-        borderColor: '#3e2723',
+        borderTopRightRadius: sc(40),
+        borderBottomRightRadius: sc(40),
         overflow: 'hidden',
-        position: 'relative',
-        ...createShadow({ color: '#000', radius: sc(30), offsetY: sc(15) }),
-    },
-    spruceGrain: {
-        ...StyleSheet.absoluteFillObject,
-        opacity: 0.1,
-        backgroundColor: 'rgba(0,0,0,0.05)',
-        borderLeftWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-    },
-    glossShine: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(255,255,255,0.04)',
-    },
-    soundHoleCenter: {
-        ...StyleSheet.absoluteFillObject,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingLeft: sc(50),
-    },
-    rosette: {
-        borderWidth: sc(10),
-        borderColor: '#3e2723',
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...createShadow({ color: '#000', radius: sc(20) }),
-    },
-    rosettePattern: {
-        position: 'absolute',
-        borderWidth: sc(2),
-        borderColor: '#fbbf24',
-        opacity: 0.3,
-    },
-    actualHole: {
-        backgroundColor: '#000',
-        overflow: 'hidden',
-    },
-    holeDepth: {
-        ...StyleSheet.absoluteFillObject,
-        borderWidth: sc(15),
-        borderColor: 'rgba(0,0,0,0.5)',
-    },
-    ebonyBridge: {
-        position: 'absolute',
-        right: sc(30),
-        width: sc(36),
-        backgroundColor: '#1a0f0a',
-        borderRadius: sc(10),
-        borderWidth: 2,
-        borderColor: '#000',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    bridgePinsRow: {
-        height: sc(130),
-        justifyContent: 'space-around',
-    },
-    ivoryPin: {
-        width: sc(6),
-        height: sc(6),
-        borderRadius: sc(3),
-        backgroundColor: '#fff',
-        ...createShadow({ color: '#000', radius: sc(2) }),
-    },
-    stringsOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        justifyContent: 'center',
-        paddingVertical: sc(40),
-        paddingLeft: sc(35),
-        zIndex: 20,
     },
     footer: {
         position: 'absolute',
-        bottom: sc(15),
-        right: sc(25),
+        bottom: sc(20),
+        right: sc(30),
+        pointerEvents: 'none',
     },
     footerLabel: {
         color: '#fbbf24',
         fontSize: normalize(8),
         fontWeight: '900',
-        letterSpacing: 2,
-        opacity: 0.5,
+        letterSpacing: 2.5,
+        opacity: 0.85,
+        ...createTextShadow({ color: 'rgba(0,0,0,0.95)', radius: sc(3) }),
     },
 });
